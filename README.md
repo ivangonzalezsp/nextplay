@@ -40,11 +40,23 @@ IGDB es opcional para leer la biblioteca, pero necesario para géneros, modos, d
 
 ## Uso
 
+### Steam Families
+
+La conexión familiar utiliza `STEAM_FAMILY_TOKEN`, el valor `webapi_token` de [tu sesión oficial de Steam](https://store.steampowered.com/pointssummary/ajaxgetasyncconfig). Guárdalo en `.env.local` junto a `STEAM_API_KEY`. Son credenciales distintas. La app comprueba que el token corresponde al perfil conectado; nunca lo devuelve al navegador ni lo envía a Codex.
+
+Pulsa **Comprobar conexiones** y **Conectar Steam Families**. Se importan automáticamente las bibliotecas del grupo, incluso si sus perfiles no son públicos. En **Tu biblioteca** puedes filtrar los juegos propios, los compartidos o los de cada miembro. Los duplicados se unen mediante AppID y tus preferencias se conservan. Las horas importadas pertenecen al perfil conectado, no a los propietarios de las copias.
+
+Steam decide qué títulos admite en préstamo. Los excluidos y los juegos que el propietario marca como privados no se importan como compartidos. Las recomendaciones familiares cuentan entre las tres opciones de tu biblioteca, nunca como descubrimientos. No se comprueba si otra persona está usando la última copia disponible en ese instante.
+
+La biblioteca familiar se refresca después de 24 horas al pedir recomendaciones, y también con **Actualizar Steam Families**. Si el token caduca o Steam falla, se conserva la última lectura y se indica el problema. Si Steam confirma que ya no perteneces a un grupo, se retiran los préstamos y se mantienen las preferencias. Esta integración utiliza servicios de Steam Families sin un contrato público estable y puede requerir ajustes si Steam cambia su interfaz.
+
+### Recomendaciones
+
 - **Para hoy:** tiempo de sesión y lo que te apetece. La adecuación a ese tiempo es una valoración orientativa.
 - **Próximo juego:** selección para varias sesiones, con un límite opcional de horas de historia.
 - En **Tu biblioteca**, marca favoritos y estados. Terminados y abandonados se excluyen salvo que actives la opción de incluirlos. «No me interesa» siempre se excluye.
 - La conversación mantiene los filtros y los mensajes. Los cambios de filtros de la interfaz prevalecen sobre mensajes anteriores. Una nueva búsqueda, sincronización o corrección de preferencias reinicia las propuestas para evitar resultados obsoletos. Cada conversación admite 20 consultas.
-- Las propuestas principales son propias; los descubrimientos se etiquetan aparte y enlazan a Steam. No se consultan precios.
+- Las propuestas principales proceden de tu biblioteca propia o compartida; los descubrimientos se etiquetan aparte y enlazan a Steam. Las referencias de IGDB deben incluir un enlace de aplicación de Steam cuyo AppID coincida; se descartan paquetes y referencias sin enlace verificable. No se consultan precios.
 
 ## Datos locales y conexión a Codex
 

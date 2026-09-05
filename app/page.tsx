@@ -33,7 +33,13 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DEFAULT_FILTERS, STATUS_LABELS, storeUrl } from '@/lib/model';
+import {
+  DEFAULT_FILTERS,
+  STATUS_LABELS,
+  storeUrl,
+  inLibrary,
+  libraryLabel,
+} from '@/lib/model';
 import type {
   Filters,
   Game,
@@ -133,16 +139,14 @@ function GamePick({
         <div className="eyebrow">
           {main
             ? 'TU PRÓXIMA PARTIDA'
-            : game.owned
+            : inLibrary(game)
               ? 'OTRA BUENA OPCIÓN'
               : 'POR DESCUBRIR'}
         </div>
         <h3>{game.name}</h3>
         <div className="game-meta">
-          <span>
-            {game.owned ? 'En tu biblioteca' : 'No está en tu biblioteca'}
-          </span>
-          {game.owned && game.playtimeMinutes !== null && (
+          <span>{libraryLabel(game)}</span>
+          {inLibrary(game) && game.playtimeMinutes !== null && (
             <span>
               {(game.playtimeMinutes / 60).toLocaleString('es', {
                 maximumFractionDigits: 1,
@@ -162,6 +166,11 @@ function GamePick({
           <strong>A tener en cuenta: </strong>
           {pick.caveat}
         </p>
+        {game.shared && (
+          <p className="small-note">
+            La disponibilidad de una copia libre se comprueba al abrir Steam.
+          </p>
+        )}
         <div className="pick-footer">
           <a
             className="store-link"
@@ -196,6 +205,7 @@ export default function Home() {
   );
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
+  const [libraryOwner, setLibraryOwner] = useState('');
   const [limit, setLimit] = useState(36);
   const [busy, setBusy] = useState('');
   const [loading, setLoading] = useState(true);
@@ -378,8 +388,15 @@ export default function Home() {
   const genres = [
     ...new Set(games.flatMap((g) => (g.genres ?? []).map((x) => x.name))),
   ].sort();
-  const filtered = games.filter((g) =>
-    g.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+  const filtered = games.filter(
+    (g) =>
+      g.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()) &&
+      (!libraryOwner ||
+        (libraryOwner === 'own'
+          ? g.owned
+          : libraryOwner === 'shared'
+            ? g.shared
+            : g.ownerSteamIds?.includes(libraryOwner))),
   );
   const canRecommend = games.length > 0 && state?.setup.codex;
   return (
@@ -597,6 +614,69 @@ export default function Home() {
                     new Date(state.syncedAt).toLocaleString('es')
                   : 'El perfil y los detalles de juegos deben ser públicos.'}
               </p>
+            </section>
+            <section className="panel steam-panel">
+              <div className="panel-title">
+                <Library size={18} />
+                <h2>Steam Families</h2>
+              </div>
+              <p className="small-note">
+                {state?.family
+                  ? `${state.family.name} · ${state.family.members.length} miembros`
+                  : 'Añade las bibliotecas compartidas contigo, aunque los perfiles sean privados.'}
+              </p>
+              <Button
+                variant="outline"
+                className="sync-button"
+                disabled={!!busy || !state?.profile || !state.setup.family}
+                onClick={() =>
+                  action('family', async () => {
+                    accept(await api('steam/family/sync', {}));
+                  })
+                }
+              >
+                <RefreshCw
+                  size={15}
+                  className={busy === 'family' ? 'spin' : ''}
+                />
+                {busy === 'family'
+                  ? 'Importando bibliotecas…'
+                  : state?.family
+                    ? 'Actualizar Steam Families'
+                    : 'Conectar Steam Families'}
+              </Button>
+              {state?.family && (
+                <p className="small-note">
+                  {games.filter((g) => g.shared).length.toLocaleString('es')}{' '}
+                  juegos compartidos · Última lectura:{' '}
+                  {new Date(state.family.syncedAt).toLocaleString('es')}
+                  <br />
+                  Steam ha excluido{' '}
+                  {state.family.excludedCount.toLocaleString('es')} títulos no
+                  prestables o ajenos al catálogo de juegos.
+                </p>
+              )}
+              {state && !state.setup.family && (
+                <p className="small-note">
+                  Añade <code>STEAM_FAMILY_TOKEN</code> en{' '}
+                  <code>.env.local</code> y pulsa Comprobar conexiones.{' '}
+                  <a
+                    href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Obtener token en Steam ↗
+                  </a>
+                </p>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={!!busy}
+                onClick={() => action('reload', load)}
+              >
+                Comprobar conexiones
+              </Button>
             </section>
             <div className="source-note">
               <span>CON DATOS DE</span>
@@ -885,9 +965,29 @@ export default function Home() {
                 </section>
               </TabsContent>
               <TabsContent value="library">
+                <Choice
+                  id="library-owner"
+                  label="Biblioteca"
+                  value={libraryOwner}
+                  onChange={(value) => {
+                    setLibraryOwner(value);
+                    setLimit(36);
+                  }}
+                  options={[
+                    { value: '', label: 'Todas mis bibliotecas' },
+                    { value: 'own', label: 'Mis juegos propios' },
+                    { value: 'shared', label: 'Solo juegos compartidos' },
+                    ...(state?.family?.members ?? [])
+                      .filter((m) => m.steamId !== state?.profile?.steamId)
+                      .map((m) => ({
+                        value: m.steamId,
+                        label: 'Biblioteca de ' + m.name,
+                      })),
+                  ]}
+                />
                 <div className="library-toolbar">
                   <h2>
-                    Tus juegos <span>{games.length}</span>
+                    Tus juegos <span>{filtered.length}</span>
                   </h2>
                   <label className="sr-only" htmlFor="search">
                     Buscar en tu biblioteca
@@ -911,7 +1011,7 @@ export default function Home() {
                     <Library size={35} />
                     <h2>
                       {games.length
-                        ? 'No hay juegos con ese nombre.'
+                        ? 'No hay juegos que coincidan con esta búsqueda y biblioteca.'
                         : 'Tu biblioteca aparecerá aquí.'}
                     </h2>
                   </div>
@@ -927,6 +1027,7 @@ export default function Home() {
                         <Cover game={game} />
                         <div className="library-card-body">
                           <h3>{game.name}</h3>
+                          <p className="small-note">{libraryLabel(game)}</p>
                           <p className="small-note">
                             {game.playtimeMinutes === null
                               ? 'Horas no disponibles'

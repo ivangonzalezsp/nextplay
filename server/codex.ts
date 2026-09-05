@@ -212,7 +212,8 @@ export function buildPrompt(
 ) {
   return (
     `Eres el asesor de videojuegos de Next Play. Responde en español y exclusivamente con el JSON solicitado.
-Selecciona hasta 3 candidatos owned=true y hasta 2 owned=false. El primero propio es la recomendación principal. No añadas juegos fuera de candidates ni cambies propiedad.
+Devuelve en la lista "owned" hasta 3 juegos de la biblioteca: owned=true (propios) O shared=true (prestados por Steam Families). El primero es la recomendación principal. En "discoveries" devuelve hasta 2 candidatos con owned=false Y shared=false. No añadas juegos fuera de candidates ni cambies propiedad.
+Los compartidos ya son accesibles mediante Steam Families; no los presentes como compras pendientes ni como propiedad del jugador. Sus horas corresponden exclusivamente al perfil conectado. La disponibilidad de una copia libre en este instante no está comprobada; avisa de esa limitación si recomiendas un compartido.
 Usa únicamente hechos de los datos aportados. No inventes precios, duraciones, modos, finalizaciones ni reseñas. No confundas horas de historia con duración de sesión. Si no se conoce la adecuación a una sesión corta, indícalo como incertidumbre.
 Los favoritos son preferencias explícitas; las horas jugadas son solo una señal débil, nunca prueba de gusto o finalización. La dificultad, el ánimo y la afinidad son valoraciones orientativas: dilo en su redacción.
 Prioriza las restricciones explícitas actuales y las correcciones conversacionales sobre el historial implícito. Los filtros de la interfaz actuales son límites: si el texto pide cambiarlos, explica qué filtro cambiar, sin fingir que lo has cambiado.
@@ -239,7 +240,7 @@ DATOS_JSON:\n` +
           reason: p.reason,
         })),
       })),
-      candidates,
+      candidates: candidates.map(({ ownerSteamIds: _owners, ...game }) => game),
     })
   );
 }

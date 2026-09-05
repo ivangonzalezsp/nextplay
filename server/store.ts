@@ -24,6 +24,7 @@ export async function config() {
   const get = (key: string) => (local[key] || process.env[key] || '').trim();
   return {
     steam: get('STEAM_API_KEY'),
+    familyToken: get('STEAM_FAMILY_TOKEN'),
     clientId: get('TWITCH_CLIENT_ID'),
     clientSecret: get('TWITCH_CLIENT_SECRET'),
     model: get('NEXTPLAY_CODEX_MODEL') || 'gpt-5.6-luna',

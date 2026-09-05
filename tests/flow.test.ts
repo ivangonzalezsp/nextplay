@@ -13,7 +13,13 @@ import {
   selectCandidates,
   validatePicks,
 } from '../server/selection.ts';
-import { ownedGames, syncSteam, metadata, review } from '../server/sources.ts';
+import {
+  ownedGames,
+  syncSteam,
+  metadata,
+  review,
+  steamAppLink,
+} from '../server/sources.ts';
 import {
   atomicJson,
   exclusive,
@@ -61,6 +67,22 @@ const pick = (appId: number) => ({
   reason: 'Afinidad orientativa por tus preferencias.',
   whyNow: 'Encaja en lo que buscas.',
   caveat: 'No hay datos de duración de una sesión.',
+});
+
+void test('Steam external identifiers require a matching app URL, not a package or stale ID', () => {
+  const link = {
+    uid: '400',
+    game: 71,
+    url: 'https://store.steampowered.com/app/400/Portal/',
+  };
+  assert.equal(steamAppLink(link), true);
+  for (const invalid of [
+    { ...link, uid: '52003' },
+    { ...link, url: undefined },
+    { ...link, url: 'https://store.steampowered.com/sub/400/' },
+    { ...link, url: 'https://store.steampowered.com.evil.test/app/400/' },
+  ])
+    assert.equal(steamAppLink(invalid), false);
 });
 
 void test('missing IGDB type stays unknown, durations require valid contributions', () => {

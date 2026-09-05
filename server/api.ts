@@ -17,6 +17,11 @@ import {
 } from './selection.ts';
 import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import type { Game, Snapshot, State } from '../lib/model.ts';
+import {
+  mergeLibraries,
+  refreshLibraries,
+  retainedFamilyGames,
+} from './family.ts';
 
 const localHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
 export function verifyRequest(request: Request) {
@@ -70,6 +75,7 @@ async function snapshot(
     ...state,
     setup: {
       steam: !!c.steam,
+      family: !!c.familyToken,
       igdb: !!c.clientId && !!c.clientSecret,
       ...(await codexStatus()),
     },
@@ -132,18 +138,59 @@ export async function handle(request: Request): Promise<Response> {
             409,
           );
         const cache = await getCache();
-        const enriched = await enrich(fresh.games, cache, payload.force);
-        if (payload.force) cache.reviewsRefreshAfter = Date.now();
-        const next: State = {
+        const warnings = [...fresh.warnings];
+        let next: State = {
           ...state,
           profile: fresh.profile,
-          games: enriched.games,
+          games: mergeLibraries(
+            fresh.games,
+            retainedFamilyGames(state),
+            fresh.profile.steamId,
+          ),
           syncedAt: Date.now(),
+          conversation: [],
+        };
+        if (c.familyToken) {
+          try {
+            const refreshed = await refreshLibraries(next, c, {
+              own: false,
+              family: true,
+            });
+            next = refreshed.state;
+            warnings.push(...refreshed.warnings);
+          } catch (e) {
+            warnings.push(
+              e instanceof AppError
+                ? e.message
+                : 'No se ha actualizado Steam Families. Se conserva su última biblioteca.',
+            );
+          }
+        } else if (next.family)
+          warnings.push(
+            'Falta el token de Steam Families. Se conserva su última biblioteca guardada.',
+          );
+        const enriched = await enrich(next.games, cache, payload.force);
+        next.games = enriched.games;
+        if (payload.force) cache.reviewsRefreshAfter = Date.now();
+        await saveCache(cache);
+        await saveState(next);
+        return snapshot(next, [...warnings, ...enriched.warnings]);
+      }
+      if (path === '/api/steam/family/sync' && request.method === 'POST') {
+        const refreshed = await refreshLibraries(state, await config(), {
+          own: false,
+          family: true,
+        });
+        const cache = await getCache();
+        const enriched = await enrich(refreshed.state.games, cache);
+        const next = {
+          ...refreshed.state,
+          games: enriched.games,
           conversation: [],
         };
         await saveCache(cache);
         await saveState(next);
-        return snapshot(next, [...fresh.warnings, ...enriched.warnings]);
+        return snapshot(next, [...refreshed.warnings, ...enriched.warnings]);
       }
       if (path === '/api/recommendations' && request.method === 'POST') {
         const filters = parseFilters(payload.filters);
@@ -165,9 +212,11 @@ export async function handle(request: Request): Promise<Response> {
         // Refresh an expired library only on a user request; failed refreshes keep the snapshot.
         if (state.syncedAt && Date.now() - state.syncedAt >= DAY) {
           try {
-            const fresh = await syncSteam(state.profile.url, c.steam);
-            state.games = fresh.games;
-            state.syncedAt = Date.now();
+            const fresh = await refreshLibraries(state, c, {
+              own: true,
+              family: false,
+            });
+            Object.assign(state, fresh.state);
             warnings.push(...fresh.warnings);
           } catch {
             warnings.push(
@@ -175,6 +224,28 @@ export async function handle(request: Request): Promise<Response> {
             );
           }
         }
+        if (
+          c.familyToken &&
+          (!state.family || Date.now() - state.family.syncedAt >= DAY)
+        ) {
+          try {
+            const fresh = await refreshLibraries(state, c, {
+              own: false,
+              family: true,
+            });
+            Object.assign(state, fresh.state);
+            warnings.push(...fresh.warnings);
+          } catch (e) {
+            warnings.push(
+              e instanceof AppError
+                ? e.message
+                : 'No se ha podido actualizar Steam Families. Se conserva su última biblioteca.',
+            );
+          }
+        } else if (state.family && !c.familyToken)
+          warnings.push(
+            'Falta el token de Steam Families. Los juegos compartidos proceden de la última lectura guardada.',
+          );
         const cache = await getCache();
         const enriched = await enrich(state.games, cache);
         state.games = enriched.games;

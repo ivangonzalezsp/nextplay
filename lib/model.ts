@@ -23,6 +23,8 @@ export type Game = {
   appId: number;
   name: string;
   owned: boolean;
+  shared?: boolean;
+  ownerSteamIds?: string[];
   playtimeMinutes: number | null;
   recentMinutes: number | null;
   cover?: string;
@@ -63,6 +65,13 @@ export type State = {
   version: 1;
   profile: Profile | null;
   syncedAt: number | null;
+  family?: {
+    groupId: string;
+    name: string;
+    members: { steamId: string; name: string }[];
+    syncedAt: number;
+    excludedCount: number;
+  } | null;
   games: Game[];
   preferences: Record<string, Preference>;
   conversation: Turn[];
@@ -70,6 +79,7 @@ export type State = {
 };
 export type Setup = {
   steam: boolean;
+  family: boolean;
   igdb: boolean;
   codex: boolean;
   codexMessage: string;
@@ -92,3 +102,10 @@ export const STATUS_LABELS: Record<GameStatus, string> = {
 };
 export const storeUrl = (appId: number) =>
   `https://store.steampowered.com/app/${appId}/`;
+export const inLibrary = (game: Game) => game.owned || game.shared === true;
+export const libraryLabel = (game: Game) =>
+  game.owned
+    ? 'Propio'
+    : game.shared
+      ? 'Compartido · Steam Families'
+      : 'Descubrimiento';

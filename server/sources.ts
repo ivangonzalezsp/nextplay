@@ -44,12 +44,31 @@ type IgdbGame = {
   first_release_date?: number;
   game_type?: number;
 };
-type IgdbLink = { uid: string; game: number };
+type IgdbLink = { uid: string; game: number; url?: string };
+export function steamAppLink(link: IgdbLink) {
+  try {
+    const url = new URL(link.url ?? '');
+    const match = url.pathname.match(/^\/app\/(\d+)(?:\/|$)/);
+    return (
+      ['https:', 'http:'].includes(url.protocol) &&
+      url.hostname === 'store.steampowered.com' &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      !!match &&
+      match[1] === String(link.uid) &&
+      Number(link.uid) > 0
+    );
+  } catch {
+    return false;
+  }
+}
 type Duration = { game_id: number; count?: number; hastily?: number };
-async function json<T>(
+export async function json<T>(
   url: string | URL,
   init: RequestInit = {},
   fetcher: Fetcher = fetch,
+  authMessage?: string,
 ): Promise<T> {
   let response: Response;
   try {
@@ -67,7 +86,8 @@ async function json<T>(
   if (!response.ok) {
     if ([401, 403].includes(response.status))
       throw new AppError(
-        'Una fuente rechazó las credenciales. Revisa la clave de Steam o las credenciales de Twitch/IGDB.',
+        authMessage ||
+          'Una fuente rechazó las credenciales. Revisa la clave de Steam o las credenciales de Twitch/IGDB.',
         502,
       );
     throw new AppError(
@@ -384,7 +404,7 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
         const batch = missing.slice(i, i + 100);
         const links = await igdb<IgdbLink>(
           'external_games',
-          `fields uid,game; where external_game_source = ${d.source} & uid = (${batch.map((g) => '"' + g.appId + '"').join(',')}); limit 500;`,
+          `fields uid,game,url; where external_game_source = ${d.source} & uid = (${batch.map((g) => '"' + g.appId + '"').join(',')}); limit 500;`,
         );
         const gameIds = ids(links.map((x) => x.game));
         const records = gameIds
@@ -403,7 +423,10 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
           const matches = [
             ...new Set(
               links
-                .filter((x) => String(x.uid) === String(game.appId))
+                .filter(
+                  (x) =>
+                    steamAppLink(x) && String(x.uid) === String(game.appId),
+                )
                 .map((x) => x.game),
             ),
           ];
@@ -465,12 +488,12 @@ export async function discover(state: State, cache: Cache): Promise<Game[]> {
   if (!raw.length) return [];
   const links = await igdb<IgdbLink>(
     'external_games',
-    `fields uid,game; where external_game_source = ${d.source} & game = (${ids(raw.map((g) => g.id))}); limit 500;`,
+    `fields uid,game,url; where external_game_source = ${d.source} & game = (${ids(raw.map((g) => g.id))}); limit 500;`,
   );
   const own = new Set(state.games.map((g) => g.appId));
   const games: Game[] = [];
   for (const link of links) {
-    if (!/^\d+$/.test(String(link.uid))) continue;
+    if (!steamAppLink(link)) continue;
     const appId = Number(link.uid),
       g = raw.find((r) => r.id === link.game);
     if (

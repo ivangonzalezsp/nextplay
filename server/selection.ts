@@ -1,5 +1,5 @@
 import { AppError } from './store.ts';
-import { STATUS_LABELS } from '../lib/model.ts';
+import { STATUS_LABELS, inLibrary } from '../lib/model.ts';
 import type { Filters, Game, Preference, State, Pick } from '../lib/model.ts';
 
 export function parseProfile(input: unknown) {
@@ -110,7 +110,7 @@ export function selectCandidates(
   discoveries: Game[],
   filters: Filters,
   text = '',
-) {
+): Game[] {
   const liked = state.games.filter((g) => state.preferences[g.appId]?.favorite);
   const seeds = liked.length
     ? liked
@@ -137,10 +137,17 @@ export function selectCandidates(
     (g.genres ?? []).filter((x) => genres.has(x.id)).length * 3 +
     (g.recentMinutes ? 2 : 0) +
     ((g.playtimeMinutes ?? 0) === 0 ? 1 : 0);
-  const ownIds = new Set(state.games.map((g) => g.appId));
+  const library = new Map(state.games.map((g) => [g.appId, g]));
   const unique = new Map(
-    [...state.games, ...discoveries.filter((g) => !ownIds.has(g.appId))].map(
-      (g) => [g.appId, { ...g, owned: ownIds.has(g.appId) }],
+    [...state.games, ...discoveries.filter((g) => !library.has(g.appId))].map(
+      (g) => [
+        g.appId,
+        {
+          ...g,
+          owned: library.get(g.appId)?.owned ?? false,
+          shared: library.get(g.appId)?.shared === true,
+        },
+      ],
     ),
   );
   const sorted = [...unique.values()]
@@ -148,8 +155,8 @@ export function selectCandidates(
     .toSorted((a, b) => score(b) - score(a) || a.appId - b.appId);
   // ponytail: bounded heuristic shortlist; add semantic retrieval only if large libraries lose relevant candidates.
   return [
-    ...sorted.filter((g) => g.owned).slice(0, 40),
-    ...sorted.filter((g) => !g.owned).slice(0, 20),
+    ...sorted.filter(inLibrary).slice(0, 40),
+    ...sorted.filter((g) => !inLibrary(g)).slice(0, 20),
   ];
 }
 export function validatePicks(value: unknown, candidates: Game[]) {
@@ -174,7 +181,7 @@ export function validatePicks(value: unknown, candidates: Game[]) {
     const game = known.get(p?.appId);
     if (
       !game ||
-      game.owned !== owned ||
+      inLibrary(game) !== owned ||
       used.has(p.appId) ||
       ![p.reason, p.whyNow, p.caveat].every(
         (t) => typeof t === 'string' && t.trim() && t.length <= 1500,
