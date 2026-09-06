@@ -1,5 +1,7 @@
 import { AppError } from './store.ts';
 import { STATUS_LABELS, inLibrary } from '../lib/model.ts';
+import { AFFINITIES, affinityScore, buildTasteProfile } from '../lib/tastes.ts';
+import type { TasteSettings } from '../lib/model.ts';
 import type { Filters, Game, Preference, State, Pick } from '../lib/model.ts';
 
 export function parseProfile(input: unknown) {
@@ -74,6 +76,39 @@ export function parsePreference(value: unknown): Preference {
     throw new AppError('El estado del juego no es válido.');
   return { favorite: p.favorite, status: p.status };
 }
+export function parseTastes(value: unknown, state: State): TasteSettings {
+  const v = value as TasteSettings;
+  if (
+    !v ||
+    typeof v !== 'object' ||
+    !v.overrides ||
+    typeof v.overrides !== 'object' ||
+    Array.isArray(v.overrides) ||
+    !Object.entries(v.overrides).every(
+      ([id, choice]) =>
+        AFFINITIES.some((a) => a.id === id) &&
+        ['auto', 'like', 'neutral', 'dislike'].includes(choice),
+    ) ||
+    !Array.isArray(v.ignoredHours) ||
+    v.ignoredHours.length > 5000 ||
+    !v.ignoredHours.every(
+      (id) =>
+        Number.isSafeInteger(id) &&
+        (state.games.some((g) => g.appId === id) ||
+          state.tastes?.ignoredHours.includes(id)),
+    ) ||
+    typeof v.notes !== 'string' ||
+    v.notes.length > 2000
+  )
+    throw new AppError(
+      'Revisa las afinidades, los juegos excluidos y las notas (máximo 2000 caracteres).',
+    );
+  return {
+    overrides: { ...v.overrides },
+    ignoredHours: [...new Set(v.ignoredHours)],
+    notes: v.notes.trim(),
+  };
+}
 export function eligible(game: Game, pref: Preference | undefined, f: Filters) {
   if (
     pref?.status === 'ignored' ||
@@ -111,31 +146,18 @@ export function selectCandidates(
   filters: Filters,
   text = '',
 ): Game[] {
-  const liked = state.games.filter((g) => state.preferences[g.appId]?.favorite);
-  const seeds = liked.length
-    ? liked
-    : state.games
-        .filter(
-          (g) =>
-            !['ignored', 'abandoned'].includes(
-              state.preferences[g.appId]?.status ?? '',
-            ),
-        )
-        .toSorted(
-          (a, b) =>
-            Math.min(b.playtimeMinutes ?? 0, 6000) -
-            Math.min(a.playtimeMinutes ?? 0, 6000),
-        )
-        .slice(0, 12);
-  const genres = new Set(
-    seeds.flatMap((g) => (g.genres ?? []).map((x) => x.id)),
-  );
+  const profile = buildTasteProfile(state);
   const mentioned = text.toLowerCase();
   const score = (g: Game) =>
-    (mentioned.includes(g.name.toLowerCase()) ? 30 : 0) +
-    (state.preferences[g.appId]?.favorite ? 10 : 0) +
-    (g.genres ?? []).filter((x) => genres.has(x.id)).length * 3 +
-    (g.recentMinutes ? 2 : 0) +
+    (mentioned.includes(g.name.toLowerCase()) ? 80 : 0) +
+    (state.preferences[g.appId]?.favorite ? 40 : 0) +
+    affinityScore(g, profile) +
+    (g.recentMinutes &&
+    state.syncedAt &&
+    Date.now() - state.syncedAt < 86400000 &&
+    !state.tastes?.ignoredHours.includes(g.appId)
+      ? 1
+      : 0) +
     ((g.playtimeMinutes ?? 0) === 0 ? 1 : 0);
   const library = new Map(state.games.map((g) => [g.appId, g]));
   const unique = new Map(

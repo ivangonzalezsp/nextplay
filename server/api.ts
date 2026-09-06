@@ -12,11 +12,13 @@ import {
   parseFilters,
   parsePreference,
   parseProfile,
+  parseTastes,
   selectCandidates,
   validatePicks,
 } from './selection.ts';
 import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import type { Game, Snapshot, State } from '../lib/model.ts';
+import { buildTasteProfile } from '../lib/tastes.ts';
 import {
   mergeLibraries,
   refreshLibraries,
@@ -73,6 +75,7 @@ async function snapshot(
   const c = await config();
   return {
     ...state,
+    tasteProfile: buildTasteProfile(state),
     setup: {
       steam: !!c.steam,
       family: !!c.familyToken,
@@ -97,6 +100,12 @@ export async function handle(request: Request): Promise<Response> {
     const payload = await body(request);
     const result = await exclusive(async () => {
       const state = await readState();
+      if (path === '/api/tastes' && request.method === 'PATCH') {
+        state.tastes = parseTastes(payload, state);
+        state.conversation = [];
+        await saveState(state);
+        return snapshot(state);
+      }
       if (path === '/api/state' && request.method === 'PATCH') {
         if (
           typeof payload.appId !== 'number' ||

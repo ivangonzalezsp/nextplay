@@ -964,3 +964,58 @@ h1 {
     transition: none !important;
   }
 }
+.tastes-panel {
+  display: grid;
+  gap: 14px;
+}
+.tastes-panel fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.tastes-panel output {
+  display: block;
+  margin-top: 10px;
+}
+.taste-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 14px;
+}
+.taste-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+  overflow-wrap: anywhere;
+}
+.taste-card h3 {
+  margin: 0 0 10px;
+}
+.taste-card label {
+  display: block;
+  margin: 12px 0 8px;
+}
+.taste-card select {
+  width: 100%;
+  white-space: normal;
+}
+.taste-card ul {
+  padding-left: 18px;
+  font-size: 0.875rem;
+  margin-top: 12px;
+}
+.taste-hours label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.taste-hours input {
+  flex-shrink: 0;
+}
+@media (max-width: 520px) {
+  .view-navigation [role='tablist'] {
+    flex-wrap: wrap;
+    height: auto;
+  }
+}

@@ -1,6 +1,19 @@
 export type Mode = 'today' | 'next';
 export type GameStatus = 'pending' | 'completed' | 'abandoned' | 'ignored';
 export type Preference = { favorite: boolean; status: GameStatus };
+export type TasteChoice = 'auto' | 'like' | 'neutral' | 'dislike';
+export type TasteSettings = {
+  overrides: Record<string, TasteChoice>;
+  ignoredHours: number[];
+  notes: string;
+};
+export type TasteAffinity = {
+  id: string;
+  label: string;
+  inferred: number;
+  choice: TasteChoice;
+  evidence: { appId: number; name: string; hours: number; favorite: boolean }[];
+};
 export type Filters = {
   mode: Mode;
   minutes: number | null;
@@ -74,6 +87,7 @@ export type State = {
   } | null;
   games: Game[];
   preferences: Record<string, Preference>;
+  tastes?: TasteSettings;
   conversation: Turn[];
   filters: Filters;
 };
@@ -84,7 +98,11 @@ export type Setup = {
   codex: boolean;
   codexMessage: string;
 };
-export type Snapshot = State & { setup: Setup; warnings: string[] };
+export type Snapshot = State & {
+  setup: Setup;
+  warnings: string[];
+  tasteProfile?: TasteAffinity[];
+};
 export const EMPTY_STATE: State = {
   version: 1,
   profile: null,

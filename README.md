@@ -50,6 +50,14 @@ Steam decide qué títulos admite en préstamo. Los excluidos y los juegos que e
 
 La biblioteca familiar se refresca después de 24 horas al pedir recomendaciones, y también con **Actualizar Steam Families**. Si el token caduca o Steam falla, se conserva la última lectura y se indica el problema. Si Steam confirma que ya no perteneces a un grupo, se retiran los préstamos y se mantienen las preferencias. Esta integración utiliza servicios de Steam Families sin un contrato público estable y puede requerir ajustes si Steam cambia su interfaz.
 
+### Tus gustos
+
+La pestaña **Tus gustos** calcula un perfil provisional con los géneros y descripciones de IGDB de tus juegos. Las reglas de clasificación son aproximadas y visibles en `lib/tastes.ts`; no afirman que una característica esté confirmada. Cada afinidad usa hasta cinco juegos de referencia. Las horas aportan `log(1 + horas) / log(501)`, con un máximo de 1 por juego; un favorito aporta 2. El peso histórico es la suma dividida entre cinco, limitada a 1. No es una probabilidad. Se agrupan títulos con sufijos de edición reconocibles y coincidencias de ID de IGDB; las ediciones con nombres e identificadores distintos pueden requerir excluir sus horas manualmente.
+
+Puedes **priorizar**, **neutralizar** o **reducir** una afinidad, excluir las horas de juegos que no representan tus gustos y guardar notas para Codex. Excluir horas conserva el juego en la biblioteca y no anula un favorito explícito. Las notas llegan a Codex; los controles de afinidad y horas cambian también la preselección. Las correcciones se guardan en `data/state.json`, sobreviven a sincronizaciones y nuevas búsquedas, y al guardarlas se retiran las propuestas anteriores.
+
+La puntuación de preselección da 80 a una mención del nombre, 40 a un favorito, hasta ±16 por afinidades corregidas, hasta 6 por inferencias, 1 por actividad reciente de una lectura vigente y 1 por un juego sin horas. Primero se aplican los filtros y exclusiones. Los descubrimientos también utilizan las referencias del perfil. Codex recibe las afinidades, sus evidencias y las notas; la petición actual y los filtros prevalecen. No se entrena un modelo ni se consumen llamadas a Codex para calcular el perfil.
+
 ### Recomendaciones
 
 - **Para hoy:** tiempo de sesión y lo que te apetece. La adecuación a ese tiempo es una valoración orientativa.

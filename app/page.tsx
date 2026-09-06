@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
+import Tastes from './tastes';
 // Covers already use source thumbnails; this local Node app has no image optimizer.
 /* oxlint-disable next/no-img-element */
 import {
@@ -720,11 +721,28 @@ export default function Home() {
                   <TabsTrigger value="library">
                     <Library size={17} /> Tu biblioteca
                   </TabsTrigger>
+                  <TabsTrigger value="tastes">
+                    <Star size={17} /> Tus gustos
+                  </TabsTrigger>
                 </TabsList>
                 <span className="subtle-label">
                   Una elección que encaja contigo
                 </span>
               </div>
+              <TabsContent value="tastes">
+                {state && (
+                  <Tastes
+                    key={JSON.stringify(state.tastes)}
+                    state={state}
+                    busy={!!busy}
+                    onSave={(settings) =>
+                      action('tastes', async () => {
+                        accept(await api('tastes', settings, 'PATCH'));
+                      })
+                    }
+                  />
+                )}
+              </TabsContent>
               <TabsContent value="recommend">
                 {loading ? (
                   <div className="empty-state">

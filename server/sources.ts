@@ -3,6 +3,11 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { AppError, atomicJson, config, dataDir, readJson } from './store.ts';
 import { parseProfile } from './selection.ts';
 import type { Game, Profile, State } from '../lib/model.ts';
+import {
+  affinityScore,
+  buildTasteProfile,
+  tasteEvidence,
+} from '../lib/tastes.ts';
 
 export const DAY = 86_400_000;
 type Cache = {
@@ -458,23 +463,17 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
 }
 export async function discover(state: State, cache: Cache): Promise<Game[]> {
   const d = await dictionary();
-  const preferred = state.games.filter(
-    (g) => state.preferences[g.appId]?.favorite,
-  );
-  const seeds = (
-    preferred.length
-      ? preferred
-      : state.games
-          .filter(
-            (g) =>
-              !['ignored', 'abandoned'].includes(
-                state.preferences[g.appId]?.status ?? '',
-              ),
-          )
-          .toSorted(
-            (a, b) => (b.playtimeMinutes ?? 0) - (a.playtimeMinutes ?? 0),
-          )
-  ).slice(0, 12);
+  const profile = buildTasteProfile(state);
+  const seeds = tasteEvidence(state)
+    .sort(
+      (a, b) =>
+        Number(b.favorite) * 40 +
+        affinityScore(b.game, profile) +
+        b.weight -
+        (Number(a.favorite) * 40 + affinityScore(a.game, profile) + a.weight),
+    )
+    .slice(0, 12)
+    .map((e) => e.game);
   const related = ids(seeds.flatMap((g) => g.similarIds ?? []).slice(0, 100));
   const genres = ids(
     seeds.flatMap((g) => (g.genres ?? []).map((x) => x.id)).slice(0, 20),
