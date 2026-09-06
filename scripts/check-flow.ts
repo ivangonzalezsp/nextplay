@@ -11,8 +11,10 @@ import { handle } from '../server/api.ts';
 const root = resolve(tmpdir());
 const dir = await mkdtemp(join(root, 'nextplay-live-'));
 const oldDir = process.env.NEXTPLAY_DATA_DIR,
+  oldPython = process.env.NEXTPLAY_PYTHON,
   originalFetch = globalThis.fetch;
 process.env.NEXTPLAY_DATA_DIR = dir;
+process.env.NEXTPLAY_PYTHON = join(dir, 'python-disabled');
 const game = (appId: number, durationHours: number): Game => ({
   appId,
   name: 'Juego de prueba ' + appId,
@@ -90,6 +92,8 @@ try {
     'Conversación y preferencias conservadas después de releer el estado.',
   );
 } finally {
+  if (oldPython === undefined) delete process.env.NEXTPLAY_PYTHON;
+  else process.env.NEXTPLAY_PYTHON = oldPython;
   globalThis.fetch = originalFetch;
   if (oldDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
   else process.env.NEXTPLAY_DATA_DIR = oldDir;

@@ -19,6 +19,14 @@ import {
 import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import type { Game, Snapshot, State } from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
+import { inLibrary } from '../lib/model.ts';
+import {
+  expireHltbCache,
+  getHltbCache,
+  hltbAvailable,
+  refreshHltb,
+  withHltb,
+} from './hltb.ts';
 import {
   mergeLibraries,
   refreshLibraries,
@@ -80,6 +88,7 @@ async function snapshot(
       steam: !!c.steam,
       family: !!c.familyToken,
       igdb: !!c.clientId && !!c.clientSecret,
+      hltb: await hltbAvailable(),
       ...(await codexStatus()),
     },
     warnings,
@@ -180,7 +189,10 @@ export async function handle(request: Request): Promise<Response> {
           );
         const enriched = await enrich(next.games, cache, payload.force);
         next.games = enriched.games;
-        if (payload.force) cache.reviewsRefreshAfter = Date.now();
+        if (payload.force) {
+          cache.reviewsRefreshAfter = Date.now();
+          await expireHltbCache();
+        }
         await saveCache(cache);
         await saveState(next);
         return snapshot(next, [...warnings, ...enriched.warnings]);
@@ -268,6 +280,31 @@ export async function handle(request: Request): Promise<Response> {
               'No se han podido buscar nuevos descubrimientos. La selección continúa con tu biblioteca.',
             );
           }
+        }
+        const durations = await getHltbCache();
+        state.games = withHltb(state.games, durations);
+        discoveries = withHltb(discoveries, durations);
+        if (await hltbAvailable()) {
+          // Acquire missing durations before applying the final story cap.
+          const preliminary = selectCandidates(
+            state,
+            discoveries,
+            { ...filters, hours: null },
+            payload.text,
+          );
+          const priority = [
+            ...preliminary.filter(inLibrary).slice(0, 6),
+            ...preliminary.filter((g) => !inLibrary(g)).slice(0, 2),
+            ...preliminary,
+          ];
+          warnings.push(
+            ...(await refreshHltb(
+              [...new Map(priority.map((g) => [g.appId, g])).values()],
+              durations,
+            )),
+          );
+          state.games = withHltb(state.games, durations);
+          discoveries = withHltb(discoveries, durations);
         }
         const candidates = selectCandidates(
           state,

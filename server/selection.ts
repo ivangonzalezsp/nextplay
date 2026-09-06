@@ -1,5 +1,5 @@
 import { AppError } from './store.ts';
-import { STATUS_LABELS, inLibrary } from '../lib/model.ts';
+import { STATUS_LABELS, inLibrary, storyHours } from '../lib/model.ts';
 import { AFFINITIES, affinityScore, buildTasteProfile } from '../lib/tastes.ts';
 import type { TasteSettings } from '../lib/model.ts';
 import type { Filters, Game, Preference, State, Pick } from '../lib/model.ts';
@@ -135,7 +135,7 @@ export function eligible(game: Game, pref: Preference | undefined, f: Filters) {
   if (
     f.mode === 'next' &&
     f.hours !== null &&
-    (!game.durationHours || game.durationHours > f.hours)
+    (!storyHours(game) || storyHours(game)! > f.hours)
   )
     return false;
   return true;

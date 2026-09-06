@@ -36,7 +36,23 @@ No pegues claves en el chat ni las incluyas en Git. **No necesitas `OPENAI_API_K
 
 El enlace inicial es [fineku](https://steamcommunity.com/id/fineku/). El perfil y los **detalles de juegos** deben ser públicos. Si la API no permite verlos, se conserva la última biblioteca y se muestra un error; esto se distingue de una biblioteca accesible con cero juegos. No se importan contraseñas ni cookies de Steam.
 
-IGDB es opcional para leer la biblioteca, pero necesario para géneros, modos, duración y descubrimientos. Si faltan metadatos, los filtros estrictos que los requieren excluyen esos juegos. Las duraciones usan la media hasta los créditos de IGDB cuando hay aportaciones; nunca se interpretan como duración de una sesión. Las horas de Steam no determinan si te gustó o terminaste un juego.
+IGDB es opcional para leer la biblioteca, pero necesario para géneros, modos y descubrimientos. Si faltan metadatos, los filtros estrictos que los requieren excluyen esos juegos. La duración principal prioriza HowLongToBeat; cuando falta, utiliza la media hasta los créditos de IGDB si hay aportaciones. Nunca se interpreta como duración de una sesión. Las horas de Steam no determinan si te gustó o terminaste un juego.
+
+### HowLongToBeat
+
+Se utiliza [howlongtobeatpy](https://github.com/ScrappyCocco/HowLongToBeat-PythonAPI), mediante un proceso puntual de Python que inicia Node. No necesitas otro servidor ni credenciales de HLTB. La integración se ha probado con Python 3.12. Prepara el entorno desde esta carpeta (ya preparado en este PC):
+
+```powershell
+python -m venv .venv-hltb
+.venv-hltb\Scripts\python.exe -m pip install -r requirements-hltb.txt
+.venv-hltb\Scripts\python.exe tests/hltb_test.py
+```
+
+Por defecto se detecta `.venv-hltb`. Para usar otro entorno, configura `NEXTPLAY_PYTHON` con la ruta absoluta de su ejecutable. El proceso recibe solo nombres e identificadores de juegos; no hereda las claves de Steam, Twitch ni la autenticación de Codex.
+
+Cada recomendación consulta hasta ocho candidatos sin caché vigente, incluyendo descubrimientos cuando existen. La cobertura aumenta con las búsquedas; no se recorre de golpe toda la biblioteca. Los nombres permiten buscar, pero solo se acepta una ficha con el AppID de Steam explícito (principal o alternativo); algunos alternativos comparten las estimaciones de otra edición. Se muestran historia, historia y extras, completista, enlace y fecha. Un tiempo sin aportaciones permanece desconocido.
+
+`data/hltb.json` conserva las consultas durante siete días. **Actualizar biblioteca y datos** marca también HLTB para refrescar en la siguiente recomendación. Si hay bloqueo, límite de peticiones, cambio de formato o error, se conserva la última lectura y se utiliza IGDB cuando falta la historia de HLTB. Esta biblioteca es una integración no oficial y su funcionamiento depende de los cambios de la web.
 
 ## Uso
 

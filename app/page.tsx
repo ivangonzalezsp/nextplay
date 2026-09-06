@@ -40,6 +40,7 @@ import {
   storeUrl,
   inLibrary,
   libraryLabel,
+  storyHours,
 } from '@/lib/model';
 import type {
   Filters,
@@ -156,11 +157,29 @@ function GamePick({
             </span>
           )}
           <span>
-            {game.durationHours
-              ? '≈ ' + game.durationHours + ' h de historia'
+            {storyHours(game)
+              ? '≈ ' +
+                storyHours(game)!.toLocaleString('es', {
+                  maximumFractionDigits: 1,
+                }) +
+                ' h de historia · ' +
+                (game.hltb?.mainHours ? 'HLTB' : 'IGDB')
               : 'Duración sin datos'}
           </span>
         </div>
+        {game.hltb && (
+          <p className="small-note">
+            HLTB · Historia y extras:{' '}
+            {game.hltb.extraHours?.toLocaleString('es', {
+              maximumFractionDigits: 1,
+            }) ?? 'sin datos'}
+            {game.hltb.extraHours ? ' h' : ''} · Completista:{' '}
+            {game.hltb.completionHours?.toLocaleString('es', {
+              maximumFractionDigits: 1,
+            }) ?? 'sin datos'}
+            {game.hltb.completionHours ? ' h' : ''}
+          </p>
+        )}
         <p>{pick.reason}</p>
         <p>{pick.whyNow}</p>
         <p className="caveat">
@@ -184,6 +203,15 @@ function GamePick({
           {game.igdbUrl && (
             <a href={game.igdbUrl} target="_blank" rel="noreferrer">
               Datos de IGDB
+            </a>
+          )}
+          {game.hltb && (
+            <a
+              href={'https://howlongtobeat.com/game/' + game.hltb.id}
+              target="_blank"
+              rel="noreferrer"
+            >
+              HowLongToBeat · {new Date(game.hltb.at).toLocaleDateString('es')}
             </a>
           )}
           {game.reviews && game.reviews.total > 0 && (
@@ -692,6 +720,18 @@ export default function Home() {
               <a href="https://www.igdb.com/" target="_blank" rel="noreferrer">
                 IGDB
               </a>
+              {state?.setup.hltb && (
+                <>
+                  <span>+</span>
+                  <a
+                    href="https://howlongtobeat.com/"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    HLTB
+                  </a>
+                </>
+              )}
             </div>
           </aside>
           <div className="main-column">
@@ -812,7 +852,8 @@ export default function Home() {
                     )}
                     <p className="small-note">
                       Motivos y afinidad: valoración de IA. Duraciones estimadas
-                      de IGDB; no indican cuánto dura una sesión.
+                      de IGDB y HowLongToBeat; no indican cuánto dura una
+                      sesión.
                     </p>
                   </div>
                 )}

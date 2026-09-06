@@ -48,6 +48,13 @@ export type Game = {
   gameModes?: number[];
   durationHours?: number | null;
   durationSamples?: number;
+  hltb?: {
+    id: number;
+    mainHours: number | null;
+    extraHours: number | null;
+    completionHours: number | null;
+    at: number;
+  };
   similarIds?: number[];
   released?: boolean;
   isGame?: boolean;
@@ -95,6 +102,7 @@ export type Setup = {
   steam: boolean;
   family: boolean;
   igdb: boolean;
+  hltb?: boolean;
   codex: boolean;
   codexMessage: string;
 };
@@ -120,6 +128,8 @@ export const STATUS_LABELS: Record<GameStatus, string> = {
 };
 export const storeUrl = (appId: number) =>
   `https://store.steampowered.com/app/${appId}/`;
+export const storyHours = (game: Game) =>
+  game.hltb?.mainHours ?? game.durationHours;
 export const inLibrary = (game: Game) => game.owned || game.shared === true;
 export const libraryLabel = (game: Game) =>
   game.owned
