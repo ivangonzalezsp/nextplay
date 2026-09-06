@@ -1,6 +1,38 @@
 export type Mode = 'today' | 'next';
 export type GameStatus = 'pending' | 'completed' | 'abandoned' | 'ignored';
 export type Preference = { favorite: boolean; status: GameStatus };
+export const CODEX_EFFORTS = [
+  'low',
+  'medium',
+  'high',
+  'xhigh',
+  'max',
+  'ultra',
+] as const;
+export type CodexEffort = (typeof CODEX_EFFORTS)[number];
+export const CODEX_MODELS = [
+  { value: 'gpt-5.6-luna', label: 'GPT-5.6 Luna · rápido' },
+  { value: 'gpt-5.6-terra', label: 'GPT-5.6 Terra · equilibrado' },
+  { value: 'gpt-5.6-sol', label: 'GPT-5.6 Sol · profesional' },
+  { value: 'gpt-6-astra', label: 'GPT-6 Astra · máxima capacidad' },
+  { value: 'gpt-5.5', label: 'GPT-5.5' },
+  { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini · ligero' },
+] as const;
+const CODEX_MODEL_EFFORTS: Record<string, readonly CodexEffort[]> = {
+  'gpt-6-astra': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+  'gpt-5.6-sol': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+  'gpt-5.6-terra': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+  'gpt-5.6-luna': ['low', 'medium', 'high', 'xhigh', 'max'],
+  'gpt-5.5': ['low', 'medium', 'high', 'xhigh'],
+  'gpt-5.4-mini': ['low', 'medium', 'high', 'xhigh'],
+};
+export const codexEffortsForModel = (model: string) =>
+  CODEX_MODEL_EFFORTS[model] ?? CODEX_EFFORTS;
+export type CodexSettings = { model: string; effort: CodexEffort };
+export const DEFAULT_CODEX_SETTINGS: CodexSettings = {
+  model: 'gpt-5.6-luna',
+  effort: 'medium',
+};
 export type TasteChoice = 'auto' | 'like' | 'neutral' | 'dislike';
 export type TasteSettings = {
   overrides: Record<string, TasteChoice>;
@@ -95,6 +127,7 @@ export type State = {
   games: Game[];
   preferences: Record<string, Preference>;
   tastes?: TasteSettings;
+  codex?: CodexSettings;
   conversation: Turn[];
   filters: Filters;
 };
@@ -105,6 +138,8 @@ export type Setup = {
   hltb?: boolean;
   codex: boolean;
   codexMessage: string;
+  codexModel: string;
+  codexEffort: CodexEffort;
 };
 export type Snapshot = State & {
   setup: Setup;
@@ -117,6 +152,7 @@ export const EMPTY_STATE: State = {
   syncedAt: null,
   games: [],
   preferences: {},
+  codex: DEFAULT_CODEX_SETTINGS,
   conversation: [],
   filters: DEFAULT_FILTERS,
 };

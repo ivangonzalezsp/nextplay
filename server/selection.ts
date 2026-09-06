@@ -1,8 +1,39 @@
 import { AppError } from './store.ts';
-import { STATUS_LABELS, inLibrary, storyHours } from '../lib/model.ts';
+import {
+  CODEX_EFFORTS,
+  STATUS_LABELS,
+  codexEffortsForModel,
+  inLibrary,
+  storyHours,
+} from '../lib/model.ts';
 import { AFFINITIES, affinityScore, buildTasteProfile } from '../lib/tastes.ts';
-import type { TasteSettings } from '../lib/model.ts';
+import type {
+  CodexEffort,
+  CodexSettings,
+  TasteSettings,
+} from '../lib/model.ts';
 import type { Filters, Game, Preference, State, Pick } from '../lib/model.ts';
+
+const codexModelPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,100}$/;
+
+export function parseCodexSettings(
+  value: unknown,
+  fallback: CodexSettings,
+): CodexSettings {
+  const v = (value === undefined ? fallback : value) as {
+    model?: unknown;
+    effort?: unknown;
+  };
+  const model = typeof v?.model === 'string' ? v.model.trim() : '';
+  const effort = v?.effort as CodexEffort;
+  if (
+    !codexModelPattern.test(model) ||
+    !CODEX_EFFORTS.includes(effort) ||
+    !codexEffortsForModel(model).includes(effort)
+  )
+    throw new AppError('El modelo o el esfuerzo de Codex no es válido.');
+  return { model, effort };
+}
 
 export function parseProfile(input: unknown) {
   if (typeof input !== 'string' || input.length > 300)

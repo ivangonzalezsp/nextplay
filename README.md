@@ -88,7 +88,7 @@ La puntuación de preselección da 80 a una mención del nombre, 40 a un favorit
 
 El servidor envía a Codex únicamente candidatos, preferencias y conversación, nunca las claves de Steam o Twitch. Utiliza el ejecutable oficial, entrada estándar, sesión efímera, autenticación forzada a ChatGPT y salida JSON validada. Las herramientas de comandos, conectores y búsqueda web están desactivadas. Se comparte el cupo de tu cuenta de Codex.
 
-El modelo inicial es `gpt-5.6-luna`; puedes cambiar `NEXTPLAY_CODEX_MODEL` en `.env.local` por otro disponible en tu cuenta. Si Codex está instalado fuera de las ubicaciones habituales, configura `NEXTPLAY_CODEX_BIN` en el entorno con la ruta absoluta a su ejecutable nativo (`codex.exe` en Windows).
+El modelo inicial es `gpt-5.6-luna`; puedes elegir el modelo y el esfuerzo de razonamiento junto a los filtros. La última selección usada en una consulta se conserva en `data/state.json`. También puedes cambiar `NEXTPLAY_CODEX_MODEL` en `.env.local` por otro disponible en tu cuenta. Si Codex está instalado fuera de las ubicaciones habituales, configura `NEXTPLAY_CODEX_BIN` en el entorno con la ruta absoluta a su ejecutable nativo (`codex.exe` en Windows).
 
 Si aparece «no puede localizar tu carpeta de usuario», ejecuta la aplicación desde una terminal normal de tu sesión de Windows. No copies archivos de autenticación ni uses otra cuenta. `codex login status` debe indicar **Logged in using ChatGPT**.
 

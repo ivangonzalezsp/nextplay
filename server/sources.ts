@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AppError, atomicJson, config, dataDir, readJson } from './store.ts';
 import { parseProfile } from './selection.ts';
+import { log, logError } from '../lib/log.ts';
 import type { Game, Profile, State } from '../lib/model.ts';
 import {
   affinityScore,
@@ -75,6 +76,14 @@ export async function json<T>(
   fetcher: Fetcher = fetch,
   authMessage?: string,
 ): Promise<T> {
+  const parsedUrl = new URL(url.toString());
+  const source = {
+    host: parsedUrl.hostname,
+    path: parsedUrl.pathname,
+    method: init.method ?? 'GET',
+  };
+  const started = Date.now();
+  log('server', 'source:request', source);
   let response: Response;
   try {
     response = await fetcher(url, {
@@ -82,13 +91,22 @@ export async function json<T>(
       redirect: 'error',
       signal: AbortSignal.timeout(20_000),
     });
-  } catch {
+  } catch (e) {
+    logError('server', 'source:network-error', e, {
+      ...source,
+      ms: Date.now() - started,
+    });
     throw new AppError(
       'No se ha podido conectar con una fuente de datos. Se conservan los datos anteriores.',
       502,
     );
   }
   if (!response.ok) {
+    log('server', 'source:response-error', {
+      ...source,
+      status: response.status,
+      ms: Date.now() - started,
+    });
     if ([401, 403].includes(response.status))
       throw new AppError(
         authMessage ||
@@ -103,8 +121,19 @@ export async function json<T>(
     );
   }
   try {
-    return await response.json();
-  } catch {
+    const result = await response.json();
+    log('server', 'source:response', {
+      ...source,
+      status: response.status,
+      ms: Date.now() - started,
+    });
+    return result;
+  } catch (e) {
+    logError('server', 'source:invalid-response', e, {
+      ...source,
+      status: response.status,
+      ms: Date.now() - started,
+    });
     throw new AppError('La fuente devolvió datos que no se pueden leer.', 502);
   }
 }

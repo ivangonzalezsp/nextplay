@@ -21,6 +21,7 @@ import {
   RotateCcw,
   AlertCircle,
   LoaderCircle,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,14 +36,19 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
+  CODEX_MODELS,
   DEFAULT_FILTERS,
+  DEFAULT_CODEX_SETTINGS,
   STATUS_LABELS,
+  codexEffortsForModel,
   storeUrl,
   inLibrary,
   libraryLabel,
   storyHours,
 } from '@/lib/model';
+import { log, logError } from '@/lib/log';
 import type {
+  CodexSettings,
   Filters,
   Game,
   GameStatus,
@@ -53,19 +59,61 @@ import type {
 } from '@/lib/model';
 
 async function api(path: string, body?: unknown, method = 'POST') {
-  const response = await fetch(
-    '/api/' + path,
-    body === undefined
-      ? undefined
-      : {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        },
-  );
-  const data = await response.json();
-  if (!response.ok)
-    throw new Error(data.error || 'No se ha podido completar la solicitud.');
+  const request = {
+    method: body === undefined ? 'GET' : method,
+    path: '/api/' + path,
+    ...(body && typeof body === 'object' && !Array.isArray(body)
+      ? { fields: Object.keys(body) }
+      : {}),
+  };
+  const started = Date.now();
+  log('browser', 'api:start', request);
+  let response: Response;
+  try {
+    response = await fetch(
+      request.path,
+      body === undefined
+        ? undefined
+        : {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          },
+    );
+  } catch (e) {
+    logError('browser', 'api:network-error', e, {
+      ...request,
+      ms: Date.now() - started,
+    });
+    throw e;
+  }
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    logError('browser', 'api:invalid-response', e, {
+      ...request,
+      status: response.status,
+      ms: Date.now() - started,
+    });
+    throw e;
+  }
+  if (!response.ok) {
+    const error = new Error(
+      data.error || 'No se ha podido completar la solicitud.',
+    );
+    logError('browser', 'api:failed', error, {
+      ...request,
+      status: response.status,
+      ms: Date.now() - started,
+    });
+    throw error;
+  }
+  log('browser', 'api:complete', {
+    ...request,
+    status: response.status,
+    ms: Date.now() - started,
+  });
   return data;
 }
 function Choice({
@@ -118,7 +166,10 @@ function Cover({ game }: { game: Game }) {
           src={game.cover}
           alt=""
           loading="lazy"
-          onError={() => setFailed(true)}
+          onError={() => {
+            log('browser', 'cover:failed', { appId: game.appId });
+            setFailed(true);
+          }}
         />
       ) : (
         <Gamepad2 aria-hidden="true" />
@@ -129,9 +180,15 @@ function Cover({ game }: { game: Game }) {
 function GamePick({
   pick,
   main,
+  status,
+  onStatus,
+  busy,
 }: {
   pick: Pick & { game: Game };
   main?: boolean;
+  status?: GameStatus;
+  onStatus?: (status: GameStatus) => void;
+  busy?: boolean;
 }) {
   const { game } = pick;
   return (
@@ -186,6 +243,31 @@ function GamePick({
           <strong>A tener en cuenta: </strong>
           {pick.caveat}
         </p>
+        {onStatus && (
+          <div
+            className="pick-actions"
+            aria-label={'Acciones para ' + game.name}
+          >
+            <Button
+              variant={status === 'completed' ? 'secondary' : 'outline'}
+              size="sm"
+              disabled={busy}
+              aria-pressed={status === 'completed'}
+              onClick={() => onStatus('completed')}
+            >
+              <Check size={15} /> Ya jugado
+            </Button>
+            <Button
+              variant={status === 'ignored' ? 'destructive' : 'outline'}
+              size="sm"
+              disabled={busy}
+              aria-pressed={status === 'ignored'}
+              onClick={() => onStatus('ignored')}
+            >
+              <X size={15} /> No me interesa
+            </Button>
+          </div>
+        )}
         {game.shared && (
           <p className="small-note">
             La disponibilidad de una copia libre se comprueba al abrir Steam.
@@ -229,6 +311,7 @@ function GamePick({
 export default function Home() {
   const [state, setState] = useState<Snapshot | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+  const [codex, setCodex] = useState<CodexSettings>(DEFAULT_CODEX_SETTINGS);
   const [profileUrl, setProfileUrl] = useState(
     'https://steamcommunity.com/id/fineku/',
   );
@@ -242,27 +325,65 @@ export default function Home() {
   const [result, setResult] = useState<Recommendation | null>(null);
   const [tab, setTab] = useState('recommend');
   const activeFilters = useRef(filters);
+  const activeCodex = useRef(codex);
   useEffect(() => {
     activeFilters.current = filters;
+    log('browser', 'filters:changed', filters);
   }, [filters]);
+  useEffect(() => {
+    activeCodex.current = codex;
+    log('browser', 'codex:changed', codex);
+  }, [codex]);
+  useEffect(() => {
+    log('browser', 'view:changed', { tab });
+  }, [tab]);
   function accept(next: Snapshot) {
+    log('browser', 'state:accepted', {
+      games: next.games.length,
+      conversation: next.conversation.length,
+      warnings: next.warnings.length,
+      setup: {
+        steam: next.setup.steam,
+        family: next.setup.family,
+        igdb: next.setup.igdb,
+        hltb: next.setup.hltb,
+        codex: next.setup.codex,
+      },
+    });
     setState(next);
     setResult(next.conversation.at(-1)?.result ?? null);
+    if (next.codex) setCodex(next.codex);
   }
   async function load() {
     const next: Snapshot = await api('state');
     accept(next);
     setFilters(next.filters);
+    setCodex(
+      next.codex ?? {
+        model: next.setup.codexModel,
+        effort: next.setup.codexEffort,
+      },
+    );
     if (next.profile) setProfileUrl(next.profile.url);
   }
   useEffect(() => {
+    log('browser', 'app:mounted');
     void api('state')
       .then((next: Snapshot) => {
         accept(next);
         setFilters(next.filters);
+        setCodex(
+          next.codex ?? {
+            model: next.setup.codexModel,
+            effort: next.setup.codexEffort,
+          },
+        );
         if (next.profile) setProfileUrl(next.profile.url);
       })
-      .catch((e) => setError(e.message))
+      .catch((e) => {
+        logError('browser', 'app:load-failed', e);
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => {
@@ -276,15 +397,21 @@ export default function Home() {
         };
       }
     ).modelContext;
-    if (!context?.registerTool) return;
+    if (!context?.registerTool) {
+      log('browser', 'webmcp:unavailable');
+      return;
+    }
+    log('browser', 'webmcp:register:start');
     const lifecycle = new AbortController();
     const register = (tool: object) => {
       try {
         void Promise.resolve(
           context.registerTool(tool, { signal: lifecycle.signal }),
-        ).catch(() => {});
-      } catch {
-        /* Ordinary browsers do not need WebMCP. */
+        )
+          .then(() => log('browser', 'webmcp:register:complete'))
+          .catch((e) => logError('browser', 'webmcp:register-failed', e));
+      } catch (e) {
+        logError('browser', 'webmcp:register-failed', e);
       }
     };
     register({
@@ -298,9 +425,16 @@ export default function Home() {
       },
       annotations: { readOnlyHint: true, untrustedContentHint: true },
       async execute(input: unknown) {
+        log('browser', 'webmcp:tool:start', {
+          name: 'get_library_summary',
+        });
         if (!input || typeof input !== 'object' || Object.keys(input).length)
           throw new Error('Este comando no acepta parámetros.');
         const next: Snapshot = await api('state');
+        log('browser', 'webmcp:tool:complete', {
+          name: 'get_library_summary',
+          games: next.games.length,
+        });
         return {
           profile: next.profile?.name ?? null,
           games: next.games.length,
@@ -321,6 +455,9 @@ export default function Home() {
       },
       annotations: { readOnlyHint: false, untrustedContentHint: true },
       async execute(input: unknown) {
+        log('browser', 'webmcp:tool:start', {
+          name: 'request_game_recommendations',
+        });
         const data = input as { message?: unknown };
         if (
           !data ||
@@ -334,6 +471,7 @@ export default function Home() {
         try {
           const next: Snapshot = await api('recommendations', {
             filters: activeFilters.current,
+            codex: activeCodex.current,
             text: data.message,
           });
           flushSync(() => {
@@ -353,11 +491,18 @@ export default function Home() {
     return () => lifecycle.abort();
   }, []);
   async function action(name: string, fn: () => Promise<void>) {
+    const started = Date.now();
+    log('browser', 'action:start', { name });
     setBusy(name);
     setError('');
     try {
       await fn();
+      log('browser', 'action:complete', { name, ms: Date.now() - started });
     } catch (e) {
+      logError('browser', 'action:failed', e, {
+        name,
+        ms: Date.now() - started,
+      });
       setError(
         e instanceof Error
           ? e.message
@@ -365,6 +510,7 @@ export default function Home() {
       );
     } finally {
       setBusy('');
+      log('browser', 'action:end', { name, ms: Date.now() - started });
     }
   }
   async function sync() {
@@ -374,7 +520,13 @@ export default function Home() {
   }
   async function recommend(message = text) {
     await action('recommend', async () => {
-      accept(await api('recommendations', { filters, text: message }));
+      accept(
+        await api('recommendations', {
+          filters,
+          codex,
+          text: message,
+        }),
+      );
       setText('');
       setTab('recommend');
     });
@@ -427,6 +579,27 @@ export default function Home() {
             ? g.shared
             : g.ownerSteamIds?.includes(libraryOwner))),
   );
+  const modelOptions = [
+    ...CODEX_MODELS,
+    ...(CODEX_MODELS.some((m) => m.value === codex.model)
+      ? []
+      : [{ value: codex.model, label: codex.model + ' · configurado' }]),
+  ];
+  const effortOptions = codexEffortsForModel(codex.model).map((value) => ({
+    value,
+    label:
+      value === 'low'
+        ? 'Bajo · más rápido'
+        : value === 'medium'
+          ? 'Medio · equilibrado'
+          : value === 'high'
+            ? 'Alto · más razonado'
+            : value === 'xhigh'
+              ? 'Muy alto'
+              : value === 'max'
+                ? 'Máximo'
+                : 'Ultra',
+  }));
   const canRecommend = games.length > 0 && state?.setup.codex;
   return (
     <div className="app-shell">
@@ -586,6 +759,33 @@ export default function Home() {
                 />{' '}
                 Incluir terminados y abandonados
               </label>
+              <Choice
+                id="codex-model"
+                label="Modelo"
+                value={codex.model}
+                onChange={(model) => {
+                  const efforts = codexEffortsForModel(model);
+                  setCodex({
+                    model,
+                    effort: efforts.includes(codex.effort)
+                      ? codex.effort
+                      : 'medium',
+                  });
+                }}
+                options={modelOptions}
+              />
+              <Choice
+                id="codex-effort"
+                label="Esfuerzo de razonamiento"
+                value={codex.effort}
+                onChange={(effort) =>
+                  setCodex({
+                    ...codex,
+                    effort: effort as CodexSettings['effort'],
+                  })
+                }
+                options={effortOptions}
+              />
               <Button
                 className="recommend-button"
                 disabled={!canRecommend || !!busy}
@@ -835,7 +1035,16 @@ export default function Home() {
                       </Button>
                     </div>
                     {result.owned.map((pick, i) => (
-                      <GamePick key={pick.appId} pick={pick} main={i === 0} />
+                      <GamePick
+                        key={pick.appId}
+                        pick={pick}
+                        main={i === 0}
+                        status={state?.preferences[pick.appId]?.status}
+                        busy={!!busy}
+                        onStatus={(status) => {
+                          void preference(pick.game, { status });
+                        }}
+                      />
                     ))}
                     {result.discoveries.length > 0 && (
                       <>
@@ -845,7 +1054,15 @@ export default function Home() {
                         </div>
                         <div className="discoveries">
                           {result.discoveries.map((pick) => (
-                            <GamePick key={pick.appId} pick={pick} />
+                            <GamePick
+                              key={pick.appId}
+                              pick={pick}
+                              status={state?.preferences[pick.appId]?.status}
+                              busy={!!busy}
+                              onStatus={(status) => {
+                                void preference(pick.game, { status });
+                              }}
+                            />
                           ))}
                         </div>
                       </>
@@ -1013,7 +1230,8 @@ export default function Home() {
                   </form>
                   <div className="chat-footnote">
                     <span>
-                      <span className="status-dot" /> Codex · tu cuenta
+                      <span className="status-dot" /> Codex · {codex.model} ·{' '}
+                      {codex.effort}
                     </span>
                     <span>
                       {busy === 'recommend'

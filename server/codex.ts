@@ -10,8 +10,9 @@ import {
 import { homedir } from 'node:os';
 import { delimiter, isAbsolute, join, resolve } from 'node:path';
 import { AppError, config, dataDir } from './store.ts';
-import type { Filters, Game, State } from '../lib/model.ts';
-import { storyHours } from '../lib/model.ts';
+import { log, logError } from '../lib/log.ts';
+import type { CodexSettings, Filters, Game, State } from '../lib/model.ts';
+import { DEFAULT_CODEX_SETTINGS, storyHours } from '../lib/model.ts';
 import { buildTasteProfile, gameAffinities } from '../lib/tastes.ts';
 
 export async function codexBinary() {
@@ -26,6 +27,7 @@ export async function codexBinary() {
         503,
       );
     await access(custom);
+    log('server', 'codex:binary:found', { source: 'custom' });
     return custom;
   }
   const candidates = (process.env.PATH ?? '')
@@ -41,11 +43,13 @@ export async function codexBinary() {
   for (const path of candidates) {
     try {
       await access(path);
+      log('server', 'codex:binary:found', { source: 'path' });
       return path;
     } catch {
       /* Try the next installed executable. */
     }
   }
+  log('server', 'codex:binary:missing');
   throw new AppError(
     'No se encuentra Codex CLI. Instálalo y ejecuta codex login con ChatGPT.',
     503,
@@ -80,9 +84,15 @@ function codexEnv() {
 export async function runProcess(
   args: string[],
   input = '',
-  timeout = 120_000,
+  timeout?: number,
   cwd = process.cwd(),
 ) {
+  const command = args[0] ?? 'codex';
+  const started = Date.now();
+  log('server', 'codex:process:start', {
+    command,
+    ...(timeout === undefined ? {} : { timeout }),
+  });
   const binary = await codexBinary();
   return new Promise<string>((resolveRun, reject) => {
     const child = spawn(binary, args, {
@@ -95,25 +105,37 @@ export async function runProcess(
     let stdout = '',
       stderr = '',
       done = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const finish = (error?: Error) => {
       if (done) return;
       done = true;
-      clearTimeout(timer);
+      if (timer) clearTimeout(timer);
+      const details = {
+        command,
+        ms: Date.now() - started,
+        stdoutBytes: stdout.length,
+        stderrBytes: stderr.length,
+      };
       if (error) {
+        logError('server', 'codex:process:failed', error, details);
         child.kill();
         reject(error);
-      } else resolveRun(stdout || stderr);
+      } else {
+        log('server', 'codex:process:complete', details);
+        resolveRun(stdout || stderr);
+      }
     };
-    const timer = setTimeout(
-      () =>
-        finish(
-          new AppError(
-            'Codex ha tardado demasiado. Tu biblioteca está guardada; vuelve a intentarlo.',
-            504,
+    if (timeout !== undefined)
+      timer = setTimeout(
+        () =>
+          finish(
+            new AppError(
+              'Codex ha tardado demasiado. Tu biblioteca está guardada; vuelve a intentarlo.',
+              504,
+            ),
           ),
-        ),
-      timeout,
-    );
+        timeout,
+      );
     child.on('error', () =>
       finish(
         new AppError(
@@ -264,8 +286,16 @@ DATOS_JSON:\n` +
     })
   );
 }
-export async function askCodex(prompt: string) {
+export async function askCodex(prompt: string, settings?: CodexSettings) {
   const c = await config();
+  const model = settings?.model ?? c.model;
+  const effort = settings?.effort ?? DEFAULT_CODEX_SETTINGS.effort;
+  const started = Date.now();
+  log('server', 'codex:request:start', {
+    model,
+    effort,
+    promptLength: prompt.length,
+  });
   const runRoot = resolve(dataDir(), 'codex-runs');
   await mkdir(runRoot, { recursive: true });
   const dir = await mkdtemp(join(runRoot, 'request-'));
@@ -308,7 +338,9 @@ export async function askCodex(prompt: string) {
         '-c',
         'history.persistence="none"',
         '--model',
-        c.model,
+        model,
+        '-c',
+        `model_reasoning_effort="${effort}"`,
         '--output-schema',
         schemaPath,
         '--output-last-message',
@@ -316,7 +348,7 @@ export async function askCodex(prompt: string) {
         '-',
       ],
       prompt,
-      120_000,
+      undefined,
       dir,
     );
     let result: unknown;
@@ -328,10 +360,23 @@ export async function askCodex(prompt: string) {
         502,
       );
     }
+    log('server', 'codex:request:response', { model, effort });
     return result;
+  } catch (e) {
+    logError('server', 'codex:request:failed', e, {
+      model,
+      effort,
+      ms: Date.now() - started,
+    });
+    throw e;
   } finally {
     // Only remove this invocation's known child directory, never an arbitrary configured path.
     if (dir.startsWith(runRoot + (process.platform === 'win32' ? '\\' : '/')))
       await rm(dir, { recursive: true, force: true });
+    log('server', 'codex:request:end', {
+      model,
+      effort,
+      ms: Date.now() - started,
+    });
   }
 }

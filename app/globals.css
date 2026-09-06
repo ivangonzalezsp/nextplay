@@ -637,6 +637,12 @@ h1 {
   color: #bacbce;
   margin: 12px 0;
 }
+.pick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
 .game-meta {
   display: flex;
   flex-wrap: wrap;

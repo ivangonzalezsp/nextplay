@@ -26,6 +26,7 @@ import {
   readState,
   saveState,
 } from '../server/store.ts';
+import { parseCodexSettings } from '../server/selection.ts';
 import { verifyRequest, handle } from '../server/api.ts';
 import { buildPrompt } from '../server/codex.ts';
 
@@ -126,6 +127,20 @@ void test('Steam URL and preferences are validated at the boundary', () => {
   assert.throws(() => parseFilters({ ...DEFAULT_FILTERS, minutes: -1 }));
   assert.throws(() =>
     parseFilters({ ...DEFAULT_FILTERS, gameMode: 'unknown' }),
+  );
+});
+void test('Codex model and effort are validated at the boundary', () => {
+  const fallback = { model: 'gpt-5.6-luna', effort: 'medium' as const };
+  assert.deepEqual(parseCodexSettings(undefined, fallback), fallback);
+  assert.deepEqual(
+    parseCodexSettings({ model: ' gpt-5.5 ', effort: 'high' }, fallback),
+    { model: 'gpt-5.5', effort: 'high' },
+  );
+  assert.throws(() =>
+    parseCodexSettings({ model: 'gpt-5.5', effort: 'max' }, fallback),
+  );
+  assert.throws(() =>
+    parseCodexSettings({ model: 'gpt-5.5;bad', effort: 'high' }, fallback),
   );
 });
 void test('inaccessible, empty and malformed libraries are different', () => {

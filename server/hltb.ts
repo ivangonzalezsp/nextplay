@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process';
 import { join, resolve, isAbsolute } from 'node:path';
 import { access } from 'node:fs/promises';
 import { AppError, atomicJson, config, dataDir, readJson } from './store.ts';
+import { log, logError } from '../lib/log.ts';
 import type { Game } from '../lib/model.ts';
 
 type Cache = Record<string, { checkedAt: number; data: Game['hltb'] | null }>;
@@ -142,7 +143,15 @@ export async function refreshHltb(
       (g) => force || Date.now() - (cache[g.appId]?.checkedAt ?? 0) >= WEEK,
     )
     .slice(0, 8);
-  if (!missing.length) return [];
+  if (!missing.length) {
+    log('server', 'hltb:refresh:skipped', { games: games.length });
+    return [];
+  }
+  const started = Date.now();
+  log('server', 'hltb:refresh:work', {
+    games: missing.length,
+    force,
+  });
   try {
     const rows = validateHltb(await runner(missing), missing);
     const next = { ...cache };
@@ -155,12 +164,20 @@ export async function refreshHltb(
     }
     await atomicJson(cachePath(), next);
     Object.assign(cache, next);
+    log('server', 'hltb:refresh:stored', {
+      games: rows.length,
+      ms: Date.now() - started,
+    });
     return rows.some((r) => r.data === null)
       ? [
           'No se encontró una correspondencia inequívoca en HLTB para algunos candidatos; se mantiene IGDB o la última lectura válida.',
         ]
       : [];
   } catch (e) {
+    logError('server', 'hltb:refresh:failed', e, {
+      games: missing.length,
+      ms: Date.now() - started,
+    });
     return [
       e instanceof AppError
         ? e.message
