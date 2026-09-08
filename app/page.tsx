@@ -10,6 +10,7 @@ import {
   ArrowRight,
   Gamepad2,
   Library,
+  History,
   Sparkles,
   Clock3,
   Star,
@@ -44,7 +45,8 @@ import {
   storeUrl,
   inLibrary,
   libraryLabel,
-  storyHours,
+  sortLibraryGames,
+  steamTagKey,
 } from '@/lib/model';
 import { log, logError } from '@/lib/log';
 import type {
@@ -52,9 +54,11 @@ import type {
   Filters,
   Game,
   GameStatus,
+  LibraryOrderBy,
   Pick,
   Preference,
   Recommendation,
+  RecommendationEngine,
   Snapshot,
 } from '@/lib/model';
 
@@ -177,6 +181,23 @@ function Cover({ game }: { game: Game }) {
     </div>
   );
 }
+function GameTags({ game }: { game: Game }) {
+  if (!game.steamTags?.length) return null;
+  return (
+    <div className="filter-tags" aria-label="Etiquetas Steam">
+      {game.steamTags.map((tag) => (
+        <span className="filter-tag" key={steamTagKey(tag)}>
+          {tag.name}
+        </span>
+      ))}
+    </div>
+  );
+}
+function formatHours(value: number | null | undefined) {
+  return value == null
+    ? 'sin datos'
+    : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
+}
 function GamePick({
   pick,
   main,
@@ -213,30 +234,21 @@ function GamePick({
               h jugadas
             </span>
           )}
-          <span>
-            {storyHours(game)
-              ? '≈ ' +
-                storyHours(game)!.toLocaleString('es', {
-                  maximumFractionDigits: 1,
-                }) +
-                ' h de historia · ' +
-                (game.hltb?.mainHours ? 'HLTB' : 'IGDB')
-              : 'Duración sin datos'}
-          </span>
+          {game.durationHours != null && (
+            <span>IGDB · ≈ {formatHours(game.durationHours)} de historia</span>
+          )}
+          {game.hltb && (
+            <span>
+              HLTB · Historia: {formatHours(game.hltb.mainHours)} · Historia y
+              extras: {formatHours(game.hltb.extraHours)} · Completista:{' '}
+              {formatHours(game.hltb.completionHours)}
+            </span>
+          )}
+          {game.durationHours == null && !game.hltb && (
+            <span>Duraciones sin datos</span>
+          )}
         </div>
-        {game.hltb && (
-          <p className="small-note">
-            HLTB · Historia y extras:{' '}
-            {game.hltb.extraHours?.toLocaleString('es', {
-              maximumFractionDigits: 1,
-            }) ?? 'sin datos'}
-            {game.hltb.extraHours ? ' h' : ''} · Completista:{' '}
-            {game.hltb.completionHours?.toLocaleString('es', {
-              maximumFractionDigits: 1,
-            }) ?? 'sin datos'}
-            {game.hltb.completionHours ? ' h' : ''}
-          </p>
-        )}
+        <GameTags game={game} />
         <p>{pick.reason}</p>
         <p>{pick.whyNow}</p>
         <p className="caveat">
@@ -253,7 +265,9 @@ function GamePick({
               size="sm"
               disabled={busy}
               aria-pressed={status === 'completed'}
-              onClick={() => onStatus('completed')}
+              onClick={() =>
+                onStatus(status === 'completed' ? 'pending' : 'completed')
+              }
             >
               <Check size={15} /> Ya jugado
             </Button>
@@ -262,7 +276,9 @@ function GamePick({
               size="sm"
               disabled={busy}
               aria-pressed={status === 'ignored'}
-              onClick={() => onStatus('ignored')}
+              onClick={() =>
+                onStatus(status === 'ignored' ? 'pending' : 'ignored')
+              }
             >
               <X size={15} /> No me interesa
             </Button>
@@ -312,12 +328,17 @@ export default function Home() {
   const [state, setState] = useState<Snapshot | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [codex, setCodex] = useState<CodexSettings>(DEFAULT_CODEX_SETTINGS);
+  const [engine, setEngine] = useState<RecommendationEngine>('codex');
   const [profileUrl, setProfileUrl] = useState(
     'https://steamcommunity.com/id/fineku/',
   );
   const [text, setText] = useState('');
   const [search, setSearch] = useState('');
   const [libraryOwner, setLibraryOwner] = useState('');
+  const [libraryTag, setLibraryTag] = useState('');
+  const [tagSearch, setTagSearch] = useState('');
+  const [libraryOrderBy, setLibraryOrderBy] =
+    useState<LibraryOrderBy>('original');
   const [limit, setLimit] = useState(36);
   const [busy, setBusy] = useState('');
   const [loading, setLoading] = useState(true);
@@ -326,6 +347,10 @@ export default function Home() {
   const [tab, setTab] = useState('recommend');
   const activeFilters = useRef(filters);
   const activeCodex = useRef(codex);
+  const activeEngine = useRef(engine);
+  useEffect(() => {
+    activeEngine.current = engine;
+  }, [engine]);
   useEffect(() => {
     activeFilters.current = filters;
     log('browser', 'filters:changed', filters);
@@ -358,6 +383,7 @@ export default function Home() {
     const next: Snapshot = await api('state');
     accept(next);
     setFilters(next.filters);
+    setEngine(next.engine ?? 'codex');
     setCodex(
       next.codex ?? {
         model: next.setup.codexModel,
@@ -372,6 +398,7 @@ export default function Home() {
       .then((next: Snapshot) => {
         accept(next);
         setFilters(next.filters);
+        setEngine(next.engine ?? 'codex');
         setCodex(
           next.codex ?? {
             model: next.setup.codexModel,
@@ -446,7 +473,7 @@ export default function Home() {
     register({
       name: 'request_game_recommendations',
       description:
-        "Request recommendations using the current visible filters and a message; updates the visible results and saves the conversation. Consumes the local user's Codex quota.",
+        'Request recommendations using the visible filters and engine; saves results in history. Codex consumes quota and interprets messages. The local algorithm uses saved tastes and filters without tokens and ignores free text.',
       inputSchema: {
         type: 'object',
         properties: { message: { type: 'string', maxLength: 2000 } },
@@ -472,6 +499,7 @@ export default function Home() {
           const next: Snapshot = await api('recommendations', {
             filters: activeFilters.current,
             codex: activeCodex.current,
+            engine: activeEngine.current,
             text: data.message,
           });
           flushSync(() => {
@@ -524,7 +552,8 @@ export default function Home() {
         await api('recommendations', {
           filters,
           codex,
-          text: message,
+          engine,
+          text: engine === 'local' ? '' : message,
         }),
       );
       setText('');
@@ -569,15 +598,70 @@ export default function Home() {
   const genres = [
     ...new Set(games.flatMap((g) => (g.genres ?? []).map((x) => x.name))),
   ].sort();
+  const steamTags = [
+    ...new Map(
+      games
+        .flatMap((g) => g.steamTags ?? [])
+        .filter((tag) => tag.name.trim())
+        .map((tag) => [
+          steamTagKey(tag),
+          {
+            value: steamTagKey(tag),
+            label:
+              tag.englishName && tag.englishName !== tag.name
+                ? `${tag.name} · ${tag.englishName}`
+                : tag.name,
+          },
+        ]),
+    ).values(),
+  ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+  const tagLabels = new Map(steamTags.map((tag) => [tag.value, tag.label]));
+  const selectedTagKeys = filters.tags ?? [];
+  const tagSuggestions = steamTags.filter(
+    (tag) => !selectedTagKeys.includes(tag.value),
+  );
+  function addTagFilter() {
+    const query = tagSearch.trim().toLocaleLowerCase();
+    if (!query) return;
+    const exact = steamTags.find(
+      (tag) =>
+        tag.value === tagSearch.trim() ||
+        tag.label.toLocaleLowerCase() === query,
+    );
+    const match =
+      exact ??
+      steamTags.find((tag) => tag.label.toLocaleLowerCase().includes(query));
+    if (!match) return;
+    if (!selectedTagKeys.includes(match.value))
+      setFilters({ ...filters, tags: [...selectedTagKeys, match.value] });
+    setTagSearch('');
+  }
+  const searchText = search.toLocaleLowerCase();
   const filtered = games.filter(
     (g) =>
-      g.name.toLocaleLowerCase().includes(search.toLocaleLowerCase()) &&
+      [
+        g.name,
+        ...(g.steamTags ?? []).flatMap((tag) => [
+          tag.name,
+          ...(tag.englishName ? [tag.englishName] : []),
+        ]),
+      ]
+        .join(' ')
+        .toLocaleLowerCase()
+        .includes(searchText) &&
+      (!libraryTag ||
+        (g.steamTags ?? []).some((tag) => steamTagKey(tag) === libraryTag)) &&
       (!libraryOwner ||
         (libraryOwner === 'own'
           ? g.owned
           : libraryOwner === 'shared'
             ? g.shared
             : g.ownerSteamIds?.includes(libraryOwner))),
+  );
+  const ordered = sortLibraryGames(
+    filtered,
+    libraryOrderBy,
+    state?.preferences,
   );
   const modelOptions = [
     ...CODEX_MODELS,
@@ -600,7 +684,8 @@ export default function Home() {
                 ? 'Máximo'
                 : 'Ultra',
   }));
-  const canRecommend = games.length > 0 && state?.setup.codex;
+  const canRecommend =
+    games.length > 0 && (engine === 'local' || state?.setup.codex);
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
@@ -715,6 +800,73 @@ export default function Home() {
                   <span>{filters.mode === 'today' ? 'minutos' : 'horas'}</span>
                 </div>
               </div>
+              <div className="field">
+                <label htmlFor="min-release-date">
+                  Fecha mínima de lanzamiento
+                </label>
+                <Input
+                  id="min-release-date"
+                  type="date"
+                  value={filters.minReleaseDate ?? ''}
+                  onChange={(e) =>
+                    setFilters({
+                      ...filters,
+                      minReleaseDate: e.target.value || null,
+                    })
+                  }
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="recommendation-tags">Etiquetas Steam</label>
+                {!!selectedTagKeys.length && (
+                  <div
+                    className="filter-tags"
+                    aria-label="Etiquetas seleccionadas"
+                  >
+                    {selectedTagKeys.map((key) => (
+                      <span className="filter-tag" key={key}>
+                        {tagLabels.get(key) ?? key}
+                        <button
+                          type="button"
+                          aria-label={`Quitar ${tagLabels.get(key) ?? key}`}
+                          onClick={() =>
+                            setFilters({
+                              ...filters,
+                              tags: selectedTagKeys.filter(
+                                (tag) => tag !== key,
+                              ),
+                            })
+                          }
+                        >
+                          <X size={13} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                <Input
+                  id="recommendation-tags"
+                  list="recommendation-tag-options"
+                  value={tagSearch}
+                  placeholder="Busca una etiqueta y pulsa Enter"
+                  onChange={(e) => setTagSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTagFilter();
+                    }
+                  }}
+                />
+                <datalist id="recommendation-tag-options">
+                  {tagSuggestions.map((tag) => (
+                    <option key={tag.value} value={tag.label} />
+                  ))}
+                </datalist>
+                <p className="field-help">
+                  Con varias: primero juegos con todas; si no hay suficientes,
+                  se incluyen los que tengan cualquiera.
+                </p>
+              </div>
               <Choice
                 id="genre"
                 label="Género"
@@ -737,18 +889,20 @@ export default function Home() {
                   { value: 'multi', label: 'Multijugador' },
                 ]}
               />
-              <div className="field">
-                <label htmlFor="mood">Hoy busco…</label>
-                <Input
-                  id="mood"
-                  maxLength={200}
-                  value={filters.mood}
-                  placeholder="Algo tranquilo, una buena historia…"
-                  onChange={(e) =>
-                    setFilters({ ...filters, mood: e.target.value })
-                  }
-                />
-              </div>
+              {engine === 'codex' && (
+                <div className="field">
+                  <label htmlFor="mood">Hoy busco…</label>
+                  <Input
+                    id="mood"
+                    maxLength={200}
+                    value={filters.mood}
+                    placeholder="Algo tranquilo, una buena historia…"
+                    onChange={(e) =>
+                      setFilters({ ...filters, mood: e.target.value })
+                    }
+                  />
+                </div>
+              )}
               <label className="check-label" htmlFor="replay">
                 <Checkbox
                   id="replay"
@@ -760,32 +914,52 @@ export default function Home() {
                 Incluir terminados y abandonados
               </label>
               <Choice
-                id="codex-model"
-                label="Modelo"
-                value={codex.model}
-                onChange={(model) => {
-                  const efforts = codexEffortsForModel(model);
-                  setCodex({
-                    model,
-                    effort: efforts.includes(codex.effort)
-                      ? codex.effort
-                      : 'medium',
-                  });
-                }}
-                options={modelOptions}
+                id="recommendation-engine"
+                label="Cómo recomendar"
+                value={engine}
+                onChange={(value) => setEngine(value as RecommendationEngine)}
+                options={[
+                  { value: 'codex', label: 'Codex · IA' },
+                  { value: 'local', label: 'Algoritmo local · sin tokens' },
+                ]}
               />
-              <Choice
-                id="codex-effort"
-                label="Esfuerzo de razonamiento"
-                value={codex.effort}
-                onChange={(effort) =>
-                  setCodex({
-                    ...codex,
-                    effort: effort as CodexSettings['effort'],
-                  })
-                }
-                options={effortOptions}
-              />
+              {engine === 'local' && (
+                <p className="field-help">
+                  Usa tus favoritos y los pesos de Tus gustos. Funciona con los
+                  datos guardados, sin interpretar notas ni conversación.
+                </p>
+              )}
+              {engine === 'codex' && (
+                <>
+                  <Choice
+                    id="codex-model"
+                    label="Modelo"
+                    value={codex.model}
+                    onChange={(model) => {
+                      const efforts = codexEffortsForModel(model);
+                      setCodex({
+                        model,
+                        effort: efforts.includes(codex.effort)
+                          ? codex.effort
+                          : 'medium',
+                      });
+                    }}
+                    options={modelOptions}
+                  />
+                  <Choice
+                    id="codex-effort"
+                    label="Esfuerzo de razonamiento"
+                    value={codex.effort}
+                    onChange={(effort) =>
+                      setCodex({
+                        ...codex,
+                        effort: effort as CodexSettings['effort'],
+                      })
+                    }
+                    options={effortOptions}
+                  />
+                </>
+              )}
               <Button
                 className="recommend-button"
                 disabled={!canRecommend || !!busy}
@@ -964,6 +1138,9 @@ export default function Home() {
                   <TabsTrigger value="tastes">
                     <Star size={17} /> Tus gustos
                   </TabsTrigger>
+                  <TabsTrigger value="history">
+                    <History size={17} /> Historial
+                  </TabsTrigger>
                 </TabsList>
                 <span className="subtle-label">
                   Una elección que encaja contigo
@@ -982,6 +1159,89 @@ export default function Home() {
                     }
                   />
                 )}
+              </TabsContent>
+              <TabsContent value="history">
+                <div className="results">
+                  <p className="small-note">
+                    Cada consulta conserva sus filtros y resultados originales,
+                    incluso después de empezar otra búsqueda o cambiar tus
+                    gustos.
+                  </p>
+                  {!state?.history?.length && (
+                    <p>Aún no hay búsquedas guardadas.</p>
+                  )}
+                  {state?.history?.toReversed().map((entry) => (
+                    <details className="panel saved-search" key={entry.id}>
+                      <summary>
+                        {entry.filters.mode === 'today'
+                          ? 'Para hoy'
+                          : 'Próximo juego'}
+                        {' · '}
+                        {new Date(entry.result.at).toLocaleString('es')}
+                        {' · '}
+                        {entry.result.engine === 'local'
+                          ? 'Algoritmo local'
+                          : 'Codex'}
+                      </summary>
+                      <p className="small-note">
+                        {entry.filters.mode === 'today'
+                          ? entry.filters.minutes === null
+                            ? 'Sesión sin límite'
+                            : `${entry.filters.minutes} min de sesión`
+                          : entry.filters.hours === null
+                            ? 'Historia sin límite'
+                            : `Historia de hasta ${entry.filters.hours} h`}
+                        {' · '}
+                        {entry.filters.genre || 'Cualquier género'}
+                        {entry.filters.minReleaseDate &&
+                          ` · Lanzados desde ${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString('es')}`}
+                        {(entry.filters.tags ?? []).length > 0 &&
+                          ` · Etiquetas: ${(entry.filters.tags ?? [])
+                            .map((tag) => tagLabels.get(tag) ?? tag)
+                            .join(', ')}`}
+                        {' · '}
+                        {{
+                          single: 'En solitario',
+                          coop: 'Cooperativo',
+                          multi: 'Multijugador',
+                        }[entry.filters.gameMode] || 'Cualquier modalidad'}
+                        {' · '}
+                        {entry.filters.replay
+                          ? 'Incluye terminados y abandonados'
+                          : 'Sin terminados ni abandonados'}
+                        {entry.filters.mood &&
+                          ` · Hoy busco: ${entry.filters.mood}`}
+                      </p>
+                      {entry.text && (
+                        <p>
+                          <strong>{entry.text}</strong>
+                        </p>
+                      )}
+                      <p>{entry.result.message}</p>
+                      <div className="results">
+                        {[
+                          ...entry.result.owned,
+                          ...entry.result.discoveries,
+                        ].map((pick) => (
+                          <GamePick
+                            key={pick.appId}
+                            pick={pick}
+                            status={state.preferences[pick.appId]?.status}
+                            busy={!!busy}
+                            onStatus={(status) => {
+                              void preference(pick.game, { status });
+                            }}
+                          />
+                        ))}
+                      </div>
+                      {entry.result.warnings.map((warning) => (
+                        <p className="small-note" key={warning}>
+                          {warning}
+                        </p>
+                      ))}
+                    </details>
+                  ))}
+                </div>
               </TabsContent>
               <TabsContent value="recommend">
                 {loading ? (
@@ -1068,9 +1328,11 @@ export default function Home() {
                       </>
                     )}
                     <p className="small-note">
-                      Motivos y afinidad: valoración de IA. Duraciones estimadas
-                      de IGDB y HowLongToBeat; no indican cuánto dura una
-                      sesión.
+                      {result.engine === 'local'
+                        ? 'Motivos y afinidad: puntuación del algoritmo local.'
+                        : 'Motivos y afinidad: valoración de IA.'}{' '}
+                      Duraciones estimadas de IGDB y HowLongToBeat; no indican
+                      cuánto dura una sesión.
                     </p>
                   </div>
                 )}
@@ -1178,68 +1440,70 @@ export default function Home() {
                     <span>{w}</span>
                   </div>
                 ))}
-                <section className="conversation">
-                  <div className="panel-title">
-                    <MessageCircle size={18} />
-                    <h2>Vamos afinando</h2>
-                  </div>
-                  <p>
-                    Cuéntanos qué buscas o qué cambiarías de las propuestas.
-                  </p>
-                  {state && state.conversation.length > 0 && (
-                    <details className="history">
-                      <summary>
-                        Conversación · {state.conversation.length} consultas
-                      </summary>
-                      {state.conversation.map((t, i) => (
-                        <div key={i}>
-                          <strong>
-                            {t.text ||
-                              (t.filters.mode === 'today'
-                                ? 'Una partida para hoy'
-                                : 'Mi próximo juego')}
-                          </strong>
-                          <p>{t.result.message}</p>
-                        </div>
-                      ))}
-                    </details>
-                  )}
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void recommend();
-                    }}
-                  >
-                    <label className="sr-only" htmlFor="message">
-                      Mensaje para afinar la recomendación
-                    </label>
-                    <Textarea
-                      id="message"
-                      maxLength={2000}
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                      placeholder="Por ejemplo: hoy prefiero explorar sin prisas, nada competitivo…"
-                    />
-                    <Button
-                      type="submit"
-                      disabled={!canRecommend || !!busy}
-                      aria-label="Enviar mensaje"
+                {engine === 'codex' && (
+                  <section className="conversation">
+                    <div className="panel-title">
+                      <MessageCircle size={18} />
+                      <h2>Vamos afinando</h2>
+                    </div>
+                    <p>
+                      Cuéntanos qué buscas o qué cambiarías de las propuestas.
+                    </p>
+                    {state && state.conversation.length > 0 && (
+                      <details className="history">
+                        <summary>
+                          Conversación · {state.conversation.length} consultas
+                        </summary>
+                        {state.conversation.map((t, i) => (
+                          <div key={i}>
+                            <strong>
+                              {t.text ||
+                                (t.filters.mode === 'today'
+                                  ? 'Una partida para hoy'
+                                  : 'Mi próximo juego')}
+                            </strong>
+                            <p>{t.result.message}</p>
+                          </div>
+                        ))}
+                      </details>
+                    )}
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void recommend();
+                      }}
                     >
-                      <ArrowRight size={20} />
-                    </Button>
-                  </form>
-                  <div className="chat-footnote">
-                    <span>
-                      <span className="status-dot" /> Codex · {codex.model} ·{' '}
-                      {codex.effort}
-                    </span>
-                    <span>
-                      {busy === 'recommend'
-                        ? 'Puede tardar hasta dos minutos'
-                        : 'Tus filtros se mantienen en cada consulta'}
-                    </span>
-                  </div>
-                </section>
+                      <label className="sr-only" htmlFor="message">
+                        Mensaje para afinar la recomendación
+                      </label>
+                      <Textarea
+                        id="message"
+                        maxLength={2000}
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder="Por ejemplo: hoy prefiero explorar sin prisas, nada competitivo…"
+                      />
+                      <Button
+                        type="submit"
+                        disabled={!canRecommend || !!busy}
+                        aria-label="Enviar mensaje"
+                      >
+                        <ArrowRight size={20} />
+                      </Button>
+                    </form>
+                    <div className="chat-footnote">
+                      <span>
+                        <span className="status-dot" /> Codex · {codex.model} ·{' '}
+                        {codex.effort}
+                      </span>
+                      <span>
+                        {busy === 'recommend'
+                          ? 'Puede tardar hasta dos minutos'
+                          : 'Tus filtros se mantienen en cada consulta'}
+                      </span>
+                    </div>
+                  </section>
+                )}
               </TabsContent>
               <TabsContent value="library">
                 <Choice
@@ -1262,6 +1526,52 @@ export default function Home() {
                       })),
                   ]}
                 />
+                <Choice
+                  id="library-tag"
+                  label="Etiqueta Steam"
+                  value={libraryTag}
+                  onChange={(value) => {
+                    setLibraryTag(value);
+                    setLimit(36);
+                  }}
+                  options={[
+                    { value: '', label: 'Todas las etiquetas' },
+                    ...steamTags,
+                  ]}
+                />
+                <Choice
+                  id="library-order"
+                  label="Ordenar por"
+                  value={libraryOrderBy}
+                  onChange={(value) => {
+                    setLibraryOrderBy(value as LibraryOrderBy);
+                    setLimit(36);
+                  }}
+                  options={[
+                    { value: 'original', label: 'Orden original' },
+                    { value: 'name', label: 'Nombre (A-Z)' },
+                    {
+                      value: 'release-newest',
+                      label: 'Lanzamiento: más recientes',
+                    },
+                    {
+                      value: 'release-oldest',
+                      label: 'Lanzamiento: más antiguos',
+                    },
+                    { value: 'playtime-most', label: 'Más horas jugadas' },
+                    { value: 'playtime-least', label: 'Menos horas jugadas' },
+                    { value: 'recent-most', label: 'Más actividad reciente' },
+                    {
+                      value: 'duration-shortest',
+                      label: 'Duración: más cortos',
+                    },
+                    {
+                      value: 'duration-longest',
+                      label: 'Duración: más largos',
+                    },
+                    { value: 'favorite', label: 'Favoritos primero' },
+                  ]}
+                />
                 <div className="library-toolbar">
                   <h2>
                     Tus juegos <span>{filtered.length}</span>
@@ -1276,7 +1586,7 @@ export default function Home() {
                       setSearch(e.target.value);
                       setLimit(36);
                     }}
-                    placeholder="Buscar un juego…"
+                    placeholder="Buscar un juego o etiqueta…"
                   />
                 </div>
                 <p className="small-note">
@@ -1294,7 +1604,7 @@ export default function Home() {
                   </div>
                 )}
                 <div className="library-grid">
-                  {filtered.slice(0, limit).map((game) => {
+                  {ordered.slice(0, limit).map((game) => {
                     const pref = state?.preferences[game.appId] ?? {
                       status: 'pending',
                       favorite: false,
@@ -1305,6 +1615,7 @@ export default function Home() {
                         <div className="library-card-body">
                           <h3>{game.name}</h3>
                           <p className="small-note">{libraryLabel(game)}</p>
+                          <GameTags game={game} />
                           <p className="small-note">
                             {game.playtimeMinutes === null
                               ? 'Horas no disponibles'

@@ -12,6 +12,7 @@ import {
   hoursWeight,
   tasteEvidence,
   gameAffinities,
+  gameAffinitySignals,
 } from '../lib/tastes.ts';
 import { parseTastes, selectCandidates } from '../server/selection.ts';
 import { buildPrompt } from '../server/codex.ts';
@@ -22,6 +23,7 @@ const game = (
   id: number,
   hours = 50,
   summary = 'Build a factory and automate production.',
+  steamTags?: Game['steamTags'],
 ): Game => ({
   appId: id,
   name: 'Game ' + id,
@@ -29,6 +31,7 @@ const game = (
   playtimeMinutes: hours * 60,
   recentMinutes: 0,
   summary,
+  ...(steamTags ? { steamTags } : {}),
 });
 const state = (games: Game[]): State => ({
   ...structuredClone(EMPTY_STATE),
@@ -74,6 +77,122 @@ void test('hours diminish, independent games reinforce affinity, editions and ig
       'synergies',
     ),
   );
+  assert(
+    gameAffinities(
+      game(7, 50, 'A calm adventure.', [
+        { id: 5507, name: 'Automatización', englishName: 'Automation' },
+      ]),
+    ).includes('automation'),
+  );
+});
+void test('structured Steam evidence is translated, deduplicated and stronger than description-only matches', () => {
+  const tagged = game(1, 50, '', [
+    { id: 255534, name: 'Automatización' },
+    { id: 255534, name: 'Automatización', englishName: 'Automation' },
+    { id: 12472, name: 'Gestión' },
+  ]);
+  const signal = gameAffinitySignals(tagged).find(
+    (a) => a.id === 'automation',
+  )!;
+  assert.equal(signal.strength, 1);
+  assert.deepEqual(signal.sources, ['Steam: Automatización', 'Steam: Gestión']);
+  const weight = (g: Game) =>
+    buildTasteProfile(state([g])).find((a) => a.id === 'automation')!.inferred;
+  const genre = {
+    ...game(2, 50, ''),
+    genres: [{ id: 1, name: 'Base Building' }],
+  };
+  assert(weight(tagged) > weight(genre));
+  assert(weight(genre) > weight(game(3)));
+  assert.equal(
+    weight(tagged),
+    weight({ ...tagged, steamTags: tagged.steamTags!.slice(0, 1) }),
+  );
+  assert.deepEqual(
+    gameAffinities(
+      game(4, 0, '', [
+        { id: 122, name: 'Rol' },
+        { id: 1742, name: 'Buena trama' },
+        { id: 4026, name: 'Implacables' },
+      ]),
+    ),
+    ['progression', 'challenge', 'narrative'],
+  );
+  assert.deepEqual(
+    gameAffinities(game(5, 0, '', [{ name: 'RPG' }, { name: 'Story Rich' }])),
+    ['progression', 'narrative'],
+  );
+  assert(
+    !gameAffinities(
+      game(6, 0, 'Make a difficult choice about automatic weapons.'),
+    ).includes('challenge'),
+  );
+  const s = state([tagged]);
+  s.tastes = { ...EMPTY_TASTES, overrides: { automation: 'like' } };
+  const profile = buildTasteProfile(s);
+  assert(affinityScore(tagged, profile) > affinityScore(game(3), profile));
+  assert(affinityScore(tagged, profile) <= 16);
+});
+void test('weights use the whole played history, respect unknown data and give short games bounded evidence', () => {
+  const tagged = (id: number, hours = 50) =>
+    game(id, hours, '', [{ id: 255534, name: 'Automatización' }]);
+  const affinity = (s: State) =>
+    buildTasteProfile(s).find((a) => a.id === 'automation')!;
+  const s = state(Array.from({ length: 6 }, (_, i) => tagged(i + 1)));
+  const six = affinity(s);
+  assert.equal(six.evidenceCount, 6);
+  assert.equal(six.evidence.length, 5);
+  assert(six.inferred > affinity(state(s.games.slice(0, 5))).inferred);
+  s.games.push(tagged(7, 0), { ...game(8), summary: undefined });
+  assert.equal(
+    affinity(s).inferred,
+    six.inferred,
+    'unplayed and unknown games do not dilute the profile',
+  );
+  s.games.push(game(9, 50, '', [{ id: 1742, name: 'Buena trama' }]));
+  assert(
+    affinity(s).inferred < six.inferred,
+    'other played tastes contribute to the denominator',
+  );
+  assert(
+    six.inferred <
+      affinity(state(Array.from({ length: 20 }, (_, i) => tagged(i + 1))))
+        .inferred,
+  );
+  const short = { ...tagged(20, 5), durationHours: 5 };
+  const long = { ...tagged(21, 50), durationHours: 50 };
+  assert.equal(
+    tasteEvidence(state([short]))[0].weight,
+    tasteEvidence(state([long]))[0].weight,
+  );
+  assert(
+    tasteEvidence(state([short]))[0].weight >
+      tasteEvidence(state([tagged(20, 5)]))[0].weight,
+  );
+  const hltb = {
+    ...short,
+    durationHours: 100,
+    hltb: {
+      id: 1,
+      mainHours: 5,
+      extraHours: null,
+      completionHours: null,
+      at: 1,
+    },
+  };
+  assert.equal(
+    tasteEvidence(state([hltb]))[0].weight,
+    tasteEvidence(state([short]))[0].weight,
+  );
+  const ignored = state([short]);
+  ignored.tastes = { ...EMPTY_TASTES, ignoredHours: [20] };
+  assert.equal(affinity(ignored).inferred, 0);
+  ignored.preferences['20'] = { favorite: true, status: 'pending' };
+  assert.equal(tasteEvidence(ignored)[0].weight, 2);
+  ignored.preferences['20'].status = 'abandoned';
+  assert.equal(affinity(ignored).inferred, 0);
+  assert.equal(affinity(state([{ ...short, isGame: false }])).inferred, 0);
+  assert(buildTasteProfile(s).every((a) => a.inferred >= 0 && a.inferred <= 1));
 });
 void test('corrections change shortlist, remain soft, and never beat favorites or hard exclusions', () => {
   const s = state(
@@ -171,13 +290,13 @@ void test('API corrections survive reload and new searches, reach Codex, and inv
       200,
     );
     assert.deepEqual((await readState()).tastes, settings);
-    const before = await readFile(join(dir, 'state.json'), 'utf8');
+    const before = await readFile(join(dir, 'library.sqlite'));
     assert.equal(
       (await call('tastes', 'PATCH', { ...settings, notes: 'x'.repeat(2001) }))
         .status,
       400,
     );
-    assert.equal(await readFile(join(dir, 'state.json'), 'utf8'), before);
+    assert.deepEqual(await readFile(join(dir, 'library.sqlite')), before);
   } finally {
     if (oldDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
     else process.env.NEXTPLAY_DATA_DIR = oldDir;

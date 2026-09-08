@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { parseEnv } from 'node:util';
 import { EMPTY_STATE } from '../lib/model.ts';
 import type { State } from '../lib/model.ts';
+import { loadState, openDatabase, storeState } from './database.ts';
 
 export const dataDir = () => resolve(process.env.NEXTPLAY_DATA_DIR || 'data');
 export class AppError extends Error {
@@ -58,22 +59,51 @@ export async function atomicJson(path: string, value: unknown) {
   }
 }
 export async function readState(): Promise<State> {
-  const state = await readJson(join(dataDir(), 'state.json'), EMPTY_STATE);
+  await mkdir(dataDir(), { recursive: true });
+  const db = openDatabase(join(dataDir(), 'library.sqlite'));
+  try {
+    const saved = loadState(db);
+    if (saved) return validState(saved);
+    // One-time migration. Keep the original JSON as a recovery copy.
+    const legacy = validState(
+      await readJson(join(dataDir(), 'state.json'), EMPTY_STATE),
+    );
+    storeState(db, legacy, true);
+    return validState(loadState(db)!);
+  } finally {
+    db.close();
+  }
+}
+function validState(state: State): State {
   if (
     state?.version !== 1 ||
     !Array.isArray(state.games) ||
     !Array.isArray(state.conversation) ||
+    (state.history !== undefined && !Array.isArray(state.history)) ||
     !state.preferences ||
     !state.filters
   )
     throw new AppError(
-      'El formato de data/state.json no es compatible. El archivo se ha conservado.',
+      'El formato de los datos locales no es compatible. Los originales se han conservado.',
       500,
     );
+  // Preserve the existing conversation on upgrade, before any action can reset it.
+  state.history ??= state.conversation.map((turn, i) => ({
+    ...turn,
+    id: `legacy-${turn.result.at}-${i}`,
+  }));
   return state;
 }
-export const saveState = (state: State) =>
-  atomicJson(join(dataDir(), 'state.json'), state);
+export async function saveState(state: State) {
+  validState(state);
+  await mkdir(dataDir(), { recursive: true });
+  const db = openDatabase(join(dataDir(), 'library.sqlite'));
+  try {
+    storeState(db, state);
+  } finally {
+    db.close();
+  }
+}
 
 // ponytail: one local user; reject concurrent mutations instead of adding a job queue.
 let busy = false;

@@ -246,10 +246,10 @@ void test('API sync preserves preferences and private members, handles expired s
     assert.equal(snapshot.setup.family, true);
     assert.ok(!JSON.stringify(snapshot).includes(token));
     assert.equal((await readState()).preferences['2'].favorite, true);
-    const old = await readFile(join(dir, 'state.json'), 'utf8');
+    const old = await readFile(join(dir, 'library.sqlite'));
     mode = 'expired';
     assert.equal((await call('steam/family/sync')).status, 502);
-    assert.equal(await readFile(join(dir, 'state.json'), 'utf8'), old);
+    assert.deepEqual(await readFile(join(dir, 'library.sqlite')), old);
     const personal = await call('steam/sync', {
       profileUrl: `https://steamcommunity.com/profiles/${viewer}/`,
       force: true,

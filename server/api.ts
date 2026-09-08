@@ -1,4 +1,5 @@
 import { AppError, config, exclusive, readState, saveState } from './store.ts';
+import { randomUUID } from 'node:crypto';
 import {
   DAY,
   discover,
@@ -10,6 +11,8 @@ import {
 } from './sources.ts';
 import {
   parseFilters,
+  parseEngine,
+  recommendLocally,
   parseCodexSettings,
   parsePreference,
   parseProfile,
@@ -19,7 +22,7 @@ import {
 } from './selection.ts';
 import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import { DEFAULT_CODEX_SETTINGS } from '../lib/model.ts';
-import type { Game, Snapshot, State } from '../lib/model.ts';
+import type { Game, Snapshot, State, Turn } from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
 import { inLibrary } from '../lib/model.ts';
 import { log, logError } from '../lib/log.ts';
@@ -99,6 +102,17 @@ async function snapshot(
     warnings,
   };
 }
+async function saveRecommendation(state: State, turn: Turn) {
+  const next: State = {
+    ...state,
+    filters: turn.filters,
+    engine: turn.result.engine ?? 'codex',
+    conversation: [...state.conversation, turn],
+    history: [...(state.history ?? []), { ...turn, id: randomUUID() }],
+  };
+  await saveState(next);
+  return snapshot(next, turn.result.warnings);
+}
 export async function handle(request: Request): Promise<Response> {
   const started = Date.now();
   const path = new URL(request.url).pathname;
@@ -158,10 +172,11 @@ export async function handle(request: Request): Promise<Response> {
           typeof payload.appId !== 'number' ||
           !Number.isSafeInteger(payload.appId) ||
           (!state.games.some((g) => g.appId === payload.appId) &&
-            ![
-              ...(state.conversation.at(-1)?.result.owned ?? []),
-              ...(state.conversation.at(-1)?.result.discoveries ?? []),
-            ].some((p) => p.appId === payload.appId))
+            ![...state.conversation, ...(state.history ?? [])].some((turn) =>
+              [...turn.result.owned, ...turn.result.discoveries].some(
+                (p) => p.appId === payload.appId,
+              ),
+            ))
         )
           throw new AppError(
             'Ese juego no pertenece a la biblioteca sincronizada.',
@@ -169,7 +184,6 @@ export async function handle(request: Request): Promise<Response> {
         state.preferences[String(payload.appId)] = parsePreference(
           payload.preference,
         );
-        state.conversation = []; // Past picks no longer reflect these explicit corrections.
         await saveState(state);
         const next = await snapshot(state);
         phase('preference:update:complete', { appId: payload.appId });
@@ -312,6 +326,36 @@ export async function handle(request: Request): Promise<Response> {
           throw new AppError(
             'Conecta tu perfil de Steam antes de pedir recomendaciones.',
           );
+        const engine = parseEngine(
+          payload.engine === undefined
+            ? (state.engine ?? 'codex')
+            : payload.engine,
+        );
+        if (
+          engine === 'local' ||
+          (state.engine ?? 'codex') !== engine ||
+          state.conversation.at(-1)?.filters.mode !== filters.mode
+        )
+          state.conversation = [];
+        if (engine === 'local') {
+          phase('recommendations:local:start');
+          state.games = withHltb(state.games, await getHltbCache());
+          const recommendation = recommendLocally(state, filters);
+          if (payload.text.trim())
+            recommendation.warnings.push(
+              'El mensaje no se interpreta en modo local; usa los filtros y Tus gustos.',
+            );
+          const next = await saveRecommendation(state, {
+            text: payload.text.trim(),
+            filters,
+            result: recommendation,
+          });
+          phase('recommendations:local:complete', {
+            owned: recommendation.owned.length,
+            discoveries: recommendation.discoveries.length,
+          });
+          return next;
+        }
         if (state.conversation.length >= 20)
           throw new AppError(
             'Esta conversación tiene 20 consultas. Inicia una nueva búsqueda para continuar.',
@@ -442,7 +486,7 @@ export async function handle(request: Request): Promise<Response> {
           state.games = withHltb(state.games, durations);
           discoveries = withHltb(discoveries, durations);
         }
-        const candidates = selectCandidates(
+        let candidates = selectCandidates(
           state,
           discoveries,
           filters,
@@ -453,21 +497,20 @@ export async function handle(request: Request): Promise<Response> {
           owned: candidates.filter(inLibrary).length,
           discoveries: candidates.filter((g) => !inLibrary(g)).length,
         });
-        // Four bounded requests at a time; avoid hammering Steam or serial timeout chains.
-        for (let i = 0; i < candidates.length; i += 4) {
+        // Bound external refresh work, not the catalog the AI can consult.
+        const reviewCandidates = [
+          ...candidates.filter(inLibrary).slice(0, 40),
+          ...candidates.filter((g) => !inLibrary(g)).slice(0, 20),
+        ];
+        for (let i = 0; i < reviewCandidates.length; i += 4) {
           phase('recommendations:reviews:batch:start', {
             offset: i,
-            count: Math.min(4, candidates.length - i),
+            count: Math.min(4, reviewCandidates.length - i),
           });
           const batch = await Promise.allSettled(
-            candidates.slice(i, i + 4).map((g) => review(g, cache)),
+            reviewCandidates.slice(i, i + 4).map((g) => review(g, cache)),
           );
-          let failed = false;
-          for (let j = 0; j < batch.length; j++) {
-            const r = batch[j];
-            if (r.status === 'fulfilled') candidates[i + j] = r.value;
-            else failed = true;
-          }
+          const failed = batch.some((r) => r.status === 'rejected');
           phase('recommendations:reviews:batch:complete', {
             offset: i,
             failed,
@@ -476,16 +519,22 @@ export async function handle(request: Request): Promise<Response> {
             warnings.push(
               'Algunas valoraciones no se han actualizado; las disponibles muestran su fecha de consulta.',
             );
-            for (let k = i; k < candidates.length; k++)
-              if (cache.reviews[candidates[k].appId])
-                candidates[k] = {
-                  ...candidates[k],
-                  reviews: cache.reviews[candidates[k].appId],
-                };
             break;
           }
         }
+        const withReviews = (g: Game) =>
+          cache.reviews[g.appId]
+            ? { ...g, reviews: cache.reviews[g.appId] }
+            : g;
+        candidates = candidates.map(withReviews);
+        state.games = state.games.map(withReviews);
         await saveCache(cache);
+        // Persist refreshed libraries even if the subsequent Codex request fails.
+        await saveState(state);
+        phase('recommendations:database:ready', {
+          library: state.games.length,
+          eligible: candidates.length,
+        });
         let out;
         if (candidates.length) {
           phase('recommendations:codex:start', {
@@ -496,6 +545,7 @@ export async function handle(request: Request): Promise<Response> {
           const raw = await askCodex(
             buildPrompt(state, candidates, filters, payload.text),
             codex,
+            { state, candidates },
           );
           phase('recommendations:codex:response');
           out = validatePicks(raw, candidates);
@@ -514,20 +564,18 @@ export async function handle(request: Request): Promise<Response> {
         }
         const recommendation = {
           ...out,
+          engine,
           at: Date.now(),
           warnings: [...new Set(warnings)],
         };
-        const next: State = {
-          ...state,
-          filters,
-          codex,
-          conversation: [
-            ...state.conversation,
-            { text: payload.text.trim(), filters, result: recommendation },
-          ],
-        };
-        await saveState(next);
-        const nextSnapshot = await snapshot(next, warnings);
+        const nextSnapshot = await saveRecommendation(
+          { ...state, codex },
+          {
+            text: payload.text.trim(),
+            filters,
+            result: recommendation,
+          },
+        );
         phase('recommendations:complete', {
           owned: nextSnapshot.conversation.at(-1)?.result.owned.length ?? 0,
           discoveries:

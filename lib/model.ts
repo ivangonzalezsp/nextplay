@@ -1,4 +1,5 @@
 export type Mode = 'today' | 'next';
+export type RecommendationEngine = 'codex' | 'local';
 export type GameStatus = 'pending' | 'completed' | 'abandoned' | 'ignored';
 export type Preference = { favorite: boolean; status: GameStatus };
 export const CODEX_EFFORTS = [
@@ -44,12 +45,21 @@ export type TasteAffinity = {
   label: string;
   inferred: number;
   choice: TasteChoice;
-  evidence: { appId: number; name: string; hours: number; favorite: boolean }[];
+  evidenceCount: number;
+  evidence: {
+    appId: number;
+    name: string;
+    hours: number;
+    favorite: boolean;
+    sources: string[];
+  }[];
 };
 export type Filters = {
   mode: Mode;
   minutes: number | null;
   hours: number | null;
+  minReleaseDate: string | null;
+  tags: string[];
   genre: string;
   gameMode: string;
   mood: string;
@@ -59,6 +69,8 @@ export const DEFAULT_FILTERS: Filters = {
   mode: 'today',
   minutes: 60,
   hours: null,
+  minReleaseDate: null,
+  tags: [],
   genre: '',
   gameMode: '',
   mood: '',
@@ -77,6 +89,8 @@ export type Game = {
   igdbUrl?: string;
   summary?: string;
   genres?: { id: number; name: string }[];
+  steamTags?: { id?: number; name: string; englishName?: string }[];
+  steamTagsCheckedAt?: number;
   gameModes?: number[];
   durationHours?: number | null;
   durationSamples?: number;
@@ -88,11 +102,25 @@ export type Game = {
     at: number;
   };
   similarIds?: number[];
+  releasedAt?: number;
   released?: boolean;
   isGame?: boolean;
   metadataAt?: number;
   reviews?: { positive: number; total: number; at: number };
 };
+export const steamTagKey = (tag: NonNullable<Game['steamTags']>[number]) =>
+  tag.id ? `id:${tag.id}` : `name:${tag.name}`;
+export type LibraryOrderBy =
+  | 'original'
+  | 'name'
+  | 'release-newest'
+  | 'release-oldest'
+  | 'playtime-most'
+  | 'playtime-least'
+  | 'recent-most'
+  | 'duration-shortest'
+  | 'duration-longest'
+  | 'favorite';
 export type Profile = {
   steamId: string;
   name: string;
@@ -106,6 +134,7 @@ export type Pick = {
   caveat: string;
 };
 export type Recommendation = {
+  engine?: RecommendationEngine;
   message: string;
   owned: (Pick & { game: Game })[];
   discoveries: (Pick & { game: Game })[];
@@ -113,6 +142,7 @@ export type Recommendation = {
   warnings: string[];
 };
 export type Turn = { text: string; filters: Filters; result: Recommendation };
+export type HistoryEntry = Turn & { id: string };
 export type State = {
   version: 1;
   profile: Profile | null;
@@ -128,6 +158,8 @@ export type State = {
   preferences: Record<string, Preference>;
   tastes?: TasteSettings;
   codex?: CodexSettings;
+  engine?: RecommendationEngine;
+  history?: HistoryEntry[];
   conversation: Turn[];
   filters: Filters;
 };
@@ -166,6 +198,13 @@ export const storeUrl = (appId: number) =>
   `https://store.steampowered.com/app/${appId}/`;
 export const storyHours = (game: Game) =>
   game.hltb?.mainHours ?? game.durationHours;
+export const releaseDateAt = (date: string) => {
+  const time = Date.parse(`${date}T00:00:00.000Z`);
+  return Number.isFinite(time) &&
+    new Date(time).toISOString().slice(0, 10) === date
+    ? time
+    : null;
+};
 export const inLibrary = (game: Game) => game.owned || game.shared === true;
 export const libraryLabel = (game: Game) =>
   game.owned
@@ -173,3 +212,58 @@ export const libraryLabel = (game: Game) =>
     : game.shared
       ? 'Compartido · Steam Families'
       : 'Descubrimiento';
+export function sortLibraryGames(
+  games: Game[],
+  orderBy: LibraryOrderBy,
+  preferences: Record<string, Preference> = {},
+) {
+  if (orderBy === 'original') return [...games];
+  const collator = new Intl.Collator('es', { sensitivity: 'base' });
+  const compareKnown = (
+    a: number | null | undefined,
+    b: number | null | undefined,
+    direction: 1 | -1,
+  ) =>
+    a == null || b == null
+      ? a == null
+        ? b == null
+          ? 0
+          : 1
+        : -1
+      : (a - b) * direction;
+  return [...games].sort((a, b) => {
+    let result = 0;
+    switch (orderBy) {
+      case 'name':
+        result = collator.compare(a.name, b.name);
+        break;
+      case 'release-newest':
+        result = compareKnown(a.releasedAt, b.releasedAt, -1);
+        break;
+      case 'release-oldest':
+        result = compareKnown(a.releasedAt, b.releasedAt, 1);
+        break;
+      case 'playtime-most':
+        result = compareKnown(a.playtimeMinutes, b.playtimeMinutes, -1);
+        break;
+      case 'playtime-least':
+        result = compareKnown(a.playtimeMinutes, b.playtimeMinutes, 1);
+        break;
+      case 'recent-most':
+        result = compareKnown(a.recentMinutes, b.recentMinutes, -1);
+        break;
+      case 'duration-shortest':
+        result = compareKnown(storyHours(a), storyHours(b), 1);
+        break;
+      case 'duration-longest':
+        result = compareKnown(storyHours(a), storyHours(b), -1);
+        break;
+      case 'favorite':
+        result =
+          Number(preferences[String(b.appId)]?.favorite) -
+          Number(preferences[String(a.appId)]?.favorite);
+        break;
+    }
+    return result || collator.compare(a.name, b.name) || a.appId - b.appId;
+  });
+}

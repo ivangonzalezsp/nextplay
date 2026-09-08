@@ -46,14 +46,16 @@ export default function Tastes({
     >
       <h2>Tus gustos</h2>
       <p>
-        Hipótesis basadas en tus horas y favoritos. Las afinidades se reconocen
-        en géneros y descripciones de IGDB; pueden ser incompletas o
-        equivocadas.
+        Afinidades basadas en todo tu historial con datos disponibles. Las
+        etiquetas de Steam pesan más que los géneros y las descripciones de
+        IGDB. Tus favoritos y correcciones tienen prioridad.
       </p>
       <p className="small-note">
-        Varias experiencias pesan más que un único juego. El peso por hora
-        disminuye y las ediciones reconocibles cuentan una vez. El peso
-        histórico no es una probabilidad de que te guste algo.
+        Las horas tienen un peso limitado y se ajustan a la duración de la
+        historia cuando se conoce, para dar espacio a los juegos cortos. Las
+        ediciones reconocibles cuentan una vez. El peso refleja la presencia de
+        cada afinidad en tu historial, no una probabilidad de que te guste ni
+        una confirmación de que terminaste un juego.
       </p>
       <fieldset disabled={busy}>
         <legend className="sr-only">Corregir tus afinidades</legend>
@@ -63,7 +65,7 @@ export default function Tastes({
               <h3>{a.label}</h3>
               <p className="small-note">
                 Peso histórico: {Math.round(a.inferred * 100)}/100 ·{' '}
-                {a.evidence.length} referencias
+                {a.evidenceCount} juegos de referencia
               </p>
               <label htmlFor={'taste-' + a.id}>Tu preferencia: {a.label}</label>
               <select
@@ -93,6 +95,9 @@ export default function Tastes({
                     <li key={e.appId}>
                       {e.name} · {e.hours.toLocaleString('es')} h
                       {e.favorite ? ' · favorito explícito' : ''}
+                      <p className="small-note">
+                        {e.sources.slice(0, 3).join(' · ')}
+                      </p>
                     </li>
                   ))}
                 </ul>
@@ -100,6 +105,11 @@ export default function Tastes({
                 <p className="small-note">
                   Sin evidencia suficiente. Puedes indicar tu preferencia
                   igualmente.
+                </p>
+              )}
+              {a.evidenceCount > a.evidence.length && (
+                <p className="small-note">
+                  Se muestran los {a.evidence.length} juegos con más peso.
                 </p>
               )}
             </section>

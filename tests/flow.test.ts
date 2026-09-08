@@ -8,6 +8,8 @@ import type { Game, State } from '../lib/model.ts';
 import {
   eligible,
   parseFilters,
+  parseEngine,
+  recommendLocally,
   parsePreference,
   parseProfile,
   selectCandidates,
@@ -92,11 +94,17 @@ void test('missing IGDB type stays unknown, durations require valid contribution
   assert.equal(partial.isGame, undefined);
   assert.equal(partial.durationHours, null);
   const known = metadata(
-    { id: 1, name: 'Juego', game_type: 0 },
+    {
+      id: 1,
+      name: 'Juego',
+      game_type: 0,
+      first_release_date: 1577836800,
+    },
     { game_id: 1, count: 4, hastily: 7200 },
     types,
   );
   assert.equal(known.isGame, true);
+  assert.equal(known.releasedAt, 1577836800000);
   assert.equal(known.durationHours, 2);
   assert.equal(
     metadata(
@@ -278,6 +286,83 @@ void test('today uses session minutes, next uses known story hours and metadata 
     eligible(game(1, { isGame: false }), undefined, DEFAULT_FILTERS),
     false,
   );
+  assert.equal(
+    eligible(game(1, { releasedAt: Date.UTC(2021, 0, 1) }), undefined, {
+      ...DEFAULT_FILTERS,
+      minReleaseDate: '2020-01-01',
+    }),
+    true,
+  );
+  assert.equal(
+    eligible(game(1, { releasedAt: Date.UTC(2019, 0, 1) }), undefined, {
+      ...DEFAULT_FILTERS,
+      minReleaseDate: '2020-01-01',
+    }),
+    false,
+  );
+  assert.equal(
+    eligible(game(1), undefined, {
+      ...DEFAULT_FILTERS,
+      minReleaseDate: '2020-01-01',
+    }),
+    false,
+  );
+  assert.throws(() =>
+    parseFilters({
+      ...DEFAULT_FILTERS,
+      minReleaseDate: '2020-02-30',
+    }),
+  );
+  assert.deepEqual(
+    parseFilters({
+      ...DEFAULT_FILTERS,
+      tags: ['id:1', 'id:1', 'name:A'],
+    }).tags,
+    ['id:1', 'name:A'],
+  );
+  assert.throws(() =>
+    parseFilters({ ...DEFAULT_FILTERS, tags: ['not-a-tag-key'] }),
+  );
+  const tagged = state();
+  tagged.preferences = {};
+  tagged.games = [
+    game(1, {
+      steamTags: [
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+      ],
+    }),
+    game(2, { steamTags: [{ id: 1, name: 'A' }] }),
+    game(3, { steamTags: [{ id: 2, name: 'B' }] }),
+    game(4, {
+      steamTags: [
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+      ],
+    }),
+  ];
+  assert.deepEqual(
+    selectCandidates(tagged, [], {
+      ...DEFAULT_FILTERS,
+      tags: ['id:1', 'id:2'],
+    }).map((g) => g.appId),
+    [1, 4, 2, 3],
+  );
+  tagged.games.push(
+    game(5, {
+      steamTags: [
+        { id: 1, name: 'A' },
+        { id: 2, name: 'B' },
+      ],
+    }),
+  );
+  assert.deepEqual(
+    selectCandidates(tagged, [], {
+      ...DEFAULT_FILTERS,
+      tags: ['id:1', 'id:2'],
+    }).map((g) => g.appId),
+    [1, 4, 5],
+  );
 });
 void test('Codex output rejects invented IDs, duplicates, wrong ownership and missing reasons', () => {
   const candidates = [game(1), game(9, { owned: false })];
@@ -375,30 +460,36 @@ void test('atomic state survives restart and failures without losing preferences
   process.env.NEXTPLAY_DATA_DIR = dir;
   try {
     const s = state();
-    await saveState(s);
+    const legacyPath = join(dir, 'state.json');
+    await atomicJson(legacyPath, s);
     const first = await readState();
     first.preferences['1'].status = 'completed';
     await saveState(first);
     const restarted = await readState();
     assert.equal(restarted.preferences['1'].favorite, true);
     assert.equal(restarted.preferences['1'].status, 'completed');
-    const path = join(dir, 'state.json');
-    const before = await readFile(path, 'utf8');
+    assert.deepEqual(JSON.parse(await readFile(legacyPath, 'utf8')), s);
+    const path = join(dir, 'library.sqlite');
+    const before = await readFile(path);
     await assert.rejects(
       exclusive(async () => {
         await exclusive(async () => {});
       }),
       /operación en curso/,
     );
-    assert.equal(await readFile(path, 'utf8'), before);
+    assert.deepEqual(await readFile(path), before);
+    await assert.rejects(
+      saveState({ ...restarted, games: [game(1), game(1)] }),
+    );
+    assert.deepEqual(await readState(), restarted);
     assert.equal(
       (await readdir(dir)).filter((f) => f.endsWith('.tmp')).length,
       0,
     );
     await writeFile(path, 'corrupted');
-    await assert.rejects(readState(), /conservado/);
+    await assert.rejects(readState(), /database/);
     assert.equal(await readFile(path, 'utf8'), 'corrupted');
-    await atomicJson(path, s);
+    await writeFile(path, before);
     assert.equal((await readState()).games.length, 5);
   } finally {
     if (previous === undefined) delete process.env.NEXTPLAY_DATA_DIR;
@@ -425,5 +516,218 @@ void test('manual review refresh preserves the last valid data when Steam fails'
     assert.equal(cache.reviews['1'].positive, 90);
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+void test('local recommendations use taste weights, mode signals and hard filters without inventing session lengths', () => {
+  const s = state();
+  s.syncedAt = Date.now();
+  s.preferences = {};
+  s.tastes = {
+    overrides: { progression: 'like' },
+    ignoredHours: [],
+    notes: '',
+  };
+  s.games = [
+    game(1, { recentMinutes: 30, playtimeMinutes: 120 }),
+    game(2),
+    game(3, { genres: [] }),
+    game(4, { genres: [], playtimeMinutes: null }),
+  ];
+  const today = recommendLocally(s, { ...DEFAULT_FILTERS, minutes: 10 });
+  const next = recommendLocally(s, { ...DEFAULT_FILTERS, mode: 'next' });
+  assert.equal(today.owned[0].appId, 1);
+  assert.equal(next.owned[0].appId, 2);
+  assert.match(today.owned[0].reason, /afinidad \+12/);
+  assert.match(today.owned[0].caveat, /10 minutos/);
+  assert.equal(today.engine, 'local');
+  assert.equal(next.owned.length, 3);
+  s.preferences['3'] = { favorite: true, status: 'pending' };
+  assert.equal(recommendLocally(s, DEFAULT_FILTERS).owned[0].appId, 3);
+  s.preferences['3'].status = 'ignored';
+  assert(
+    !recommendLocally(s, { ...DEFAULT_FILTERS, replay: true }).owned.some(
+      (p) => p.appId === 3,
+    ),
+  );
+  s.tastes.overrides.progression = 'dislike';
+  assert.equal(recommendLocally(s, DEFAULT_FILTERS).owned[0].appId, 4);
+  assert.equal(
+    recommendLocally(s, { ...DEFAULT_FILTERS, mode: 'next', hours: 5 }).owned
+      .length,
+    0,
+  );
+  assert.equal(
+    recommendLocally(s, { ...DEFAULT_FILTERS, gameMode: 'coop' }).owned.length,
+    0,
+  );
+  assert.equal(
+    recommendLocally(s, { ...DEFAULT_FILTERS, genre: 'Racing' }).owned.length,
+    0,
+  );
+  for (const invalid of [null, '', 'auto', {}, 1])
+    assert.throws(() => parseEngine(invalid));
+});
+
+void test('local API works without Codex or network and preserves every search across resets, feedback and reloads', async () => {
+  const tempRoot = resolve(tmpdir());
+  const dir = await mkdtemp(join(tempRoot, 'nextplay-history-test-'));
+  const previousDir = process.env.NEXTPLAY_DATA_DIR;
+  const previousBin = process.env.NEXTPLAY_CODEX_BIN;
+  const originalFetch = globalThis.fetch;
+  process.env.NEXTPLAY_DATA_DIR = dir;
+  process.env.NEXTPLAY_CODEX_BIN = join(dir, 'missing-codex.exe');
+  let networkCalls = 0;
+  globalThis.fetch = async () => {
+    networkCalls++;
+    throw new Error('Offline');
+  };
+  const request = (
+    path: string,
+    payload: object,
+    method: 'POST' | 'PATCH' = 'POST',
+  ) =>
+    handle(
+      new Request('http://127.0.0.1:3000/api/' + path, {
+        method,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+    );
+  try {
+    const s = state();
+    const discovery = game(9, { owned: false });
+    s.conversation = [
+      {
+        text: 'Búsqueda anterior',
+        filters: DEFAULT_FILTERS,
+        result: {
+          at: 1,
+          message: 'Recomendación anterior',
+          owned: [],
+          discoveries: [{ ...pick(9), game: discovery }],
+          warnings: [],
+        },
+      },
+    ];
+    await atomicJson(join(dir, 'state.json'), s);
+    const migrated = await readState();
+    assert.equal(migrated.history?.length, 1);
+    assert.deepEqual(migrated.history?.[0].result, s.conversation[0].result);
+    const call = async (
+      path: string,
+      payload: object,
+      method: 'POST' | 'PATCH' = 'POST',
+    ) => {
+      const response = await request(path, payload, method);
+      assert.equal(response.status, 200);
+      return response.json();
+    };
+    const today = await call('recommendations', {
+      engine: 'local',
+      filters: DEFAULT_FILTERS,
+      text: '',
+    });
+    assert.equal(today.setup.codex, false);
+    assert.equal(today.history.length, 2);
+    assert.equal(today.conversation[0].result.discoveries[0].appId, 9);
+    await call('conversation/reset', { filters: DEFAULT_FILTERS });
+    const next = await call('recommendations', {
+      engine: 'local',
+      filters: { ...DEFAULT_FILTERS, mode: 'next', hours: 40 },
+      text: '',
+    });
+    assert.equal(next.history.length, 3);
+    assert.equal(next.conversation.length, 1);
+    assert.equal(next.engine, 'local');
+    assert.deepEqual(next.history.slice(0, 2), today.history);
+    const visiblePick = [
+      ...next.conversation[0].result.owned,
+      ...next.conversation[0].result.discoveries,
+    ][0];
+    assert.ok(visiblePick);
+    const feedback = await call(
+      'state',
+      {
+        appId: visiblePick.game.appId,
+        preference: { favorite: false, status: 'ignored' },
+      },
+      'PATCH',
+    );
+    assert.equal(feedback.conversation.length, 1);
+    assert.equal(
+      feedback.conversation[0].result.owned.some(
+        (p: { appId: number }) => p.appId === visiblePick.appId,
+      ) ||
+        feedback.conversation[0].result.discoveries.some(
+          (p: { appId: number }) => p.appId === visiblePick.appId,
+        ),
+      true,
+    );
+    await call('conversation/reset', { filters: DEFAULT_FILTERS });
+    await call(
+      'state',
+      { appId: 9, preference: { favorite: false, status: 'ignored' } },
+      'PATCH',
+    );
+    await call(
+      'tastes',
+      {
+        overrides: { progression: 'like' },
+        ignoredHours: [],
+        notes: 'Me gustan las historias.',
+      },
+      'PATCH',
+    );
+    const restarted = await readState();
+    assert.deepEqual(restarted.history, next.history);
+    assert.equal(restarted.conversation.length, 0);
+    assert(
+      !recommendLocally(restarted, DEFAULT_FILTERS).discoveries.some(
+        (p) => p.appId === 9,
+      ),
+    );
+    assert.equal(
+      (
+        await request(
+          'state',
+          { appId: 999, preference: { favorite: false, status: 'ignored' } },
+          'PATCH',
+        )
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await request('recommendations', {
+          engine: 'invalid',
+          filters: DEFAULT_FILTERS,
+          text: '',
+        })
+      ).status,
+      400,
+    );
+    assert.deepEqual((await readState()).history, next.history);
+    restarted.conversation = Array.from(
+      { length: 20 },
+      () => s.conversation[0],
+    );
+    await saveState(restarted);
+    const more = await call('recommendations', {
+      filters: DEFAULT_FILTERS,
+      text: '',
+    });
+    assert.equal(more.history.length, 4);
+    assert.equal(more.conversation[0].result.engine, 'local');
+    assert.equal(networkCalls, 0);
+    assert.equal((await readdir(dir)).includes('codex-runs'), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+    else process.env.NEXTPLAY_DATA_DIR = previousDir;
+    if (previousBin === undefined) delete process.env.NEXTPLAY_CODEX_BIN;
+    else process.env.NEXTPLAY_CODEX_BIN = previousBin;
+    if (dir.startsWith(join(tempRoot, 'nextplay-history-test-')))
+      await rm(dir, { recursive: true, force: true });
   }
 });

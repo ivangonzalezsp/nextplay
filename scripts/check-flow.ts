@@ -36,7 +36,19 @@ try {
       url: 'https://steamcommunity.com/profiles/76561198000000001/',
     },
     syncedAt: Date.now(),
-    games: [game(1001, 2), game(1002, 8), game(1003, 30)],
+    games: [
+      game(1001, 2),
+      game(1002, 8),
+      game(1003, 30),
+      ...Array.from({ length: 120 }, (_, i) => game(1004 + i, 10)),
+      {
+        ...game(2000, 2),
+        owned: false,
+        shared: true,
+        summary:
+          'Puzles de constelaciones: conecta estrellas para reconstruir el cielo. Datos ficticios de prueba.',
+      },
+    ],
     preferences: {
       '1001': { favorite: true, status: 'pending' },
       '1003': { favorite: false, status: 'ignored' },
@@ -68,8 +80,8 @@ try {
           },
           text:
             mode === 'today'
-              ? 'Recomienda uno de los juegos disponibles para explorar sin competir.'
-              : 'Mantén lo de explorar sin competir; ahora quiero una historia de hasta 3 horas.',
+              ? 'Busco puzles de constelaciones. Busca en la base de datos el juego que encaje y recomiéndamelo.'
+              : 'Mantén lo de puzles de constelaciones; ahora quiero una historia de hasta 3 horas.',
         }),
       }),
     );
@@ -81,7 +93,12 @@ try {
       'Expected an eligible owned recommendation',
     );
     assert.ok(result.owned.every((p) => p.appId !== 1003));
-    if (mode === 'next') assert.ok(result.owned.every((p) => p.appId === 1001));
+    assert.ok(
+      result.owned.some((p) => p.appId === 2000),
+      'Expected retrieval of the shared game beyond the first 60',
+    );
+    if (mode === 'next')
+      assert.ok(result.owned.every((p) => [1001, 2000].includes(p.appId)));
     console.log(mode + ': propuesta válida, exclusiones y límites respetados.');
   }
   const restarted = await readState();

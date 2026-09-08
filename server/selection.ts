@@ -4,6 +4,8 @@ import {
   STATUS_LABELS,
   codexEffortsForModel,
   inLibrary,
+  releaseDateAt,
+  steamTagKey,
   storyHours,
 } from '../lib/model.ts';
 import { AFFINITIES, affinityScore, buildTasteProfile } from '../lib/tastes.ts';
@@ -11,10 +13,19 @@ import type {
   CodexEffort,
   CodexSettings,
   TasteSettings,
+  TasteAffinity,
+  Recommendation,
+  RecommendationEngine,
 } from '../lib/model.ts';
 import type { Filters, Game, Preference, State, Pick } from '../lib/model.ts';
 
 const codexModelPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,100}$/;
+
+export function parseEngine(value: unknown): RecommendationEngine {
+  if (value !== 'codex' && value !== 'local')
+    throw new AppError('Elige Codex o el algoritmo local.');
+  return value;
+}
 
 export function parseCodexSettings(
   value: unknown,
@@ -73,10 +84,30 @@ export function parseFilters(value: unknown): Filters {
   const number = (v: unknown, max: number) =>
     v === null ||
     (typeof v === 'number' && Number.isFinite(v) && v >= 1 && v <= max);
+  const minReleaseDate = f.minReleaseDate ?? null;
+  const tags = f.tags ?? [];
+  const validTag = (tag: unknown) => {
+    if (typeof tag !== 'string' || tag.length < 4 || tag.length > 205)
+      return false;
+    if (tag.startsWith('id:')) {
+      const id = Number(tag.slice(3));
+      return Number.isSafeInteger(id) && id > 0;
+    }
+    return tag.startsWith('name:') && tag.slice(5).trim().length > 0;
+  };
+  const validMinReleaseDate =
+    minReleaseDate === null ||
+    (typeof minReleaseDate === 'string' &&
+      /^\d{4}-\d{2}-\d{2}$/.test(minReleaseDate) &&
+      releaseDateAt(minReleaseDate) !== null);
   if (
     !['today', 'next'].includes(f.mode) ||
     !number(f.minutes, 1440) ||
     !number(f.hours, 1000) ||
+    !validMinReleaseDate ||
+    !Array.isArray(tags) ||
+    tags.length > 50 ||
+    !tags.every(validTag) ||
     typeof f.genre !== 'string' ||
     f.genre.length > 100 ||
     typeof f.mood !== 'string' ||
@@ -91,6 +122,8 @@ export function parseFilters(value: unknown): Filters {
     mode: f.mode,
     minutes: f.minutes,
     hours: f.hours,
+    minReleaseDate,
+    tags: [...new Set(tags)],
     genre: f.genre.trim(),
     gameMode: f.gameMode,
     mood: f.mood.trim(),
@@ -148,6 +181,12 @@ export function eligible(game: Game, pref: Preference | undefined, f: Filters) {
     return false;
   if (game.isGame === false || game.released === false) return false;
   if (
+    f.minReleaseDate &&
+    (game.releasedAt == null ||
+      (releaseDateAt(f.minReleaseDate) ?? Infinity) > game.releasedAt)
+  )
+    return false;
+  if (
     f.genre &&
     !game.genres?.some((g) => g.name.toLowerCase() === f.genre.toLowerCase())
   )
@@ -171,6 +210,48 @@ export function eligible(game: Game, pref: Preference | undefined, f: Filters) {
     return false;
   return true;
 }
+function hasSteamTag(game: Game, key: string) {
+  return (
+    game.steamTags?.some(
+      (tag) =>
+        steamTagKey(tag) === key ||
+        (key.startsWith('name:') && key.slice(5) === tag.englishName),
+    ) ?? false
+  );
+}
+function matchesTags(game: Game, tags: string[], all: boolean) {
+  if (!tags.length) return true;
+  return all
+    ? tags.every((tag) => hasSteamTag(game, tag))
+    : tags.some((tag) => hasSteamTag(game, tag));
+}
+function candidateWeights(
+  g: Game,
+  state: State,
+  profile: TasteAffinity[],
+  filters: Filters,
+  text = '',
+) {
+  return {
+    'mención directa': text.toLowerCase().includes(g.name.toLowerCase())
+      ? 80
+      : 0,
+    favorito: state.preferences[g.appId]?.favorite ? 40 : 0,
+    afinidad: affinityScore(g, profile),
+    'actividad reciente':
+      g.recentMinutes &&
+      state.syncedAt &&
+      Date.now() - state.syncedAt < 86400000 &&
+      !state.tastes?.ignoredHours.includes(g.appId)
+        ? filters.mode === 'today'
+          ? 4
+          : 1
+        : 0,
+    'sin tiempo de juego registrado':
+      g.playtimeMinutes === 0 ? (filters.mode === 'next' ? 4 : 1) : 0,
+  };
+}
+
 export function selectCandidates(
   state: State,
   discoveries: Game[],
@@ -178,18 +259,6 @@ export function selectCandidates(
   text = '',
 ): Game[] {
   const profile = buildTasteProfile(state);
-  const mentioned = text.toLowerCase();
-  const score = (g: Game) =>
-    (mentioned.includes(g.name.toLowerCase()) ? 80 : 0) +
-    (state.preferences[g.appId]?.favorite ? 40 : 0) +
-    affinityScore(g, profile) +
-    (g.recentMinutes &&
-    state.syncedAt &&
-    Date.now() - state.syncedAt < 86400000 &&
-    !state.tastes?.ignoredHours.includes(g.appId)
-      ? 1
-      : 0) +
-    ((g.playtimeMinutes ?? 0) === 0 ? 1 : 0);
   const library = new Map(state.games.map((g) => [g.appId, g]));
   const unique = new Map(
     [...state.games, ...discoveries.filter((g) => !library.has(g.appId))].map(
@@ -203,14 +272,113 @@ export function selectCandidates(
       ],
     ),
   );
-  const sorted = [...unique.values()]
-    .filter((g) => eligible(g, state.preferences[g.appId], filters))
-    .toSorted((a, b) => score(b) - score(a) || a.appId - b.appId);
-  // ponytail: bounded heuristic shortlist; add semantic retrieval only if large libraries lose relevant candidates.
+  const sorted = (allTags: boolean) =>
+    [...unique.values()]
+      .filter(
+        (g) =>
+          eligible(g, state.preferences[g.appId], filters) &&
+          matchesTags(g, filters.tags ?? [], allTags),
+      )
+      .map((game) => ({
+        game,
+        score: Object.values(
+          candidateWeights(game, state, profile, filters, text),
+        ).reduce((sum, weight) => sum + weight, 0),
+      }))
+      .toSorted((a, b) => b.score - a.score || a.game.appId - b.game.appId)
+      .map(({ game }) => game);
+  const strict = sorted(true);
+  const tags = filters.tags ?? [];
+  if (!tags.length) return strict;
+  const any = sorted(false);
+  const choose = (library: boolean) => {
+    const strictBucket = strict.filter((game) => inLibrary(game) === library);
+    const anyBucket = any.filter((game) => inLibrary(game) === library);
+    if (
+      strictBucket.length >= (library ? 3 : 2) ||
+      strictBucket.length === anyBucket.length
+    )
+      return strictBucket;
+    const strictIds = new Set(strictBucket.map((game) => game.appId));
+    return [
+      ...strictBucket,
+      ...anyBucket.filter((game) => !strictIds.has(game.appId)),
+    ];
+  };
+  const selectedIds = new Set(
+    [...choose(true), ...choose(false)].map((game) => game.appId),
+  );
+  const strictIds = new Set(strict.map((game) => game.appId));
   return [
-    ...sorted.filter(inLibrary).slice(0, 40),
-    ...sorted.filter((g) => !inLibrary(g)).slice(0, 20),
+    ...strict.filter((game) => selectedIds.has(game.appId)),
+    ...any.filter(
+      (game) => selectedIds.has(game.appId) && !strictIds.has(game.appId),
+    ),
   ];
+}
+
+export function recommendLocally(
+  state: State,
+  filters: Filters,
+): Recommendation {
+  const profile = buildTasteProfile(state);
+  const discoveries = (state.history ?? []).flatMap((t) =>
+    t.result.discoveries.map((p) => p.game),
+  );
+  const candidates = selectCandidates(state, discoveries, filters);
+  const pick = (game: Game) => {
+    const weights = candidateWeights(game, state, profile, filters);
+    const score = Object.values(weights).reduce(
+      (sum, weight) => sum + weight,
+      0,
+    );
+    const points = (value: number) =>
+      value.toLocaleString('es', { maximumFractionDigits: 1 });
+    const reasons = Object.entries(weights)
+      .filter(([, value]) => value !== 0)
+      .map(
+        ([label, value]) => `${label} ${value > 0 ? '+' : ''}${points(value)}`,
+      );
+    return {
+      appId: game.appId,
+      game,
+      reason: `Puntuación: ${points(score)}. ${reasons.length ? reasons.join('; ') + '.' : 'Sin señales de afinidad suficientes; cumple tus filtros.'}`,
+      whyNow:
+        filters.mode === 'today'
+          ? weights['actividad reciente'] > 0
+            ? 'Lo has jugado recientemente: puede ser una opción para retomar hoy.'
+            : 'Una opción para hoy según tus gustos y filtros.'
+          : filters.hours !== null
+            ? `Historia estimada de ${points(storyHours(game)!)} h, dentro de tu límite de ${filters.hours} h.`
+            : 'Una opción para varias sesiones según tus gustos y filtros.',
+      caveat:
+        filters.mode === 'today'
+          ? `No hay datos de duración de sesión${filters.minutes !== null ? ` para asegurar que encaje en ${filters.minutes} minutos` : ''}.`
+          : storyHours(game)
+            ? 'La duración es una estimación total de la historia, no el tiempo que te queda.'
+            : 'No se conoce la duración de la historia.',
+    };
+  };
+  return {
+    engine: 'local',
+    message: candidates.length
+      ? 'Selección local según tus favoritos y afinidades, sin consumir tokens.'
+      : 'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.',
+    owned: candidates.filter(inLibrary).slice(0, 3).map(pick),
+    discoveries: candidates
+      .filter((g) => !inLibrary(g))
+      .slice(0, 2)
+      .map(pick),
+    at: Date.now(),
+    warnings: [
+      'Se usan los datos guardados. Actualiza la biblioteca para refrescarlos; los descubrimientos proceden del historial.',
+      ...(filters.mood || state.tastes?.notes
+        ? [
+            'El algoritmo local no interpreta el ánimo ni las notas en texto libre. Ajusta las afinidades en Tus gustos.',
+          ]
+        : []),
+    ],
+  };
 }
 export function validatePicks(value: unknown, candidates: Game[]) {
   const v = value as { message: string; owned: Pick[]; discoveries: Pick[] };

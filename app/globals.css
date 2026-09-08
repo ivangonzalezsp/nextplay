@@ -274,6 +274,32 @@ h1 {
   font-size: 0.9375rem;
   background: #11181c;
 }
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 7px;
+  border: 1px solid #527d68;
+  border-radius: 999px;
+  background: #293b33;
+  color: #b3f2cf;
+  font-size: 0.75rem;
+}
+.filter-tag button {
+  display: inline-flex;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
 .number-field {
   position: relative;
 }
@@ -577,6 +603,13 @@ h1 {
 }
 .history summary {
   cursor: pointer;
+}
+.saved-search > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.saved-search > p {
+  margin-block: 16px;
 }
 .history > div {
   border-left: 2px solid #415b4c;

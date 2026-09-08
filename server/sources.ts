@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AppError, atomicJson, config, dataDir, readJson } from './store.ts';
+import { openDatabase, overlaySteamTags } from './database.ts';
 import { parseProfile } from './selection.ts';
 import { log, logError } from '../lib/log.ts';
 import type { Game, Profile, State } from '../lib/model.ts';
@@ -21,6 +22,18 @@ export const getCache = () =>
   readJson(join(dataDir(), 'cache.json'), emptyCache);
 export const saveCache = (cache: Cache) =>
   atomicJson(join(dataDir(), 'cache.json'), cache);
+
+function withPersistedSteamTags(games: Game[]) {
+  let db;
+  try {
+    db = openDatabase(join(dataDir(), 'library.sqlite'), true);
+    return overlaySteamTags(db, games);
+  } catch {
+    return games;
+  } finally {
+    db?.close();
+  }
+}
 type Fetcher = typeof fetch;
 type SteamGame = {
   appid: number;
@@ -410,6 +423,9 @@ export function metadata(
         : null,
     durationSamples: natural(duration?.count) ? duration.count : 0,
     isGame: natural(raw.game_type) ? gameTypes.has(raw.game_type) : undefined,
+    releasedAt: natural(raw.first_release_date)
+      ? raw.first_release_date * 1000
+      : undefined,
     released: natural(raw.first_release_date)
       ? raw.first_release_date * 1000 <= Date.now()
       : undefined,
@@ -420,7 +436,9 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
   const c = await config();
   if (!c.clientId || !c.clientSecret)
     return {
-      games: games.map((g) => ({ ...g, ...cache.metadata[g.appId] })),
+      games: withPersistedSteamTags(
+        games.map((g) => ({ ...g, ...cache.metadata[g.appId] })),
+      ),
       warnings: [
         'IGDB no está configurado: faltan géneros, duraciones y descubrimientos nuevos.',
       ],
@@ -486,7 +504,9 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
     );
   }
   return {
-    games: games.map((g) => ({ ...g, ...cache.metadata[g.appId] })),
+    games: withPersistedSteamTags(
+      games.map((g) => ({ ...g, ...cache.metadata[g.appId] })),
+    ),
     warnings,
   };
 }
