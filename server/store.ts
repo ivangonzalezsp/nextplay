@@ -79,6 +79,11 @@ function validState(state: State): State {
     state?.version !== 1 ||
     !Array.isArray(state.games) ||
     !Array.isArray(state.conversation) ||
+    (state.shortlist !== undefined &&
+      (!Array.isArray(state.shortlist) ||
+        !state.shortlist.every(
+          (game) => game && Number.isSafeInteger(game.appId) && game.appId > 0,
+        ))) ||
     (state.history !== undefined && !Array.isArray(state.history)) ||
     !state.preferences ||
     !state.filters
