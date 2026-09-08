@@ -1,6 +1,12 @@
 export type Mode = 'today' | 'next';
 export type RecommendationEngine = 'codex' | 'local';
-export type GameStatus = 'pending' | 'completed' | 'abandoned' | 'ignored';
+export type GameStatus =
+  | 'pending'
+  | 'playing'
+  | 'paused'
+  | 'completed'
+  | 'abandoned'
+  | 'ignored';
 export type Preference = { favorite: boolean; status: GameStatus };
 export const CODEX_EFFORTS = [
   'low',
@@ -64,6 +70,7 @@ export type Filters = {
   gameMode: string;
   mood: string;
   replay: boolean;
+  sessionIntent?: 'any' | 'continue' | 'start';
 };
 export const DEFAULT_FILTERS: Filters = {
   mode: 'today',
@@ -75,6 +82,7 @@ export const DEFAULT_FILTERS: Filters = {
   gameMode: '',
   mood: '',
   replay: false,
+  sessionIntent: 'any',
 };
 export type Game = {
   appId: number;
@@ -190,6 +198,8 @@ export const EMPTY_STATE: State = {
 };
 export const STATUS_LABELS: Record<GameStatus, string> = {
   pending: 'Pendiente',
+  playing: 'Estoy jugando',
+  paused: 'En pausa',
   completed: 'Terminado',
   abandoned: 'Abandonado',
   ignored: 'No me interesa',
