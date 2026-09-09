@@ -85,6 +85,7 @@ export type Filters = {
   mood: string;
   replay: boolean;
   sessionIntent?: 'any' | 'continue' | 'start';
+  comfortZone?: boolean;
 };
 export const DEFAULT_FILTERS: Filters = {
   mode: 'today',
