@@ -1,3 +1,5 @@
+import { filterCandidates } from '../lib/filters.ts';
+export { eligible } from '../lib/filters.ts';
 import { AppError } from './store.ts';
 import {
   CODEX_EFFORTS,
@@ -5,7 +7,6 @@ import {
   codexEffortsForModel,
   inLibrary,
   releaseDateAt,
-  steamTagKey,
   storyHours,
 } from '../lib/model.ts';
 import { AFFINITIES, affinityScore, buildTasteProfile } from '../lib/tastes.ts';
@@ -173,58 +174,6 @@ export function parseTastes(value: unknown, state: State): TasteSettings {
     notes: v.notes.trim(),
   };
 }
-export function eligible(game: Game, pref: Preference | undefined, f: Filters) {
-  if (
-    pref?.status === 'ignored' ||
-    (!f.replay && ['completed', 'abandoned'].includes(pref?.status ?? ''))
-  )
-    return false;
-  if (game.isGame === false || game.released === false) return false;
-  if (
-    f.minReleaseDate &&
-    (game.releasedAt == null ||
-      (releaseDateAt(f.minReleaseDate) ?? Infinity) > game.releasedAt)
-  )
-    return false;
-  if (
-    f.genre &&
-    !game.genres?.some((g) => g.name.toLowerCase() === f.genre.toLowerCase())
-  )
-    return false;
-  const modeIds: Record<string, number[]> = {
-    single: [1],
-    multi: [2, 3, 4, 5, 6],
-    coop: [3],
-  };
-  if (
-    f.gameMode &&
-    !game.gameModes?.some((m) => modeIds[f.gameMode].includes(m))
-  )
-    return false;
-  // Story length is not session length. A hard story cap requires known duration.
-  if (
-    f.mode === 'next' &&
-    f.hours !== null &&
-    (!storyHours(game) || storyHours(game)! > f.hours)
-  )
-    return false;
-  return true;
-}
-function hasSteamTag(game: Game, key: string) {
-  return (
-    game.steamTags?.some(
-      (tag) =>
-        steamTagKey(tag) === key ||
-        (key.startsWith('name:') && key.slice(5) === tag.englishName),
-    ) ?? false
-  );
-}
-function matchesTags(game: Game, tags: string[], all: boolean) {
-  if (!tags.length) return true;
-  return all
-    ? tags.every((tag) => hasSteamTag(game, tag))
-    : tags.some((tag) => hasSteamTag(game, tag));
-}
 function candidateWeights(
   g: Game,
   state: State,
@@ -272,13 +221,8 @@ export function selectCandidates(
       ],
     ),
   );
-  const sorted = (allTags: boolean) =>
+  return filterCandidates(
     [...unique.values()]
-      .filter(
-        (g) =>
-          eligible(g, state.preferences[g.appId], filters) &&
-          matchesTags(g, filters.tags ?? [], allTags),
-      )
       .map((game) => ({
         game,
         score: Object.values(
@@ -286,35 +230,10 @@ export function selectCandidates(
         ).reduce((sum, weight) => sum + weight, 0),
       }))
       .toSorted((a, b) => b.score - a.score || a.game.appId - b.game.appId)
-      .map(({ game }) => game);
-  const strict = sorted(true);
-  const tags = filters.tags ?? [];
-  if (!tags.length) return strict;
-  const any = sorted(false);
-  const choose = (library: boolean) => {
-    const strictBucket = strict.filter((game) => inLibrary(game) === library);
-    const anyBucket = any.filter((game) => inLibrary(game) === library);
-    if (
-      strictBucket.length >= (library ? 3 : 2) ||
-      strictBucket.length === anyBucket.length
-    )
-      return strictBucket;
-    const strictIds = new Set(strictBucket.map((game) => game.appId));
-    return [
-      ...strictBucket,
-      ...anyBucket.filter((game) => !strictIds.has(game.appId)),
-    ];
-  };
-  const selectedIds = new Set(
-    [...choose(true), ...choose(false)].map((game) => game.appId),
+      .map(({ game }) => game),
+    state.preferences,
+    filters,
   );
-  const strictIds = new Set(strict.map((game) => game.appId));
-  return [
-    ...strict.filter((game) => selectedIds.has(game.appId)),
-    ...any.filter(
-      (game) => selectedIds.has(game.appId) && !strictIds.has(game.appId),
-    ),
-  ];
 }
 
 export function recommendLocally(

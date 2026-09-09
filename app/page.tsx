@@ -48,6 +48,7 @@ import {
   sortLibraryGames,
   steamTagKey,
 } from '@/lib/model';
+import { clearFilters, filterSummary } from '@/lib/filters';
 import { log, logError } from '@/lib/log';
 import type {
   CodexSettings,
@@ -617,6 +618,65 @@ export default function Home() {
   ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
   const tagLabels = new Map(steamTags.map((tag) => [tag.value, tag.label]));
   const selectedTagKeys = filters.tags ?? [];
+  const filterCounts = state ? filterSummary(state, filters) : null;
+  const activeFilterChips: { label: string; patch: Partial<Filters> }[] = [
+    ...(filters.mode === 'next' && filters.hours !== null
+      ? [
+          {
+            label: 'Historia ≤ ' + filters.hours + ' h',
+            patch: { hours: null },
+          },
+        ]
+      : []),
+    ...(filters.mode === 'today' &&
+    engine === 'codex' &&
+    filters.minutes !== null
+      ? [
+          {
+            label: 'Sesión: ' + filters.minutes + ' min (orientativo)',
+            patch: { minutes: null },
+          },
+        ]
+      : []),
+    ...(filters.minReleaseDate
+      ? [
+          {
+            label: 'Desde ' + filters.minReleaseDate,
+            patch: { minReleaseDate: null },
+          },
+        ]
+      : []),
+    ...(filters.genre ? [{ label: filters.genre, patch: { genre: '' } }] : []),
+    ...(filters.gameMode
+      ? [
+          {
+            label: (
+              {
+                single: 'En solitario',
+                coop: 'Cooperativo',
+                multi: 'Multijugador',
+              } as Record<string, string>
+            )[filters.gameMode],
+            patch: { gameMode: '' },
+          },
+        ]
+      : []),
+    ...selectedTagKeys.map((key) => ({
+      label: tagLabels.get(key) ?? key,
+      patch: { tags: selectedTagKeys.filter((tag) => tag !== key) },
+    })),
+    ...(!filters.replay
+      ? [{ label: 'Excluir terminados y abandonados', patch: { replay: true } }]
+      : []),
+    ...(engine === 'codex' && filters.mood.trim()
+      ? [
+          {
+            label: 'Busco: ' + filters.mood + ' (orientativo)',
+            patch: { mood: '' },
+          },
+        ]
+      : []),
+  ];
   const tagSuggestions = steamTags.filter(
     (tag) => !selectedTagKeys.includes(tag.value),
   );
@@ -769,6 +829,64 @@ export default function Home() {
                   ? 'Un juego para el rato que tienes ahora.'
                   : 'Una nueva historia para varias sesiones.'}
               </p>
+              <div className="field" aria-label="Resumen de filtros">
+                <strong>
+                  Filtros activos ·{' '}
+                  {filters.mode === 'today' ? 'Para hoy' : 'Próximo juego'}
+                </strong>
+                <div className="filter-tags">
+                  {activeFilterChips.map(({ label, patch }, index) => (
+                    <span className="filter-tag" key={index}>
+                      {label}
+                      <button
+                        type="button"
+                        aria-label={'Quitar filtro: ' + label}
+                        onClick={() => setFilters({ ...filters, ...patch })}
+                      >
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                {!activeFilterChips.length && (
+                  <p className="field-help">Sin filtros opcionales.</p>
+                )}
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setFilters(clearFilters(filters.mode));
+                    setTagSearch('');
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+                {filterCounts && (
+                  <p className="field-help" role="status">
+                    <strong>
+                      {filterCounts.eligible} de {filterCounts.total}
+                    </strong>{' '}
+                    juegos de tu biblioteca cumplen los filtros con los datos
+                    guardados. {filterCounts.missing} excluidos por datos
+                    necesarios sin completar, sin otro incumplimiento conocido.
+                    {selectedTagKeys.length > 1 &&
+                      (filterCounts.relaxedTags
+                        ? ' Se incluyen juegos con cualquiera de las etiquetas: hay menos de 3 con todas.'
+                        : ' Los candidatos tienen todas las etiquetas seleccionadas.')}
+                  </p>
+                )}
+                <p className="field-help">
+                  Los recuentos incluyen juegos propios y compartidos, sin
+                  descubrimientos. Codex puede actualizar metadatos al
+                  recomendar. «No me interesa» siempre se excluye.
+                  {filters.mode === 'today' &&
+                    (engine === 'codex'
+                      ? ' Los minutos orientan a Codex; no excluyen juegos por duración total.'
+                      : ' El motor local no filtra por minutos de sesión.')}
+                  {engine === 'codex' &&
+                    filters.mood.trim() &&
+                    ' «Hoy busco» orienta a Codex y no modifica el recuento.'}
+                </p>
+              </div>
               <div className="field">
                 <label htmlFor="time">
                   {filters.mode === 'today'
