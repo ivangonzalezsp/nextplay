@@ -74,6 +74,7 @@ export type TasteAffinity = {
   }[];
 };
 export type Filters = {
+  shortlistOnly?: boolean;
   mode: Mode;
   minutes: number | null;
   hours: number | null;
@@ -176,6 +177,7 @@ export type State = {
     excludedCount: number;
   } | null;
   games: Game[];
+  shortlist?: Game[];
   preferences: Record<string, Preference>;
   tastes?: TasteSettings;
   codex?: CodexSettings;

@@ -19,6 +19,7 @@ import {
   parseTastes,
   selectCandidates,
   validatePicks,
+  updateShortlist,
 } from './selection.ts';
 import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import { DEFAULT_CODEX_SETTINGS } from '../lib/model.ts';
@@ -189,6 +190,11 @@ export async function handle(request: Request): Promise<Response> {
         phase('preference:update:complete', { appId: payload.appId });
         return next;
       }
+      if (path === '/api/shortlist' && request.method === 'PATCH') {
+        updateShortlist(state, payload.appId, payload.saved);
+        await saveState(state);
+        return snapshot(state);
+      }
       if (path === '/api/conversation/reset' && request.method === 'POST') {
         phase('conversation:reset:start');
         state.filters = parseFilters(payload.filters);
@@ -334,12 +340,18 @@ export async function handle(request: Request): Promise<Response> {
         if (
           engine === 'local' ||
           (state.engine ?? 'codex') !== engine ||
+          !!state.conversation.at(-1)?.filters.shortlistOnly !==
+            !!filters.shortlistOnly ||
           state.conversation.at(-1)?.filters.mode !== filters.mode
         )
           state.conversation = [];
         if (engine === 'local') {
           phase('recommendations:local:start');
           state.games = withHltb(state.games, await getHltbCache());
+          state.shortlist = withHltb(
+            state.shortlist ?? [],
+            await getHltbCache(),
+          );
           const recommendation = recommendLocally(state, filters);
           if (payload.text.trim())
             recommendation.warnings.push(
@@ -439,8 +451,10 @@ export async function handle(request: Request): Promise<Response> {
           games: state.games.length,
           warnings: enriched.warnings.length,
         });
-        let discoveries: Game[] = [];
-        if (c.clientId && c.clientSecret) {
+        let discoveries: Game[] = filters.shortlistOnly
+          ? (state.shortlist ?? [])
+          : [];
+        if (!filters.shortlistOnly && c.clientId && c.clientSecret) {
           phase('recommendations:discover:start');
           try {
             discoveries = await discover(state, cache);

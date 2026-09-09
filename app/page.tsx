@@ -244,6 +244,8 @@ function GamePick({
   opinionPreference,
   onOpinion,
   busy,
+  saved,
+  onSaved,
 }: {
   pick: Pick & { game: Game };
   main?: boolean;
@@ -252,6 +254,8 @@ function GamePick({
   status?: GameStatus;
   onStatus?: (status: GameStatus) => void;
   busy?: boolean;
+  saved?: boolean;
+  onSaved?: () => void;
 }) {
   const { game } = pick;
   return (
@@ -291,6 +295,17 @@ function GamePick({
           )}
         </div>
         <GameTags game={game} />
+        {onSaved && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            aria-pressed={!!saved}
+            onClick={onSaved}
+          >
+            {saved ? 'Quitar de lista corta' : 'Guardar en lista corta'}
+          </Button>
+        )}
         <p>{pick.reason}</p>
         <p>{pick.whyNow}</p>
         <p className="caveat">
@@ -605,11 +620,11 @@ export default function Home() {
       accept(await api('steam/sync', { profileUrl, force: true }));
     });
   }
-  async function recommend(message = text) {
+  async function recommend(message = text, selectionFilters = filters) {
     await action('recommend', async () => {
       accept(
         await api('recommendations', {
-          filters,
+          filters: selectionFilters,
           codex,
           engine,
           text: engine === 'local' ? '' : message,
@@ -639,6 +654,22 @@ export default function Home() {
       );
     });
   }
+  async function shortlist(game: Game) {
+    await action('shortlist-' + game.appId, async () => {
+      accept(
+        await api(
+          'shortlist',
+          {
+            appId: game.appId,
+            saved: !state?.shortlist?.some(
+              (saved) => saved.appId === game.appId,
+            ),
+          },
+          'PATCH',
+        ),
+      );
+    });
+  }
   async function reset() {
     await action('reset', async () => {
       accept(await api('conversation/reset', { filters }));
@@ -652,6 +683,17 @@ export default function Home() {
       ['playing', 'paused'].includes(
         state?.preferences[game.appId]?.status ?? '',
       ),
+  );
+  const savedIds = new Set(state?.shortlist?.map((game) => game.appId));
+  const libraryById = new Map(games.map((game) => [game.appId, game]));
+  const savedGames = (state?.shortlist ?? []).map(
+    (game) =>
+      libraryById.get(game.appId) ?? {
+        ...game,
+        owned: false,
+        shared: false,
+        ownerSteamIds: [],
+      },
   );
   const favorites = games.filter(
     (g) => state?.preferences[g.appId]?.favorite,
@@ -1124,6 +1166,16 @@ export default function Home() {
                 />{' '}
                 Incluir terminados y abandonados
               </label>
+              <label className="check-label" htmlFor="shortlist-only">
+                <Checkbox
+                  id="shortlist-only"
+                  checked={!!filters.shortlistOnly}
+                  onCheckedChange={(value) =>
+                    setFilters({ ...filters, shortlistOnly: !!value })
+                  }
+                />
+                Solo mi lista corta ({savedGames.length})
+              </label>
               <Choice
                 id="recommendation-engine"
                 label="Cómo recomendar"
@@ -1346,6 +1398,9 @@ export default function Home() {
                   <TabsTrigger value="library">
                     <Library size={17} /> Tu biblioteca
                   </TabsTrigger>
+                  <TabsTrigger value="shortlist">
+                    <Plus size={17} /> Lista corta ({savedGames.length})
+                  </TabsTrigger>
                   <TabsTrigger value="tastes">
                     <Star size={17} /> Tus gustos
                   </TabsTrigger>
@@ -1357,6 +1412,80 @@ export default function Home() {
                   Una elección que encaja contigo
                 </span>
               </div>
+              <TabsContent value="shortlist">
+                <div className="results">
+                  <h2>Tus próximos candidatos</h2>
+                  <p className="small-note">
+                    Guarda juegos desde Para ti, el historial o la biblioteca.
+                    Elegiremos entre ellos con el motor y los filtros actuales;
+                    los juegos excluidos no se recomendarán.
+                  </p>
+                  <Button
+                    disabled={!!busy || !savedGames.length || !state?.profile}
+                    onClick={() => {
+                      const nextFilters = { ...filters, shortlistOnly: true };
+                      setFilters(nextFilters);
+                      void recommend(
+                        'Elige entre los juegos de mi lista corta.',
+                        nextFilters,
+                      );
+                    }}
+                  >
+                    Elegir entre estos juegos
+                  </Button>
+                  {!savedGames.length && (
+                    <p>
+                      Tu lista está vacía. Pulsa «Guardar en lista corta» en
+                      cualquier juego.
+                    </p>
+                  )}
+                  <div className="library-grid">
+                    {savedGames.map((game) => (
+                      <article className="library-card" key={game.appId}>
+                        <Cover game={game} />
+                        <div className="library-card-body">
+                          <h3>{game.name}</h3>
+                          <p className="small-note">
+                            {libraryLabel(game)} ·{' '}
+                            {
+                              STATUS_LABELS[
+                                state?.preferences[game.appId]?.status ??
+                                  'pending'
+                              ]
+                            }
+                          </p>
+                          <GameTags game={game} />
+                          <p className="small-note">
+                            IGDB · {formatHours(game.durationHours)} de historia
+                          </p>
+                          <p className="small-note">
+                            HLTB · Historia: {formatHours(game.hltb?.mainHours)}{' '}
+                            · Historia y extras:{' '}
+                            {formatHours(game.hltb?.extraHours)} · Completista:{' '}
+                            {formatHours(game.hltb?.completionHours)}
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!!busy}
+                            onClick={() => void shortlist(game)}
+                          >
+                            Quitar de lista corta
+                          </Button>
+                          <a
+                            className="store-link"
+                            href={storeUrl(game.appId)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Ver en Steam <ArrowUpRight size={16} />
+                          </a>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </TabsContent>
               <TabsContent value="tastes">
                 {state && (
                   <Tastes
@@ -1410,6 +1539,7 @@ export default function Home() {
                           entry.filters.sessionIntent === 'start' &&
                           'Empezar un pendiente · '}
                         {entry.filters.genre || 'Cualquier género'}
+                        {entry.filters.shortlistOnly && ' · Solo lista corta'}
                         {entry.filters.minReleaseDate &&
                           ` · Lanzados desde ${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString('es')}`}
                         {(entry.filters.tags ?? []).length > 0 &&
@@ -1443,6 +1573,8 @@ export default function Home() {
                           <GamePick
                             key={pick.appId}
                             pick={pick}
+                            saved={savedIds.has(pick.appId)}
+                            onSaved={() => void shortlist(pick.game)}
                             status={state.preferences[pick.appId]?.status}
                             opinionPreference={state?.preferences[pick.appId]}
                             onOpinion={(change) => {
@@ -1563,6 +1695,8 @@ export default function Home() {
                       <GamePick
                         key={pick.appId}
                         pick={pick}
+                        saved={savedIds.has(pick.appId)}
+                        onSaved={() => void shortlist(pick.game)}
                         main={i === 0}
                         status={state?.preferences[pick.appId]?.status}
                         opinionPreference={state?.preferences[pick.appId]}
@@ -1586,6 +1720,8 @@ export default function Home() {
                             <GamePick
                               key={pick.appId}
                               pick={pick}
+                              saved={savedIds.has(pick.appId)}
+                              onSaved={() => void shortlist(pick.game)}
                               status={state?.preferences[pick.appId]?.status}
                               opinionPreference={state?.preferences[pick.appId]}
                               onOpinion={(change) => {
@@ -1897,6 +2033,17 @@ export default function Home() {
                                   { maximumFractionDigits: 1 },
                                 ) + ' h jugadas'}
                           </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!!busy}
+                            aria-pressed={savedIds.has(game.appId)}
+                            onClick={() => void shortlist(game)}
+                          >
+                            {savedIds.has(game.appId)
+                              ? 'Quitar de lista corta'
+                              : 'Guardar en lista corta'}
+                          </Button>
                           <div className="preference-controls">
                             <Button
                               variant="ghost"

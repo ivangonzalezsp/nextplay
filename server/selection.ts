@@ -103,6 +103,7 @@ export function parseFilters(value: unknown): Filters {
       /^\d{4}-\d{2}-\d{2}$/.test(minReleaseDate) &&
       releaseDateAt(minReleaseDate) !== null);
   if (
+    (f.shortlistOnly !== undefined && typeof f.shortlistOnly !== 'boolean') ||
     !['today', 'next'].includes(f.mode) ||
     !['any', 'continue', 'start'].includes(sessionIntent) ||
     !number(f.minutes, 1440) ||
@@ -122,6 +123,9 @@ export function parseFilters(value: unknown): Filters {
       'Revisa el tiempo, el modo y los filtros seleccionados.',
     );
   return {
+    ...(f.shortlistOnly !== undefined
+      ? { shortlistOnly: f.shortlistOnly }
+      : {}),
     mode: f.mode,
     minutes: f.minutes,
     hours: f.hours,
@@ -154,6 +158,31 @@ export function parsePreference(value: unknown): Preference {
       ? { opinion: p.opinion, opinionReason: p.opinionReason?.trim() ?? '' }
       : {}),
   };
+}
+export function updateShortlist(state: State, appId: unknown, saved: unknown) {
+  if (
+    typeof appId !== 'number' ||
+    !Number.isSafeInteger(appId) ||
+    appId <= 0 ||
+    typeof saved !== 'boolean'
+  )
+    throw new AppError('El juego o la opción de lista corta no es válido.');
+  const game =
+    state.games.find((game) => game.appId === appId) ??
+    [...state.conversation, ...(state.history ?? [])]
+      .flatMap((turn) =>
+        [...turn.result.owned, ...turn.result.discoveries].map(
+          (pick) => pick.game,
+        ),
+      )
+      .find((game) => game.appId === appId) ??
+    state.shortlist?.find((game) => game.appId === appId);
+  if (!game)
+    throw new AppError(
+      'Ese juego no está en tu biblioteca ni en tus recomendaciones.',
+    );
+  const rest = (state.shortlist ?? []).filter((game) => game.appId !== appId);
+  state.shortlist = saved ? [...rest, game] : rest;
 }
 export function parseTastes(value: unknown, state: State): TasteSettings {
   const v = value as TasteSettings;
@@ -228,17 +257,27 @@ export function selectCandidates(
   const profile = buildTasteProfile(state);
   const library = new Map(state.games.map((g) => [g.appId, g]));
   const unique = new Map(
-    [...state.games, ...discoveries.filter((g) => !library.has(g.appId))].map(
-      (g) => [
-        g.appId,
-        {
-          ...g,
-          owned: library.get(g.appId)?.owned ?? false,
-          shared: library.get(g.appId)?.shared === true,
-        },
-      ],
-    ),
+    [
+      ...state.games,
+      ...[
+        ...(filters.shortlistOnly ? (state.shortlist ?? []) : []),
+        ...discoveries,
+      ].filter((g) => !library.has(g.appId)),
+    ].map((g) => [
+      g.appId,
+      {
+        ...g,
+        owned: library.get(g.appId)?.owned ?? false,
+        shared: library.get(g.appId)?.shared === true,
+        ownerSteamIds: library.get(g.appId)?.ownerSteamIds ?? [],
+      },
+    ]),
   );
+  if (filters.shortlistOnly) {
+    const saved = new Set(state.shortlist?.map((game) => game.appId));
+    for (const appId of unique.keys())
+      if (!saved.has(appId)) unique.delete(appId);
+  }
   return filterCandidates(
     [...unique.values()]
       .map((game) => ({
