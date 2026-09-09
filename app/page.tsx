@@ -243,6 +243,7 @@ function GamePick({
   onStatus,
   opinionPreference,
   onOpinion,
+  onSimilar,
   busy,
   saved,
   onSaved,
@@ -253,6 +254,7 @@ function GamePick({
   onOpinion?: (change: Partial<Preference>) => void;
   status?: GameStatus;
   onStatus?: (status: GameStatus) => void;
+  onSimilar: (game: Game) => void;
   busy?: boolean;
   saved?: boolean;
   onSaved?: () => void;
@@ -306,6 +308,14 @@ function GamePick({
             {saved ? 'Quitar de lista corta' : 'Guardar en lista corta'}
           </Button>
         )}
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={busy}
+          onClick={() => onSimilar(game)}
+        >
+          Algo como este, pero…
+        </Button>
         <p>{pick.reason}</p>
         <p>{pick.whyNow}</p>
         <p className="caveat">
@@ -407,6 +417,7 @@ export default function Home() {
     'https://steamcommunity.com/id/fineku/',
   );
   const [text, setText] = useState('');
+  const [reference, setReference] = useState<Game | null>(null);
   const [search, setSearch] = useState('');
   const [libraryOwner, setLibraryOwner] = useState('');
   const [libraryTag, setLibraryTag] = useState('');
@@ -621,16 +632,19 @@ export default function Home() {
     });
   }
   async function recommend(message = text, selectionFilters = filters) {
+    if (reference && engine !== 'codex') return;
     await action('recommend', async () => {
       accept(
         await api('recommendations', {
           filters: selectionFilters,
           codex,
           engine,
+          ...(reference ? { referenceAppId: reference.appId } : {}),
           text: engine === 'local' ? '' : message,
         }),
       );
       setText('');
+      setReference(null);
       setTab('recommend');
     });
   }
@@ -674,7 +688,16 @@ export default function Home() {
     await action('reset', async () => {
       accept(await api('conversation/reset', { filters }));
       setText('');
+      setReference(null);
     });
+  }
+  function similar(game: Game) {
+    setReference(game);
+    setText(
+      `Busco algo como ${game.name}, pero…\nQuiero conservar: \nQuiero cambiar: `,
+    );
+    setTab('recommend');
+    requestAnimationFrame(() => document.getElementById('message')?.focus());
   }
   const games = state?.games ?? [];
   const inProgress = games.filter(
@@ -1225,7 +1248,9 @@ export default function Home() {
               )}
               <Button
                 className="recommend-button"
-                disabled={!canRecommend || !!busy}
+                disabled={
+                  !canRecommend || !!busy || (!!reference && engine !== 'codex')
+                }
                 onClick={() => recommend()}
               >
                 {busy === 'recommend' ? (
@@ -1575,6 +1600,7 @@ export default function Home() {
                             pick={pick}
                             saved={savedIds.has(pick.appId)}
                             onSaved={() => void shortlist(pick.game)}
+                            onSimilar={similar}
                             status={state.preferences[pick.appId]?.status}
                             opinionPreference={state?.preferences[pick.appId]}
                             onOpinion={(change) => {
@@ -1705,6 +1731,7 @@ export default function Home() {
                         pick={pick}
                         saved={savedIds.has(pick.appId)}
                         onSaved={() => void shortlist(pick.game)}
+                        onSimilar={similar}
                         main={i === 0}
                         status={state?.preferences[pick.appId]?.status}
                         opinionPreference={state?.preferences[pick.appId]}
@@ -1730,6 +1757,7 @@ export default function Home() {
                               pick={pick}
                               saved={savedIds.has(pick.appId)}
                               onSaved={() => void shortlist(pick.game)}
+                              onSimilar={similar}
                               status={state?.preferences[pick.appId]?.status}
                               opinionPreference={state?.preferences[pick.appId]}
                               onOpinion={(change) => {
@@ -1859,7 +1887,7 @@ export default function Home() {
                     <span>{w}</span>
                   </div>
                 ))}
-                {engine === 'codex' && (
+                {(engine === 'codex' || reference) && (
                   <section className="conversation">
                     <div className="panel-title">
                       <MessageCircle size={18} />
@@ -1886,6 +1914,44 @@ export default function Home() {
                         ))}
                       </details>
                     )}
+                    {reference && (
+                      <div className="notice">
+                        <div>
+                          <p>
+                            Referencia: <strong>{reference.name}</strong>. Se
+                            usa como punto de partida y no se recomendará a sí
+                            mismo.
+                          </p>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={!!busy}
+                            onClick={() => {
+                              setReference(null);
+                              setText('');
+                            }}
+                          >
+                            Quitar referencia
+                          </Button>
+                          {engine === 'local' && (
+                            <>
+                              <p>
+                                El motor local no interpreta estos ajustes.
+                                Cambia a Codex (consume cuota) y después envía
+                                el mensaje.
+                              </p>
+                              <Button
+                                variant="outline"
+                                disabled={!!busy}
+                                onClick={() => setEngine('codex')}
+                              >
+                                Usar Codex
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     <form
                       onSubmit={(e) => {
                         e.preventDefault();
@@ -1904,7 +1970,11 @@ export default function Home() {
                       />
                       <Button
                         type="submit"
-                        disabled={!canRecommend || !!busy}
+                        disabled={
+                          !canRecommend ||
+                          !!busy ||
+                          (!!reference && engine !== 'codex')
+                        }
                         aria-label="Enviar mensaje"
                       >
                         <ArrowRight size={20} />
@@ -1912,8 +1982,10 @@ export default function Home() {
                     </form>
                     <div className="chat-footnote">
                       <span>
-                        <span className="status-dot" /> Codex · {codex.model} ·{' '}
-                        {codex.effort}
+                        <span className="status-dot" />{' '}
+                        {engine === 'codex'
+                          ? `Codex · ${codex.model} · ${codex.effort}`
+                          : 'Motor local · cambia a Codex para enviar'}
                       </span>
                       <span>
                         {busy === 'recommend'
@@ -2053,6 +2125,11 @@ export default function Home() {
                             {savedIds.has(game.appId)
                               ? 'Quitar de lista corta'
                               : 'Guardar en lista corta'}
+                          </Button>
+                          <Button variant="outline" size="sm" disabled={!!busy}
+                            onClick={() => similar(game)}
+                          >
+                            Algo como este, pero…
                           </Button>
                           <div className="preference-controls">
                             <Button

@@ -337,6 +337,33 @@ export async function handle(request: Request): Promise<Response> {
             ? (state.engine ?? 'codex')
             : payload.engine,
         );
+        const reference =
+          payload.referenceAppId === undefined
+            ? undefined
+            : [
+                ...state.games,
+                ...(state.history ?? []).flatMap((turn) =>
+                  [...turn.result.owned, ...turn.result.discoveries].map(
+                    (pick) => pick.game,
+                  ),
+                ),
+                ...state.conversation.flatMap((turn) =>
+                  [...turn.result.owned, ...turn.result.discoveries].map(
+                    (pick) => pick.game,
+                  ),
+                ),
+              ].find((game) => game.appId === payload.referenceAppId);
+        if (
+          payload.referenceAppId !== undefined &&
+          (!Number.isSafeInteger(payload.referenceAppId) || !reference)
+        )
+          throw new AppError(
+            'El juego de referencia no está disponible. Vuelve a seleccionarlo.',
+          );
+        if (reference && engine !== 'codex')
+          throw new AppError(
+            'Algo como este necesita Codex para interpretar qué conservar o cambiar.',
+          );
         if (
           engine === 'local' ||
           (state.engine ?? 'codex') !== engine ||
@@ -505,7 +532,7 @@ export async function handle(request: Request): Promise<Response> {
           discoveries,
           filters,
           payload.text,
-        );
+        ).filter((game) => game.appId !== reference?.appId);
         phase('recommendations:candidates', {
           total: candidates.length,
           owned: candidates.filter(inLibrary).length,
@@ -557,7 +584,7 @@ export async function handle(request: Request): Promise<Response> {
             effort: codex.effort,
           });
           const raw = await askCodex(
-            buildPrompt(state, candidates, filters, payload.text),
+            buildPrompt(state, candidates, filters, payload.text, reference),
             codex,
             { state, candidates },
           );

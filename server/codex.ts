@@ -303,6 +303,7 @@ export function buildPrompt(
   candidates: Game[],
   filters: Filters,
   text: string,
+  reference?: Game,
 ) {
   const names = new Map(state.games.map((g) => [g.appId, g.name]));
   return (
@@ -336,6 +337,13 @@ DATOS_JSON:\n` +
       recentRecommendations: [...recentRecommendationPenalties(state)].map(
         ([appId, penalty]) => ({ appId, penalty }),
       ),
+      reference: reference
+        ? {
+            purpose:
+              'Solo referencia de afinidad, nunca recomendar este juego. Usa los datos disponibles para conservar o cambiar lo solicitado; no inventes características. Mantén los filtros actuales.',
+            game: catalogGame(reference, state),
+          }
+        : undefined,
       tasteProfile: buildTasteProfile(state),
       tasteNotes: state.tastes?.notes ?? '',
       ignoredHours: state.tastes?.ignoredHours ?? [],
