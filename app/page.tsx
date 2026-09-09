@@ -199,6 +199,42 @@ function formatHours(value: number | null | undefined) {
     ? 'sin datos'
     : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
 }
+function StatusControl({
+  game,
+  status = 'pending',
+  onStatus,
+  busy,
+}: {
+  game: Game;
+  status?: GameStatus;
+  onStatus: (status: GameStatus) => void;
+  busy?: boolean;
+}) {
+  return (
+    <Select
+      value={status}
+      onValueChange={(value) => {
+        if (value) onStatus(value as GameStatus);
+      }}
+      disabled={busy}
+      items={Object.entries(STATUS_LABELS).map(([value, label]) => ({
+        value,
+        label,
+      }))}
+    >
+      <SelectTrigger aria-label={'Estado de ' + game.name}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {Object.entries(STATUS_LABELS).map(([value, label]) => (
+          <SelectItem key={value} value={value}>
+            {label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 function GamePick({
   pick,
   main,
@@ -261,6 +297,14 @@ function GamePick({
             className="pick-actions"
             aria-label={'Acciones para ' + game.name}
           >
+            {inLibrary(game) && (
+              <StatusControl
+                game={game}
+                status={status}
+                onStatus={onStatus}
+                busy={busy}
+              />
+            )}
             <Button
               variant={status === 'completed' ? 'secondary' : 'outline'}
               size="sm"
@@ -588,6 +632,13 @@ export default function Home() {
     });
   }
   const games = state?.games ?? [];
+  const inProgress = games.filter(
+    (game) =>
+      inLibrary(game) &&
+      ['playing', 'paused'].includes(
+        state?.preferences[game.appId]?.status ?? '',
+      ),
+  );
   const favorites = games.filter(
     (g) => state?.preferences[g.appId]?.favorite,
   ).length;
@@ -887,6 +938,34 @@ export default function Home() {
                     ' «Hoy busco» orienta a Codex y no modifica el recuento.'}
                 </p>
               </div>
+              {filters.mode === 'today' && (
+                <>
+                  <Choice
+                    id="session-intent"
+                    label="¿Continuar o empezar?"
+                    value={filters.sessionIntent ?? 'any'}
+                    onChange={(sessionIntent) =>
+                      setFilters({
+                        ...filters,
+                        sessionIntent:
+                          sessionIntent as Filters['sessionIntent'],
+                      })
+                    }
+                    options={[
+                      { value: 'any', label: 'Cualquiera' },
+                      {
+                        value: 'continue',
+                        label: 'Continuar jugando o retomar una pausa',
+                      },
+                      { value: 'start', label: 'Empezar un pendiente' },
+                    ]}
+                  />
+                  <p className="field-help">
+                    Usa los estados que has marcado, sin deducirlos de tus
+                    horas.
+                  </p>
+                </>
+              )}
               <div className="field">
                 <label htmlFor="time">
                   {filters.mode === 'today'
@@ -1310,6 +1389,12 @@ export default function Home() {
                             ? 'Historia sin límite'
                             : `Historia de hasta ${entry.filters.hours} h`}
                         {' · '}
+                        {entry.filters.mode === 'today' &&
+                          entry.filters.sessionIntent === 'continue' &&
+                          'Continuar jugando o retomar una pausa · '}
+                        {entry.filters.mode === 'today' &&
+                          entry.filters.sessionIntent === 'start' &&
+                          'Empezar un pendiente · '}
                         {entry.filters.genre || 'Cualquier género'}
                         {entry.filters.minReleaseDate &&
                           ` · Lanzados desde ${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString('es')}`}
@@ -1362,6 +1447,50 @@ export default function Home() {
                 </div>
               </TabsContent>
               <TabsContent value="recommend">
+                <section aria-labelledby="in-progress-title">
+                  <div className="section-heading">
+                    <h2 id="in-progress-title">Tus juegos en curso</h2>
+                    <span>{inProgress.length} jugando o en pausa</span>
+                  </div>
+                  {!inProgress.length && (
+                    <p className="small-note">
+                      Marca «Estoy jugando» o «En pausa» en tu biblioteca o en
+                      una recomendación para verlos aquí.
+                    </p>
+                  )}
+                  <div className="library-grid">
+                    {inProgress.map((game) => (
+                      <article className="library-card" key={game.appId}>
+                        <Cover game={game} />
+                        <div className="library-card-body">
+                          <h3>{game.name}</h3>
+                          <p className="small-note">{libraryLabel(game)}</p>
+                          <GameTags game={game} />
+                          <p className="small-note">
+                            HLTB · Historia: {formatHours(game.hltb?.mainHours)}{' '}
+                            · IGDB: {formatHours(game.durationHours)}
+                          </p>
+                          <StatusControl
+                            game={game}
+                            status={state?.preferences[game.appId]?.status}
+                            busy={!!busy}
+                            onStatus={(status) => {
+                              void preference(game, { status });
+                            }}
+                          />
+                          <a
+                            className="store-link"
+                            href={storeUrl(game.appId)}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Ver en Steam <ArrowUpRight size={16} />
+                          </a>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
                 {loading ? (
                   <div className="empty-state">
                     <LoaderCircle className="spin" />
@@ -1759,31 +1888,14 @@ export default function Home() {
                                 fill={pref.favorite ? 'currentColor' : 'none'}
                               />
                             </Button>
-                            <Select
-                              value={pref.status}
-                              onValueChange={(v) =>
-                                preference(game, { status: v as GameStatus })
-                              }
-                              disabled={!!busy}
-                              items={Object.entries(STATUS_LABELS).map(
-                                ([value, label]) => ({ value, label }),
-                              )}
-                            >
-                              <SelectTrigger
-                                aria-label={'Estado de ' + game.name}
-                              >
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(STATUS_LABELS).map(
-                                  ([key, label]) => (
-                                    <SelectItem key={key} value={key}>
-                                      {label}
-                                    </SelectItem>
-                                  ),
-                                )}
-                              </SelectContent>
-                            </Select>
+                            <StatusControl
+                              game={game}
+                              status={pref.status}
+                              busy={!!busy}
+                              onStatus={(status) => {
+                                void preference(game, { status });
+                              }}
+                            />
                           </div>
                         </div>
                       </article>

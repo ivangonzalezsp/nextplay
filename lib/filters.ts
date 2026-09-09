@@ -13,6 +13,13 @@ export function eligible(game: Game, pref: Preference | undefined, f: Filters) {
     (!f.replay && ['completed', 'abandoned'].includes(pref?.status ?? ''))
   )
     return false;
+  if (f.mode === 'today') {
+    if (f.sessionIntent === 'continue' &&
+        (!inLibrary(game) || !['playing', 'paused'].includes(pref?.status ?? '')))
+      return false;
+    if (f.sessionIntent === 'start' && (pref?.status ?? 'pending') !== 'pending')
+      return false;
+  }
   if (game.isGame === false || game.released === false) return false;
   if (
     f.minReleaseDate &&

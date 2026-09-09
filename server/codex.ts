@@ -310,6 +310,7 @@ Tienes la herramienta query_games para consultar la base de datos SQLite complet
 Los compartidos ya son accesibles mediante Steam Families; no los presentes como compras pendientes ni como propiedad del jugador. Sus horas corresponden exclusivamente al perfil conectado. La disponibilidad de una copia libre en este instante no está comprobada; avisa de esa limitación si recomiendas un compartido.
 Usa únicamente hechos de los datos aportados. No inventes precios, duraciones, modos, finalizaciones ni reseñas. No confundas horas de historia con duración de sesión. Si no se conoce la adecuación a una sesión corta, indícalo como incertidumbre.
 durationHours es la duración principal elegida para los filtros, con su durationSource. Se prioriza la historia de HLTB y se usa IGDB si falta. hltb.extraHours incluye historia y extras; hltb.completionHours estima completarlo todo. Son estimaciones totales, nunca tiempo restante ni duración de sesión. No combines las estimaciones de ambas fuentes.
+sessionIntent solo se aplica a Para hoy: continue permite únicamente juegos de biblioteca marcados playing (Estoy jugando) o paused (En pausa); start solo pendientes; any no restringe estos estados. Son estados explícitos, independientes de las horas registradas. No deduzcas progreso ni tiempo restante.
 Los favoritos son preferencias explícitas; las horas jugadas son solo una señal débil, nunca prueba de gusto o finalización. La dificultad, el ánimo y la afinidad son valoraciones orientativas: dilo en su redacción.
 Si minReleaseDate no es null, solo son válidos juegos con releasedAt igual o posterior a esa fecha; si no hay releasedAt, no los recomiendes.
 Si tags contiene varias etiquetas, prioriza juegos que contengan todas; usa los que contengan cualquiera solo para completar los mínimos de biblioteca o descubrimientos.
@@ -323,6 +324,8 @@ DATOS_JSON:\n` +
         ...filters,
         minutes: filters.mode === 'today' ? filters.minutes : null,
         hours: filters.mode === 'next' ? filters.hours : null,
+        sessionIntent:
+          filters.mode === 'today' ? (filters.sessionIntent ?? 'any') : 'any',
       },
       text,
       tasteProfile: buildTasteProfile(state),

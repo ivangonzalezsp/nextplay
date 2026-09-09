@@ -87,6 +87,7 @@ export function parseFilters(value: unknown): Filters {
     (typeof v === 'number' && Number.isFinite(v) && v >= 1 && v <= max);
   const minReleaseDate = f.minReleaseDate ?? null;
   const tags = f.tags ?? [];
+  const sessionIntent = f.sessionIntent === undefined ? 'any' : f.sessionIntent;
   const validTag = (tag: unknown) => {
     if (typeof tag !== 'string' || tag.length < 4 || tag.length > 205)
       return false;
@@ -103,6 +104,7 @@ export function parseFilters(value: unknown): Filters {
       releaseDateAt(minReleaseDate) !== null);
   if (
     !['today', 'next'].includes(f.mode) ||
+    !['any', 'continue', 'start'].includes(sessionIntent) ||
     !number(f.minutes, 1440) ||
     !number(f.hours, 1000) ||
     !validMinReleaseDate ||
@@ -129,6 +131,7 @@ export function parseFilters(value: unknown): Filters {
     gameMode: f.gameMode,
     mood: f.mood.trim(),
     replay: f.replay,
+    sessionIntent,
   };
 }
 export function parsePreference(value: unknown): Preference {
@@ -264,9 +267,13 @@ export function recommendLocally(
       reason: `Puntuación: ${points(score)}. ${reasons.length ? reasons.join('; ') + '.' : 'Sin señales de afinidad suficientes; cumple tus filtros.'}`,
       whyNow:
         filters.mode === 'today'
-          ? weights['actividad reciente'] > 0
-            ? 'Lo has jugado recientemente: puede ser una opción para retomar hoy.'
-            : 'Una opción para hoy según tus gustos y filtros.'
+          ? filters.sessionIntent === 'continue'
+            ? state.preferences[game.appId]?.status === 'paused'
+              ? 'Lo dejaste en pausa: puedes retomarlo hoy.'
+              : 'Lo marcaste como Estoy jugando: puedes continuar hoy.'
+            : weights['actividad reciente'] > 0
+              ? 'Lo has jugado recientemente: puede ser una opción para retomar hoy.'
+              : 'Una opción para hoy según tus gustos y filtros.'
           : filters.hours !== null
             ? `Historia estimada de ${points(storyHours(game)!)} h, dentro de tu límite de ${filters.hours} h.`
             : 'Una opción para varias sesiones según tus gustos y filtros.',
