@@ -22,7 +22,7 @@ const game = (appId: number, extra: Partial<Game> = {}): Game => ({
   ...extra,
 });
 
-test('filter overview matches the candidate selector including Steam Families and tag fallback', () => {
+void test('filter overview matches the candidate selector including Steam Families and tag fallback', () => {
   for (const strictCount of [0, 1, 2, 3, 4]) {
     const state: State = {
       ...structuredClone(EMPTY_STATE),
@@ -92,7 +92,7 @@ test('filter overview matches the candidate selector including Steam Families an
   );
 });
 
-test('missing-data count excludes known mismatches and distinguishes story time from session time', () => {
+void test('missing-data count excludes known mismatches and distinguishes story time from session time', () => {
   const state: State = {
     ...structuredClone(EMPTY_STATE),
     games: [
@@ -125,7 +125,7 @@ test('missing-data count excludes known mismatches and distinguishes story time 
   assert.equal(filterSummary(state, filters).eligible, 0);
 });
 
-test('clear filters retains the selected mode and removes optional constraints without restoring 60 minutes', () => {
+void test('clear filters retains the selected mode and removes optional constraints without restoring 60 minutes', () => {
   for (const mode of ['today', 'next'] as const) {
     assert.deepEqual(clearFilters(mode), {
       ...DEFAULT_FILTERS,
@@ -136,4 +136,39 @@ test('clear filters retains the selected mode and removes optional constraints w
       replay: true,
     });
   }
+});
+
+void test('combined shortlist, continue and reference filters keep the displayed count accurate', () => {
+  const games = [
+    game(1),
+    game(2),
+    game(3),
+    game(4, { steamTags: [{ id: 1, name: 'One' }] }),
+    game(5),
+  ];
+  const state: State = {
+    ...structuredClone(EMPTY_STATE),
+    games,
+    shortlist: games.slice(0, 4),
+    preferences: Object.fromEntries(
+      games.map((g) => [g.appId, { status: 'playing', favorite: false }]),
+    ),
+  };
+  const filters = {
+    ...DEFAULT_FILTERS,
+    mode: 'today' as const,
+    sessionIntent: 'continue' as const,
+    shortlistOnly: true,
+    tags: ['id:1', 'id:2'],
+  };
+  const candidates = selectCandidates(state, [], filters, '', 1);
+  assert.deepEqual(
+    candidates.map((g) => g.appId),
+    [2, 3, 4],
+  );
+  assert.equal(filterSummary(state, filters, 1).eligible, candidates.length);
+  assert.equal(filterSummary(state, filters, 1).relaxedTags, true);
+  state.preferences[3].status = 'pending';
+  assert.equal(filterSummary(state, filters, 1).eligible, 2);
+  assert.equal(selectCandidates(state, [], filters, '', 1).length, 2);
 });

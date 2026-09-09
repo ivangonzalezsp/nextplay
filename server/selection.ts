@@ -242,11 +242,16 @@ function candidateWeights(
   text = '',
   recent = recentRecommendationPenalties(state),
 ) {
-  const mentioned = !!g.name.trim() && text.toLowerCase().includes(g.name.toLowerCase());
+  const mentioned =
+    !!g.name.trim() && text.toLowerCase().includes(g.name.toLowerCase());
   return {
     'mención directa': mentioned ? 80 : 0,
     'propuesta reciente': mentioned ? 0 : -(recent.get(g.appId) ?? 0),
-    favorito: state.preferences[g.appId]?.favorite && state.preferences[g.appId]?.opinion !== 'disliked' ? 40 : 0,
+    favorito:
+      state.preferences[g.appId]?.favorite &&
+      state.preferences[g.appId]?.opinion !== 'disliked'
+        ? 40
+        : 0,
     afinidad: affinityScore(g, profile),
     'actividad reciente':
       g.recentMinutes &&
@@ -267,6 +272,7 @@ export function selectCandidates(
   discoveries: Game[],
   filters: Filters,
   text = '',
+  excludedAppId?: number,
 ): Game[] {
   const profile = buildTasteProfile(state);
   const recent = recentRecommendationPenalties(state);
@@ -288,6 +294,7 @@ export function selectCandidates(
       },
     ]),
   );
+  if (excludedAppId !== undefined) unique.delete(excludedAppId);
   if (filters.shortlistOnly) {
     const saved = new Set(state.shortlist?.map((game) => game.appId));
     for (const appId of unique.keys())
@@ -357,6 +364,7 @@ export function comfortSelection(state: State, candidates: Game[]) {
         const affinity = profile.find((p) => p.id === a.id)!;
         return (
           affinity.choice === 'auto' &&
+          affinity.inferred >= 0 &&
           affinity.inferred < weight(bridge.id) &&
           !usualSignals.some((b) => b.id === a.id)
         );

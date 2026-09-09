@@ -64,7 +64,7 @@ void test('explicit progress survives persistence and constrains both recommenda
     assert.deepEqual(
       selectCandidates(saved, [], { ...filters, mode: 'next' })
         .map((g) => g.appId)
-        .sort(),
+        .sort((a, b) => a - b),
       [1, 2, 3, 4, 6],
     );
     const promptData = JSON.parse(
@@ -89,7 +89,7 @@ void test('explicit progress survives persistence and constrains both recommenda
       ),
     );
     // Old states/requests retain their previous behavior; hours never assign a status.
-    const { sessionIntent, ...legacy } = DEFAULT_FILTERS;
+    const { sessionIntent: _sessionIntent, ...legacy } = DEFAULT_FILTERS;
     assert.equal(parseFilters(legacy).sessionIntent, 'any');
     assert.equal(saved.preferences['3'], undefined);
     assert.deepEqual(

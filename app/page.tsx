@@ -748,8 +748,34 @@ export default function Home() {
   ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
   const tagLabels = new Map(steamTags.map((tag) => [tag.value, tag.label]));
   const selectedTagKeys = filters.tags ?? [];
-  const filterCounts = state ? filterSummary(state, filters) : null;
+  const filterCounts = state
+    ? filterSummary(state, filters, reference?.appId)
+    : null;
   const activeFilterChips: { label: string; patch: Partial<Filters> }[] = [
+    ...(filters.shortlistOnly
+      ? [{ label: 'Solo lista corta', patch: { shortlistOnly: false } }]
+      : []),
+    ...(filters.comfortZone
+      ? [
+          {
+            label: 'Zona de confort (selección)',
+            patch: { comfortZone: false },
+          },
+        ]
+      : []),
+    ...(filters.mode === 'today' &&
+    filters.sessionIntent &&
+    filters.sessionIntent !== 'any'
+      ? [
+          {
+            label:
+              filters.sessionIntent === 'continue'
+                ? 'Continuar partida'
+                : 'Empezar un juego',
+            patch: { sessionIntent: 'any' as const },
+          },
+        ]
+      : []),
     ...(filters.mode === 'next' && filters.hours !== null
       ? [
           {
@@ -991,7 +1017,7 @@ export default function Home() {
                   Limpiar filtros
                 </Button>
                 {filterCounts && (
-                  <p className="field-help" role="status">
+                  <output className="field-help">
                     <strong>
                       {filterCounts.eligible} de {filterCounts.total}
                     </strong>{' '}
@@ -1002,7 +1028,7 @@ export default function Home() {
                       (filterCounts.relaxedTags
                         ? ' Se incluyen juegos con cualquiera de las etiquetas: hay menos de 3 con todas.'
                         : ' Los candidatos tienen todas las etiquetas seleccionadas.')}
-                  </p>
+                  </output>
                 )}
                 <p className="field-help">
                   Los recuentos incluyen juegos propios y compartidos, sin
@@ -1581,6 +1607,7 @@ export default function Home() {
                           'Empezar un pendiente · '}
                         {entry.filters.genre || 'Cualquier género'}
                         {entry.filters.shortlistOnly && ' · Solo lista corta'}
+                        {entry.filters.comfortZone && ' · Zona de confort'}
                         {entry.filters.minReleaseDate &&
                           ` · Lanzados desde ${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString('es')}`}
                         {(entry.filters.tags ?? []).length > 0 &&
@@ -1728,7 +1755,11 @@ export default function Home() {
                         variant="outline"
                         size="sm"
                         disabled={!canRecommend || !!busy}
-                        onClick={() => recommend('Tráeme otras opciones que encajen con mis filtros y preferencias.')}
+                        onClick={() =>
+                          recommend(
+                            'Tráeme otras opciones que encajen con mis filtros y preferencias.',
+                          )
+                        }
                       >
                         <RefreshCw size={15} /> Tráeme otras opciones
                       </Button>
@@ -1793,9 +1824,9 @@ export default function Home() {
                         ? 'Motivos y afinidad: puntuación del algoritmo local.'
                         : 'Motivos y afinidad: valoración de IA.'}{' '}
                       Duraciones estimadas de IGDB y HowLongToBeat; no indican
-                      cuánto dura una sesión.
-                      {' '}Priorizamos variedad respecto a tus últimas cinco búsquedas.
-                      Puede haber repeticiones si hay pocas alternativas o un juego encaja mejor.
+                      cuánto dura una sesión. Priorizamos variedad respecto a
+                      tus últimas cinco búsquedas. Puede haber repeticiones si
+                      hay pocas alternativas o un juego encaja mejor.
                     </p>
                   </div>
                 )}
@@ -2142,7 +2173,10 @@ export default function Home() {
                               ? 'Quitar de lista corta'
                               : 'Guardar en lista corta'}
                           </Button>
-                          <Button variant="outline" size="sm" disabled={!!busy}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={!!busy}
                             onClick={() => similar(game)}
                           >
                             Algo como este, pero…

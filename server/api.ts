@@ -533,7 +533,8 @@ export async function handle(request: Request): Promise<Response> {
           discoveries,
           filters,
           payload.text,
-        ).filter((game) => game.appId !== reference?.appId);
+          reference?.appId,
+        );
         phase('recommendations:candidates', {
           total: candidates.length,
           owned: candidates.filter(inLibrary).length,

@@ -14,10 +14,15 @@ export function eligible(game: Game, pref: Preference | undefined, f: Filters) {
   )
     return false;
   if (f.mode === 'today') {
-    if (f.sessionIntent === 'continue' &&
-        (!inLibrary(game) || !['playing', 'paused'].includes(pref?.status ?? '')))
+    if (
+      f.sessionIntent === 'continue' &&
+      (!inLibrary(game) || !['playing', 'paused'].includes(pref?.status ?? ''))
+    )
       return false;
-    if (f.sessionIntent === 'start' && (pref?.status ?? 'pending') !== 'pending')
+    if (
+      f.sessionIntent === 'start' &&
+      (pref?.status ?? 'pending') !== 'pending'
+    )
       return false;
   }
   if (game.isGame === false || game.released === false) return false;
@@ -120,19 +125,29 @@ export function clearFilters(mode: Filters['mode']): Filters {
   };
 }
 
-export function filterSummary(state: State, filters: Filters) {
+export function filterSummary(
+  state: State,
+  filters: Filters,
+  excludedAppId?: number,
+) {
   const library = [
     ...new Map(state.games.filter(inLibrary).map((g) => [g.appId, g])).values(),
   ];
-  const matching = filterCandidates(library, state.preferences, filters);
+  const considered = library.filter(
+    (game) =>
+      game.appId !== excludedAppId &&
+      (!filters.shortlistOnly ||
+        state.shortlist?.some((saved) => saved.appId === game.appId)),
+  );
+  const matching = filterCandidates(considered, state.preferences, filters);
   const selected = new Set(matching.map((g) => g.appId));
-  const strictCount = library.filter(
+  const strictCount = considered.filter(
     (game) =>
       eligible(game, state.preferences[game.appId], filters) &&
       matchesTags(game, filters.tags ?? [], true),
   ).length;
   const relaxedTags = !!filters.tags?.length && matching.length > strictCount;
-  const missing = library.filter((game) => {
+  const missing = considered.filter((game) => {
     if (selected.has(game.appId)) return false;
     // Only count games that have no known mismatch: missing data is the blocker.
     const withoutMissing = {

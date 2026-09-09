@@ -35,7 +35,7 @@ const state = (games: Game[]): State => ({
   },
 });
 const filters = { ...DEFAULT_FILTERS, comfortZone: true };
-test('comfort mode chooses distinct evidence-backed picks across the full eligible library', () => {
+void test('comfort mode chooses distinct evidence-backed picks across the full eligible library', () => {
   const s = state([
     game(1, [1742]),
     ...Array.from({ length: 90 }, (_, i) => game(i + 10, [])),
@@ -61,7 +61,7 @@ test('comfort mode chooses distinct evidence-backed picks across the full eligib
     undefined,
   );
 });
-test('comfort respects exclusion, story cap, genre, mode and selected tags before selection', () => {
+void test('comfort respects exclusion, story cap, genre, mode and selected tags before selection', () => {
   const base = game(1, [1742], {
     genres: [{ id: 1, name: 'RPG' }],
     gameModes: [1],
@@ -96,7 +96,7 @@ test('comfort respects exclusion, story cap, genre, mode and selected tags befor
     );
   }
 });
-test('missing signals and lack of contrast are reported honestly, malformed mode rejected', () => {
+void test('missing signals and lack of contrast are reported honestly, malformed mode rejected', () => {
   const s = state([game(1, [1742]), game(2, [])]);
   assert.match(recommendLocally(s, filters).message, /no una alternativa/);
   assert.deepEqual(
@@ -112,7 +112,7 @@ test('missing signals and lack of contrast are reported honestly, malformed mode
   assert.deepEqual(parseFilters(DEFAULT_FILTERS), DEFAULT_FILTERS);
 });
 
-test('contrast works when all nine inferred affinities are positive and dislikes remain soft', () => {
+void test('contrast works when all nine inferred affinities are positive and dislikes remain soft', () => {
   // History represents every trait, with a much stronger narrative preference.
   const history = [
     game(900, [122, 29482, 9, 255534, 1716, 1695, 1742, 1662, 3859], {
@@ -142,4 +142,22 @@ test('contrast works when all nine inferred affinities are positive and dislikes
   assert.match(out.owned[1].reason, /menos representado/);
   assert.match(out.owned[1].reason, /Steam: 9/);
   assert.doesNotMatch(out.owned[1].reason, /Steam: 1662/);
+});
+
+void test('negative opinion evidence is not presented as an appealing contrast', () => {
+  const s = state([
+    game(1, [1742]),
+    game(2, [1742, 9]),
+    game(99, [9], { playtimeMinutes: 1000 }),
+  ]);
+  s.preferences[99] = {
+    status: 'completed',
+    favorite: false,
+    opinion: 'disliked',
+  };
+  assert(buildTasteProfile(s).some((a) => a.inferred < 0));
+  assert.deepEqual(
+    recommendLocally(s, filters).owned.map((p) => p.appId),
+    [1],
+  );
 });

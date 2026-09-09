@@ -12,7 +12,7 @@ import {
 import { openDatabase, storeState, loadState } from '../server/database.ts';
 import { buildPrompt } from '../server/codex.ts';
 
-test('shortlist persists candidates independently and both engines restrict selection with existing exclusions', () => {
+void test('shortlist persists candidates independently and both engines restrict selection with existing exclusions', () => {
   const game = (appId: number, more: Partial<Game> = {}): Game => ({
     appId,
     name: `Game ${appId}`,

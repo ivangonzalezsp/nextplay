@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { OPINION_LABELS } from '../lib/model';
 import type { Game, Opinion, Preference } from '../lib/model';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ export default function GameOpinion({
   busy?: boolean;
   onSave: (change: Partial<Preference>) => void;
 }) {
+  const reasonId = useId();
   const [opinion, setOpinion] = useState<Opinion | ''>(
     preference?.opinion ?? '',
   );
@@ -55,9 +56,10 @@ export default function GameOpinion({
             ))}
           </select>
         </label>
-        <label className="grid gap-1">
+        <label className="grid gap-1" htmlFor={reasonId}>
           Motivo opcional
           <Textarea
+            id={reasonId}
             value={reason}
             maxLength={500}
             disabled={!opinion || busy}
@@ -80,13 +82,13 @@ export default function GameOpinion({
         >
           Guardar opinión
         </Button>
-        <p role="status" className="small-note">
+        <output className="small-note">
           {changed
             ? 'Cambios sin guardar'
             : preference?.opinion
               ? 'Opinión guardada'
               : 'Sin opinión guardada'}
-        </p>
+        </output>
       </fieldset>
     </details>
   );

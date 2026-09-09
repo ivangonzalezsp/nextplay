@@ -131,3 +131,11 @@ Las dos últimas órdenes usan Codex y consumen cupo. La prueba del flujo compru
 La interfaz expone herramientas WebMCP opcionales para consultar el estado y pedir recomendaciones con los mismos filtros visibles. Los navegadores sin WebMCP funcionan normalmente.
 
 Fuentes: [Steam Player Service](https://partner.steamgames.com/doc/webapi/IPlayerService), [reseñas de Steam](https://partner.steamgames.com/doc/store/getreviews), [IGDB](https://api-docs.igdb.com/), [Codex](https://learn.chatgpt.com/docs/codex-sdk).
+
+## Selección y seguimiento
+
+Puedes marcar juegos en curso o en pausa y elegir continuar o empezar en «Para hoy». La lista corta guarda candidatos y permite limitar una búsqueda a ellos. Las opiniones sobre juegos terminados o abandonados ajustan tus afinidades y pueden retirarse.
+
+Los filtros activos se pueden quitar individualmente y muestran cuántos juegos de la biblioteca cumplen los requisitos, también al limitar la búsqueda a la lista corta. Se penalizan suavemente las recomendaciones de las últimas cinco búsquedas para favorecer alternativas; una petición explícita de un juego permite repetirlo.
+
+«Algo como este» prepara una petición editable para Codex a partir de un juego y lo excluye de los resultados. «Zona de confort» selecciona una opción afín y otra con una conexión conocida y un rasgo menos representado; si no hay evidencia suficiente, lo indica. Los recuentos de filtros muestran candidatos antes de seleccionar esta pareja.
