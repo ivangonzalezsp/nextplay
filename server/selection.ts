@@ -8,7 +8,12 @@ import {
   steamTagKey,
   storyHours,
 } from '../lib/model.ts';
-import { AFFINITIES, affinityScore, buildTasteProfile } from '../lib/tastes.ts';
+import {
+  AFFINITIES,
+  affinityScore,
+  buildTasteProfile,
+  gameAffinitySignals,
+} from '../lib/tastes.ts';
 import type {
   CodexEffort,
   CodexSettings,
@@ -113,7 +118,8 @@ export function parseFilters(value: unknown): Filters {
     typeof f.mood !== 'string' ||
     f.mood.length > 200 ||
     !['', 'single', 'coop', 'multi'].includes(f.gameMode) ||
-    typeof f.replay !== 'boolean'
+    typeof f.replay !== 'boolean' ||
+    (f.comfortZone !== undefined && typeof f.comfortZone !== 'boolean')
   )
     throw new AppError(
       'Revisa el tiempo, el modo y los filtros seleccionados.',
@@ -128,6 +134,7 @@ export function parseFilters(value: unknown): Filters {
     gameMode: f.gameMode,
     mood: f.mood.trim(),
     replay: f.replay,
+    ...(f.comfortZone !== undefined ? { comfortZone: f.comfortZone } : {}),
   };
 }
 export function parsePreference(value: unknown): Preference {
@@ -317,6 +324,96 @@ export function selectCandidates(
   ];
 }
 
+// ponytail: contrast uses the nine existing affinities, not a semantic similarity model.
+export function comfortSelection(state: State, candidates: Game[]) {
+  const profile = buildTasteProfile(state);
+  const positive = new Set(
+    profile
+      .filter(
+        (a) => a.choice === 'like' || (a.choice === 'auto' && a.inferred > 0),
+      )
+      .map((a) => a.id),
+  );
+  const signals = (game: Game) =>
+    gameAffinitySignals(game).filter((a) => a.strength >= 0.5);
+  const label = (id: string) => profile.find((a) => a.id === id)!.label;
+  const familiar = candidates.find((g) =>
+    signals(g).some((a) => positive.has(a.id)),
+  );
+  const reasons: Record<number, string> = {};
+  if (!familiar)
+    return {
+      games: [],
+      reasons,
+      message:
+        'No hay señales de gustos y metadatos suficientes para identificar una opción afín. Ajusta Tus gustos o actualiza la biblioteca.',
+    };
+  const usualSignals = signals(familiar);
+  const connection = usualSignals.find((a) => positive.has(a.id))!;
+  reasons[familiar.appId] =
+    'Opción afín: ' +
+    label(connection.id) +
+    ' conecta con Tus gustos (' +
+    connection.sources.join(', ') +
+    ').';
+  const weight = (id: string) => {
+    const affinity = profile.find((a) => a.id === id)!;
+    return affinity.choice === 'like' ? 1 : affinity.inferred;
+  };
+  const contrast = (game: Game) => {
+    const traits = signals(game);
+    const bridge = traits
+      .filter(
+        (a) => positive.has(a.id) && usualSignals.some((b) => b.id === a.id),
+      )
+      .toSorted((a, b) => weight(b.id) - weight(a.id))[0];
+    const difference =
+      bridge &&
+      traits.find((a) => {
+        const affinity = profile.find((p) => p.id === a.id)!;
+        return (
+          affinity.choice === 'auto' &&
+          affinity.inferred < weight(bridge.id) &&
+          !usualSignals.some((b) => b.id === a.id)
+        );
+      });
+    return bridge && difference ? { bridge, difference } : null;
+  };
+  const alternative = candidates.find(
+    (g) => g.appId !== familiar.appId && contrast(g),
+  );
+  if (!alternative)
+    return {
+      games: [familiar],
+      reasons,
+      message:
+        'Encontré una opción afín, pero no una alternativa con conexión y diferencia respaldadas por los datos que cumpla estos filtros.',
+    };
+  const { bridge, difference } = contrast(alternative)!;
+  reasons[alternative.appId] =
+    'Opción distinta: conecta por ' +
+    label(bridge.id) +
+    ' (' +
+    bridge.sources.join(', ') +
+    '). Añade ' +
+    label(difference.id) +
+    ' (' +
+    difference.sources.join(', ') +
+    '), menos representado en Tus gustos que la conexión y sin señal en la opción afín. Afinidad inferida: ' +
+    weight(difference.id) +
+    '; conexión: ' +
+    (profile.find((a) => a.id === bridge.id)!.choice === 'like'
+      ? 'Me gusta explícito'
+      : 'afinidad inferida ' + weight(bridge.id)) +
+    '. Esto no demuestra que nunca lo hayas probado.';
+  return {
+    games: [familiar, alternative],
+    reasons,
+    message:
+      'Una opción afín y otra distinta, conectadas por Tus gustos. La diferencia se basa en los metadatos disponibles.',
+  };
+}
+
 export function recommendLocally(
   state: State,
   filters: Filters,
@@ -325,7 +422,11 @@ export function recommendLocally(
   const discoveries = (state.history ?? []).flatMap((t) =>
     t.result.discoveries.map((p) => p.game),
   );
-  const candidates = selectCandidates(state, discoveries, filters);
+  const eligibleCandidates = selectCandidates(state, discoveries, filters);
+  const comfort = filters.comfortZone
+    ? comfortSelection(state, eligibleCandidates)
+    : null;
+  const candidates = comfort?.games ?? eligibleCandidates;
   const pick = (game: Game) => {
     const weights = candidateWeights(game, state, profile, filters);
     const score = Object.values(weights).reduce(
@@ -342,7 +443,9 @@ export function recommendLocally(
     return {
       appId: game.appId,
       game,
-      reason: `Puntuación: ${points(score)}. ${reasons.length ? reasons.join('; ') + '.' : 'Sin señales de afinidad suficientes; cumple tus filtros.'}`,
+      reason:
+        comfort?.reasons[game.appId] ??
+        `Puntuación: ${points(score)}. ${reasons.length ? reasons.join('; ') + '.' : 'Sin señales de afinidad suficientes; cumple tus filtros.'}`,
       whyNow:
         filters.mode === 'today'
           ? weights['actividad reciente'] > 0
@@ -361,9 +464,11 @@ export function recommendLocally(
   };
   return {
     engine: 'local',
-    message: candidates.length
-      ? 'Selección local según tus favoritos y afinidades, sin consumir tokens.'
-      : 'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.',
+    message:
+      comfort?.message ??
+      (candidates.length
+        ? 'Selección local según tus favoritos y afinidades, sin consumir tokens.'
+        : 'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.'),
     owned: candidates.filter(inLibrary).slice(0, 3).map(pick),
     discoveries: candidates
       .filter((g) => !inLibrary(g))

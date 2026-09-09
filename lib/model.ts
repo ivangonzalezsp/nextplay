@@ -64,6 +64,7 @@ export type Filters = {
   gameMode: string;
   mood: string;
   replay: boolean;
+  comfortZone?: boolean;
 };
 export const DEFAULT_FILTERS: Filters = {
   mode: 'today',

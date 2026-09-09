@@ -903,6 +903,22 @@ export default function Home() {
                   />
                 </div>
               )}
+              <label className="check-label" htmlFor="comfort-zone">
+                <Checkbox
+                  id="comfort-zone"
+                  checked={!!filters.comfortZone}
+                  onCheckedChange={(v) =>
+                    setFilters({ ...filters, comfortZone: !!v })
+                  }
+                />{' '}
+                Sácame de mi zona de confort
+              </label>
+              {filters.comfortZone && (
+                <p className="field-help">
+                  Una opción afín y otra distinta, con una conexión con tus
+                  gustos. Mantiene tus filtros.
+                </p>
+              )}
               <label className="check-label" htmlFor="replay">
                 <Checkbox
                   id="replay"

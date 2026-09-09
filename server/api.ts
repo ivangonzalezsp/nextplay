@@ -13,6 +13,7 @@ import {
   parseFilters,
   parseEngine,
   recommendLocally,
+  comfortSelection,
   parseCodexSettings,
   parsePreference,
   parseProfile,
@@ -535,6 +536,10 @@ export async function handle(request: Request): Promise<Response> {
           library: state.games.length,
           eligible: candidates.length,
         });
+        const comfort = filters.comfortZone
+          ? comfortSelection(state, candidates)
+          : null;
+        if (comfort) candidates = comfort.games;
         let out;
         if (candidates.length) {
           phase('recommendations:codex:start', {
@@ -549,6 +554,16 @@ export async function handle(request: Request): Promise<Response> {
           );
           phase('recommendations:codex:response');
           out = validatePicks(raw, candidates);
+          if (comfort) {
+            if (out.owned.length + out.discoveries.length !== candidates.length)
+              throw new AppError(
+                'Codex no devolvió las opciones de zona de confort. Reintenta la consulta.',
+                502,
+              );
+            out.message = comfort.message;
+            for (const pick of [...out.owned, ...out.discoveries])
+              pick.reason = comfort.reasons[pick.appId];
+          }
           phase('recommendations:codex:validated', {
             owned: out.owned.length,
             discoveries: out.discoveries.length,
@@ -557,6 +572,7 @@ export async function handle(request: Request): Promise<Response> {
           phase('recommendations:codex:skipped');
           out = {
             message:
+              comfort?.message ??
               'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.',
             owned: [],
             discoveries: [],
