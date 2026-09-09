@@ -1,4 +1,10 @@
-import type { Game, State, TasteAffinity, TasteSettings } from './model.ts';
+import type {
+  Game,
+  Opinion,
+  State,
+  TasteAffinity,
+  TasteSettings,
+} from './model.ts';
 import { storyHours } from './model.ts';
 
 export const EMPTY_TASTES: TasteSettings = {
@@ -123,41 +129,73 @@ export function tasteEvidence(state: State) {
   const ignored = new Set(state.tastes?.ignoredHours ?? []);
   const groups = new Map<
     string,
-    { game: Game; weight: number; favorite: boolean }
+    {
+      game: Game;
+      weight: number;
+      favorite: boolean;
+      opinion?: Opinion;
+      opinionReason?: string;
+    }
   >();
-  for (const game of state.games) {
+  const games = new Map(state.games.map((game) => [game.appId, game]));
+  for (const turn of [...state.conversation, ...(state.history ?? [])])
+    for (const pick of [...turn.result.owned, ...turn.result.discoveries])
+      if (state.preferences[pick.appId]?.opinion && !games.has(pick.appId))
+        games.set(pick.appId, pick.game);
+  for (const game of games.values()) {
     const pref = state.preferences[game.appId];
     if (
       game.isGame === false ||
       pref?.status === 'ignored' ||
-      pref?.status === 'abandoned'
+      (pref?.status === 'abandoned' && !pref.opinion)
     )
       continue;
     const favorite = pref?.favorite === true;
     const hours = ignored.has(game.appId)
       ? 0
       : (game.playtimeMinutes ?? 0) / 60;
-    if (!favorite && hours < 1) continue;
+    if (!pref?.opinion && !favorite && hours < 1) continue;
     const duration = storyHours(game);
     // A short game's history can matter without hundreds of hours; this does not imply completion.
-    const weight = favorite
-      ? 2
-      : Math.max(
-          hoursWeight(hours),
-          duration && duration > 0 ? 0.8 * Math.min(1, hours / duration) : 0,
-        );
+    const weight = pref?.opinion
+      ? { loved: 3, liked: 2, disliked: -3 }[pref.opinion]
+      : favorite
+        ? 2
+        : Math.max(
+            hoursWeight(hours),
+            duration && duration > 0 ? 0.8 * Math.min(1, hours / duration) : 0,
+          );
     const key = editionKey(game) || 'app:' + game.appId;
     const old = groups.get(key);
-    if (!old || old.weight < weight)
-      groups.set(key, { game, weight, favorite });
+    if (
+      !old ||
+      Number(!!pref?.opinion) > Number(!!old.opinion) ||
+      (!!pref?.opinion === !!old.opinion &&
+        Math.abs(old.weight) < Math.abs(weight))
+    )
+      groups.set(key, {
+        game,
+        weight,
+        favorite,
+        opinion: pref?.opinion,
+        opinionReason: pref?.opinionReason,
+      });
   }
   // Equal IGDB IDs also represent a single source of evidence.
   const unique = new Map<
     string,
-    { game: Game; weight: number; favorite: boolean }
+    {
+      game: Game;
+      weight: number;
+      favorite: boolean;
+      opinion?: Opinion;
+      opinionReason?: string;
+    }
   >();
   for (const entry of [...groups.values()].sort(
-    (a, b) => b.weight - a.weight,
+    (a, b) =>
+      Number(!!b.opinion) - Number(!!a.opinion) ||
+      Math.abs(b.weight) - Math.abs(a.weight),
   )) {
     const key = entry.game.igdbId
       ? 'igdb:' + entry.game.igdbId
@@ -179,7 +217,7 @@ export function buildTasteProfile(state: State): TasteAffinity[] {
       e.game.genres?.length ||
       e.game.gameModes?.length ||
       e.game.summary?.trim()
-        ? e.weight
+        ? Math.abs(e.weight)
         : 0),
     0,
   );
@@ -193,7 +231,8 @@ export function buildTasteProfile(state: State): TasteAffinity[] {
       })
       .sort(
         (a, b) =>
-          b.contribution - a.contribution || a.game.appId - b.game.appId,
+          Math.abs(b.contribution) - Math.abs(a.contribution) ||
+          a.game.appId - b.game.appId,
       );
     return {
       id: a.id,
@@ -210,6 +249,8 @@ export function buildTasteProfile(state: State): TasteAffinity[] {
         name: e.game.name,
         hours: Math.round((e.game.playtimeMinutes ?? 0) / 6) / 10,
         favorite: e.favorite,
+        opinion: e.opinion,
+        opinionReason: e.opinionReason,
         sources: e.signal.sources,
       })),
     };

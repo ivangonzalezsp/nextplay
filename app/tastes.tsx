@@ -1,6 +1,7 @@
 'use client';
 import { useMemo, useState } from 'react';
 import type { Snapshot, TasteChoice, TasteSettings } from '../lib/model';
+import { OPINION_LABELS } from '../lib/model';
 import { buildTasteProfile, EMPTY_TASTES } from '../lib/tastes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,14 +49,17 @@ export default function Tastes({
       <p>
         Afinidades basadas en todo tu historial con datos disponibles. Las
         etiquetas de Steam pesan más que los géneros y las descripciones de
-        IGDB. Tus favoritos y correcciones tienen prioridad.
+        IGDB. Tus opiniones explícitas prevalecen sobre favoritos y horas; tus
+        correcciones de afinidad tienen prioridad.
       </p>
       <p className="small-note">
         Las horas tienen un peso limitado y se ajustan a la duración de la
         historia cuando se conoce, para dar espacio a los juegos cortos. Las
         ediciones reconocibles cuentan una vez. El peso refleja la presencia de
         cada afinidad en tu historial, no una probabilidad de que te guste ni
-        una confirmación de que terminaste un juego.
+        una confirmación de que terminaste un juego. Las opiniones negativas
+        pueden dar pesos negativos. Puedes guardar tu opinión desde las tarjetas
+        de juegos terminados o abandonados.
       </p>
       <fieldset disabled={busy}>
         <legend className="sr-only">Corregir tus afinidades</legend>
@@ -95,6 +99,12 @@ export default function Tastes({
                     <li key={e.appId}>
                       {e.name} · {e.hours.toLocaleString('es')} h
                       {e.favorite ? ' · favorito explícito' : ''}
+                      {e.opinion ? ` · ${OPINION_LABELS[e.opinion]}` : ''}
+                      {e.opinionReason && (
+                        <p className="small-note">
+                          Tu motivo: {e.opinionReason}
+                        </p>
+                      )}
                       <p className="small-note">
                         {e.sources.slice(0, 3).join(' · ')}
                       </p>

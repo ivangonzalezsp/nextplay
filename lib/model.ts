@@ -1,7 +1,18 @@
 export type Mode = 'today' | 'next';
 export type RecommendationEngine = 'codex' | 'local';
 export type GameStatus = 'pending' | 'completed' | 'abandoned' | 'ignored';
-export type Preference = { favorite: boolean; status: GameStatus };
+export const OPINION_LABELS = {
+  loved: 'Me encantó',
+  liked: 'Me gustó',
+  disliked: 'No me gustó',
+};
+export type Opinion = keyof typeof OPINION_LABELS;
+export type Preference = {
+  favorite: boolean;
+  status: GameStatus;
+  opinion?: Opinion;
+  opinionReason?: string;
+};
 export const CODEX_EFFORTS = [
   'low',
   'medium',
@@ -51,6 +62,8 @@ export type TasteAffinity = {
     name: string;
     hours: number;
     favorite: boolean;
+    opinion?: Opinion;
+    opinionReason?: string;
     sources: string[];
   }[];
 };

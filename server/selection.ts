@@ -135,10 +135,21 @@ export function parsePreference(value: unknown): Preference {
   if (
     !p ||
     typeof p.favorite !== 'boolean' ||
-    !Object.hasOwn(STATUS_LABELS, p.status)
+    !Object.hasOwn(STATUS_LABELS, p.status) ||
+    (p.opinion !== undefined &&
+      !['loved', 'liked', 'disliked'].includes(p.opinion)) ||
+    (p.opinionReason !== undefined &&
+      (typeof p.opinionReason !== 'string' || p.opinionReason.length > 500)) ||
+    (!p.opinion && !!p.opinionReason?.trim())
   )
     throw new AppError('El estado del juego no es válido.');
-  return { favorite: p.favorite, status: p.status };
+  return {
+    favorite: p.favorite,
+    status: p.status,
+    ...(p.opinion
+      ? { opinion: p.opinion, opinionReason: p.opinionReason?.trim() ?? '' }
+      : {}),
+  };
 }
 export function parseTastes(value: unknown, state: State): TasteSettings {
   const v = value as TasteSettings;
@@ -236,7 +247,11 @@ function candidateWeights(
     'mención directa': text.toLowerCase().includes(g.name.toLowerCase())
       ? 80
       : 0,
-    favorito: state.preferences[g.appId]?.favorite ? 40 : 0,
+    favorito:
+      state.preferences[g.appId]?.favorite &&
+      state.preferences[g.appId]?.opinion !== 'disliked'
+        ? 40
+        : 0,
     afinidad: affinityScore(g, profile),
     'actividad reciente':
       g.recentMinutes &&

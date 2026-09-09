@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import Tastes from './tastes';
+import GameOpinion from './opinion';
 // Covers already use source thumbnails; this local Node app has no image optimizer.
 /* oxlint-disable next/no-img-element */
 import {
@@ -203,10 +204,14 @@ function GamePick({
   main,
   status,
   onStatus,
+  opinionPreference,
+  onOpinion,
   busy,
 }: {
   pick: Pick & { game: Game };
   main?: boolean;
+  opinionPreference?: Preference;
+  onOpinion?: (change: Partial<Preference>) => void;
   status?: GameStatus;
   onStatus?: (status: GameStatus) => void;
   busy?: boolean;
@@ -283,6 +288,15 @@ function GamePick({
               <X size={15} /> No me interesa
             </Button>
           </div>
+        )}
+        {onOpinion && (
+          <GameOpinion
+            key={JSON.stringify(opinionPreference)}
+            game={game}
+            preference={opinionPreference}
+            busy={busy}
+            onSave={onOpinion}
+          />
         )}
         {game.shared && (
           <p className="small-note">
@@ -1227,6 +1241,10 @@ export default function Home() {
                             key={pick.appId}
                             pick={pick}
                             status={state.preferences[pick.appId]?.status}
+                            opinionPreference={state?.preferences[pick.appId]}
+                            onOpinion={(change) => {
+                              void preference(pick.game, change);
+                            }}
                             busy={!!busy}
                             onStatus={(status) => {
                               void preference(pick.game, { status });
@@ -1300,6 +1318,10 @@ export default function Home() {
                         pick={pick}
                         main={i === 0}
                         status={state?.preferences[pick.appId]?.status}
+                        opinionPreference={state?.preferences[pick.appId]}
+                        onOpinion={(change) => {
+                          void preference(pick.game, change);
+                        }}
                         busy={!!busy}
                         onStatus={(status) => {
                           void preference(pick.game, { status });
@@ -1318,6 +1340,10 @@ export default function Home() {
                               key={pick.appId}
                               pick={pick}
                               status={state?.preferences[pick.appId]?.status}
+                              opinionPreference={state?.preferences[pick.appId]}
+                              onOpinion={(change) => {
+                                void preference(pick.game, change);
+                              }}
                               busy={!!busy}
                               onStatus={(status) => {
                                 void preference(pick.game, { status });
@@ -1667,6 +1693,15 @@ export default function Home() {
                               </SelectContent>
                             </Select>
                           </div>
+                          <GameOpinion
+                            key={JSON.stringify(pref)}
+                            game={game}
+                            preference={pref}
+                            busy={!!busy}
+                            onSave={(change) => {
+                              void preference(game, change);
+                            }}
+                          />
                         </div>
                       </article>
                     );
