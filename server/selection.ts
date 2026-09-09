@@ -217,22 +217,29 @@ export function parseTastes(value: unknown, state: State): TasteSettings {
     notes: v.notes.trim(),
   };
 }
+export function recentRecommendationPenalties(state: State) {
+  const penalties = new Map<number, number>();
+  // Five completed searches keep this a short-term preference, without growing the prompt.
+  const recent = (state.history ?? state.conversation).slice(-5).toReversed();
+  for (const [index, turn] of recent.entries())
+    for (const pick of [...turn.result.owned, ...turn.result.discoveries])
+      if (!penalties.has(pick.appId)) penalties.set(pick.appId, 30 - index * 6);
+  return penalties;
+}
+
 function candidateWeights(
   g: Game,
   state: State,
   profile: TasteAffinity[],
   filters: Filters,
   text = '',
+  recent = recentRecommendationPenalties(state),
 ) {
+  const mentioned = !!g.name.trim() && text.toLowerCase().includes(g.name.toLowerCase());
   return {
-    'mención directa': text.toLowerCase().includes(g.name.toLowerCase())
-      ? 80
-      : 0,
-    favorito:
-      state.preferences[g.appId]?.favorite &&
-      state.preferences[g.appId]?.opinion !== 'disliked'
-        ? 40
-        : 0,
+    'mención directa': mentioned ? 80 : 0,
+    'propuesta reciente': mentioned ? 0 : -(recent.get(g.appId) ?? 0),
+    favorito: state.preferences[g.appId]?.favorite && state.preferences[g.appId]?.opinion !== 'disliked' ? 40 : 0,
     afinidad: affinityScore(g, profile),
     'actividad reciente':
       g.recentMinutes &&
@@ -255,6 +262,7 @@ export function selectCandidates(
   text = '',
 ): Game[] {
   const profile = buildTasteProfile(state);
+  const recent = recentRecommendationPenalties(state);
   const library = new Map(state.games.map((g) => [g.appId, g]));
   const unique = new Map(
     [
@@ -283,7 +291,7 @@ export function selectCandidates(
       .map((game) => ({
         game,
         score: Object.values(
-          candidateWeights(game, state, profile, filters, text),
+          candidateWeights(game, state, profile, filters, text, recent),
         ).reduce((sum, weight) => sum + weight, 0),
       }))
       .toSorted((a, b) => b.score - a.score || a.game.appId - b.game.appId)
@@ -298,12 +306,13 @@ export function recommendLocally(
   filters: Filters,
 ): Recommendation {
   const profile = buildTasteProfile(state);
+  const recent = recentRecommendationPenalties(state);
   const discoveries = (state.history ?? []).flatMap((t) =>
     t.result.discoveries.map((p) => p.game),
   );
   const candidates = selectCandidates(state, discoveries, filters);
   const pick = (game: Game) => {
-    const weights = candidateWeights(game, state, profile, filters);
+    const weights = candidateWeights(game, state, profile, filters, '', recent);
     const score = Object.values(weights).reduce(
       (sum, weight) => sum + weight,
       0,

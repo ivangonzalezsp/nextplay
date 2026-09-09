@@ -1683,6 +1683,14 @@ export default function Home() {
                     <div className="result-intro">
                       <p>{result.message}</p>
                       <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!canRecommend || !!busy}
+                        onClick={() => recommend('Tráeme otras opciones que encajen con mis filtros y preferencias.')}
+                      >
+                        <RefreshCw size={15} /> Tráeme otras opciones
+                      </Button>
+                      <Button
                         variant="ghost"
                         size="sm"
                         disabled={!!busy}
@@ -1742,6 +1750,8 @@ export default function Home() {
                         : 'Motivos y afinidad: valoración de IA.'}{' '}
                       Duraciones estimadas de IGDB y HowLongToBeat; no indican
                       cuánto dura una sesión.
+                      {' '}Priorizamos variedad respecto a tus últimas cinco búsquedas.
+                      Puede haber repeticiones si hay pocas alternativas o un juego encaja mejor.
                     </p>
                   </div>
                 )}
