@@ -302,6 +302,7 @@ export function buildPrompt(
   candidates: Game[],
   filters: Filters,
   text: string,
+  reference?: Game,
 ) {
   return (
     `Eres el asesor de videojuegos de Next Play. Responde en español y exclusivamente con el JSON solicitado.
@@ -325,6 +326,13 @@ DATOS_JSON:\n` +
         hours: filters.mode === 'next' ? filters.hours : null,
       },
       text,
+      reference: reference
+        ? {
+            purpose:
+              'Solo referencia de afinidad, nunca recomendar este juego. Usa los datos disponibles para conservar o cambiar lo solicitado; no inventes características. Mantén los filtros actuales.',
+            game: catalogGame(reference, state),
+          }
+        : undefined,
       tasteProfile: buildTasteProfile(state),
       tasteNotes: state.tastes?.notes ?? '',
       ignoredHours: state.tastes?.ignoredHours ?? [],
