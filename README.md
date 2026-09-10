@@ -1,30 +1,83 @@
 # Next Play
 
-Web personal en español para elegir qué jugar. Se ejecuta únicamente en `127.0.0.1:3000` y utiliza tu sesión de **Codex con ChatGPT**, sin facturación de la API de OpenAI.
+Web personal en español para elegir qué jugar de tu biblioteca de Steam. Puedes usar el algoritmo local sin IA o tu sesión de **Codex con ChatGPT**, sin configurar la API de OpenAI. Cada persona instala la app en su ordenador y utiliza sus propias cuentas y claves.
 
-## Arranque
+## Requisitos
 
-Necesitas Node.js 24 o posterior; Codex CLI es opcional si usas el algoritmo local. Desde esta carpeta:
+- **Node.js 24 o posterior**, con npm. SQLite viene integrado en Node; no necesitas instalar un servidor de base de datos.
+- **Una cuenta de Steam y una clave de Steam Web API** para importar tu biblioteca. El perfil y los detalles de juegos deben ser públicos.
+- **Git**, solo si vas a clonar el repositorio; también puedes recibir el código en ZIP.
+- **Opcional: Codex CLI y una cuenta de ChatGPT con acceso a Codex**, para las recomendaciones con IA. El algoritmo local no los necesita.
+- **Opcional: credenciales de Twitch/IGDB**, para géneros, modos y descubrimientos.
+- **Opcional: Python 3.12**, versión probada para consultar duraciones de HowLongToBeat.
+
+Las instrucciones principales usan PowerShell en Windows. Necesitas Internet para instalar dependencias, sincronizar fuentes y consultar Codex; el algoritmo local utiliza los datos ya guardados.
+
+## Instalación y primer arranque
+
+### 1. Obtener el proyecto
+
+Descomprime el ZIP recibido y abre una terminal en la carpeta que contiene `package.json`. Si te han facilitado un repositorio, sustituye `URL_DEL_REPOSITORIO` por su dirección:
 
 ```powershell
-npm install
-codex login
-npm run check:codex
+git clone URL_DEL_REPOSITORIO next-play
+cd next-play
+```
+
+### 2. Instalar dependencias y configurar tus claves
+
+```powershell
+node --version
+npm ci
+Copy-Item .env.example .env.local
+```
+
+Comprueba que Node muestra `v24` o superior. Copia `.env.example` solo en la primera instalación para no sobrescribir tus claves. En macOS/Linux, utiliza `cp .env.example .env.local`.
+
+Abre `.env.local` en un editor y completa al menos `STEAM_API_KEY`, siguiendo [Conectar tus datos](#conectar-tus-datos). Puedes dejar vacías las credenciales opcionales. No necesitas `OPENAI_API_KEY`.
+
+### 3. Iniciar la app e importar tu biblioteca
+
+```powershell
 npm run dev
 ```
 
-Abre [Next Play](http://127.0.0.1:3000). La carpeta y los scripts funcionan también después de cerrar Codex. Para usar una compilación local:
+1. Abre [Next Play](http://127.0.0.1:3000).
+2. Abre la configuración desde la cabecera. En **Steam & Familias**, sustituye el perfil que aparece inicialmente por **tu enlace de Steam** (`https://steamcommunity.com/id/tu_usuario/` o `https://steamcommunity.com/profiles/TU_STEAMID64/`).
+3. En **Diagnóstico**, pulsa **Comprobar conexiones**; vuelve a **Steam & Familias** y pulsa **Sincronizar**.
+4. Comprueba que tus juegos aparecen en **Tu biblioteca**. Para empezar sin Codex, selecciona el **Algoritmo local** en **Motor & IA**, ajusta los filtros y pide una recomendación. Al principio conviene usar pocos filtros: faltarán metadatos si no has configurado las fuentes opcionales.
+
+Deja la terminal abierta mientras usas la app. Para detenerla, pulsa `Ctrl+C`; para volver a abrirla, ejecuta `npm run dev` desde la misma carpeta. Los datos se conservan en `data/`.
+
+La app escucha únicamente en `127.0.0.1:3000`: compartir ese enlace no permite que tus amigos entren desde otro ordenador. Cada uno debe ejecutar su propia copia. No necesitas mantener abierta la aplicación de escritorio de Codex.
+
+### 4. Activar recomendaciones con IA (opcional)
+
+Instala [Codex CLI siguiendo la documentación oficial de OpenAI](https://learn.chatgpt.com/docs/codex/cli) e inicia sesión con tu propia cuenta de ChatGPT:
+
+```powershell
+npm install -g @openai/codex@latest
+codex login
+codex login status
+npm run check:codex
+```
+
+El estado debe indicar **Logged in using ChatGPT**. La comprobación sin `--live` no pide una recomendación. En la app, pulsa **Comprobar conexiones** y selecciona Codex en **Motor & IA**. Las recomendaciones con IA consumen el cupo de tu cuenta; elige un modelo disponible para ella.
+
+### Ejecutar una compilación local
+
+Como alternativa al modo de desarrollo:
 
 ```powershell
 npm run build
 npm start
 ```
 
-La web no se publica ni se abre a la red local. Mantén el PC encendido y el proceso activo. La distribución se adapta a pantallas pequeñas; esta primera versión no ofrece acceso desde otro dispositivo.
+Detén antes el servidor de desarrollo para liberar el puerto 3000. Tras cambiar o actualizar el código, vuelve a ejecutar `npm ci` y `npm run build` antes de `npm start`.
 
 ## Conectar tus datos
 
-Completa `.env.local` con estas tres variables. `.env.example` contiene el formato sin secretos:
+Configura tus propias claves en `.env.local`. `.env.example` contiene el formato sin secretos; solo la clave de Steam es necesaria para importar la biblioteca propia:
 
 | Variable               | Procedencia                                                                                                                                 |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -32,21 +85,31 @@ Completa `.env.local` con estas tres variables. `.env.example` contiene el forma
 | `TWITCH_CLIENT_ID`     | [Consola de Twitch](https://dev.twitch.tv/console/apps). Registra una aplicación de tipo **Confidential** y redirección `http://localhost`. |
 | `TWITCH_CLIENT_SECRET` | Sección de gestión de esa misma aplicación de Twitch.                                                                                       |
 
-No pegues claves en el chat ni las incluyas en Git. **No necesitas `OPENAI_API_KEY`.** La app relee `.env.local`; pulsa **Comprobar conexiones** y luego **Sincronizar Steam**. La presencia de una clave se indica en la interfaz; la sincronización verifica si la fuente la acepta.
+Las dos variables de Twitch son opcionales y se configuran juntas. No pegues claves en el chat ni las incluyas en Git. **No necesitas `OPENAI_API_KEY`.** La app relee `.env.local`; pulsa **Comprobar conexiones** y luego **Sincronizar**. La presencia de una clave se indica en la interfaz; la sincronización verifica si la fuente la acepta.
 
-El enlace inicial es [fineku](https://steamcommunity.com/id/fineku/). El perfil y los **detalles de juegos** deben ser públicos. Si la API no permite verlos, se conserva la última biblioteca y se muestra un error; esto se distingue de una biblioteca accesible con cero juegos. No se importan contraseñas ni cookies de Steam.
+Sustituye el enlace inicial por el de tu propio perfil antes de sincronizar. El perfil y los **detalles de juegos** deben ser públicos. Si la API no permite verlos, se conserva la última biblioteca y se muestra un error; esto se distingue de una biblioteca accesible con cero juegos. No se importan contraseñas ni cookies de Steam.
 
 IGDB es opcional para leer la biblioteca, pero necesario para géneros, modos y descubrimientos. Si faltan metadatos, los filtros estrictos que los requieren excluyen esos juegos. La duración principal prioriza HowLongToBeat; cuando falta, utiliza la media hasta los créditos de IGDB si hay aportaciones. Nunca se interpreta como duración de una sesión. Las horas de Steam no determinan si te gustó o terminaste un juego.
 
 ### HowLongToBeat
 
-Se utiliza [howlongtobeatpy](https://github.com/ScrappyCocco/HowLongToBeat-PythonAPI), mediante un proceso puntual de Python que inicia Node. No necesitas otro servidor ni credenciales de HLTB. La integración se ha probado con Python 3.12. Prepara el entorno desde esta carpeta (ya preparado en este PC):
+Se utiliza [howlongtobeatpy](https://github.com/ScrappyCocco/HowLongToBeat-PythonAPI), mediante un proceso puntual de Python que inicia Node. No necesitas otro servidor ni credenciales de HLTB. Esta integración es opcional y se ha probado con Python 3.12. Cada persona debe preparar su entorno desde la carpeta del proyecto:
 
 ```powershell
 python -m venv .venv-hltb
 .venv-hltb\Scripts\python.exe -m pip install -r requirements-hltb.txt
 .venv-hltb\Scripts\python.exe tests/hltb_test.py
 ```
+
+En macOS/Linux:
+
+```sh
+python3 -m venv .venv-hltb
+.venv-hltb/bin/python -m pip install -r requirements-hltb.txt
+.venv-hltb/bin/python tests/hltb_test.py
+```
+
+Después, pulsa **Comprobar conexiones** en la app. Sin Python/HLTB, las duraciones utilizan IGDB cuando hay datos disponibles.
 
 Por defecto se detecta `.venv-hltb`. Para usar otro entorno, configura `NEXTPLAY_PYTHON` con la ruta absoluta de su ejecutable. El proceso recibe solo nombres e identificadores de juegos; no hereda las claves de Steam, Twitch ni la autenticación de Codex.
 
@@ -110,11 +173,30 @@ El modelo inicial es `gpt-5.6-luna`; puedes elegir el modelo y el esfuerzo de ra
 
 Si aparece «no puede localizar tu carpeta de usuario», ejecuta la aplicación desde una terminal normal de tu sesión de Windows. No copies archivos de autenticación ni uses otra cuenta. `codex login status` debe indicar **Logged in using ChatGPT**.
 
-## Control de versiones
+## Compartir el proyecto
 
-El repositorio Git es local. La etiqueta `v0.1.0` identifica el punto de partida. El historial incluye el código y las dependencias declaradas; `.env.local`, `data/`, `node_modules/` y las compilaciones quedan excluidos.
+Comparte el código fuente, `package.json`, `package-lock.json`, `.env.example` y `requirements-hltb.txt`. Cada amigo debe crear su propio `.env.local`, iniciar su sesión de Codex si la utiliza y sincronizar su perfil.
 
-Para ver los puntos guardados usa `git log --oneline --decorate`. Guarda cada cambio terminado con `git add .` y `git commit -m "Descripción del cambio"`. Si un commit introduce un fallo, `git revert <identificador>` crea otro commit que lo deshace conservando el historial. Puedes consultar el punto inicial sin modificar archivos con `git show v0.1.0`.
+No incluyas `.env.local`, `data/`, credenciales de Codex, `node_modules/`, `.venv-hltb/` ni las carpetas generadas (`.next/`, `.vinext/`, `dist/`, `outputs/` o `work/`). `.gitignore` excluye los archivos locales del proyecto, pero no evita que se incluyan al comprimir toda la carpeta manualmente.
+
+Para preparar un ZIP con los archivos del último commit, después de guardar en Git los cambios que quieras compartir:
+
+```powershell
+git archive --format=zip --output=next-play.zip HEAD
+```
+
+El ZIP contiene solo los archivos versionados de ese commit, sin cambios pendientes ni archivos ignorados. Revisa su contenido antes de enviarlo. Este comando no publica nada ni envía el archivo.
+
+## Problemas frecuentes
+
+| Problema | Qué comprobar |
+| --- | --- |
+| `node` o `npm` no se reconoce, o falla `node:sqlite` | Instala Node.js 24 o posterior y abre una terminal nueva; comprueba `node --version`. |
+| PowerShell bloquea `npm.ps1` o `codex.ps1` | Utiliza `npm.cmd` o `codex.cmd` en los comandos correspondientes, o una terminal CMD. |
+| El puerto 3000 está ocupado | Detén la otra instancia de Next Play con `Ctrl+C` en su terminal antes de iniciar otra. |
+| Steam no importa juegos | Revisa tu clave, el enlace de tu perfil y la visibilidad pública de los detalles de juegos. |
+| No encuentra Codex o el modelo requiere una versión más nueva | Ejecuta `npm install -g @openai/codex@latest`, revisa `codex login status` y repite `npm run check:codex`. Consulta también la configuración de `NEXTPLAY_CODEX_BIN` más arriba. |
+| Faltan duraciones, géneros o resultados | Configura las fuentes opcionales, comprueba las conexiones y prueba con menos filtros. El modo local no descarga metadatos nuevos. |
 
 ## Comprobaciones
 
