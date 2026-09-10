@@ -1,14 +1,19 @@
 'use client';
+
 import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import Tastes from './tastes';
 import GameOpinion from './opinion';
-// Covers already use source thumbnails; this local Node app has no image optimizer.
-/* oxlint-disable next/no-img-element */
+import { TopBar } from '@/components/header/TopBar';
+import { SettingsModal } from '@/components/settings/SettingsModal';
+import { QuickVibeBar } from '@/components/recommendations/QuickVibeBar';
+import { HeroSpotlight } from '@/components/recommendations/HeroSpotlight';
+import { GameCard } from '@/components/recommendations/GameCard';
+import { CopilotBar } from '@/components/ai/CopilotBar';
+import { LibraryView } from '@/components/library/LibraryView';
+
 import {
-  ArrowUpRight,
-  ArrowRight,
   Gamepad2,
   Library,
   History,
@@ -23,33 +28,27 @@ import {
   RotateCcw,
   AlertCircle,
   LoaderCircle,
+  Bookmark,
+  ExternalLink,
+  Flame,
   X,
+  Play,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  CODEX_MODELS,
   DEFAULT_FILTERS,
   DEFAULT_CODEX_SETTINGS,
   STATUS_LABELS,
-  codexEffortsForModel,
   storeUrl,
   inLibrary,
   libraryLabel,
   sortLibraryGames,
   steamTagKey,
 } from '@/lib/model';
-import { clearFilters, filterSummary } from '@/lib/filters';
+import { filterSummary } from '@/lib/filters';
 import { log, logError } from '@/lib/log';
 import type {
   CodexSettings,
@@ -57,7 +56,6 @@ import type {
   Game,
   GameStatus,
   LibraryOrderBy,
-  Pick,
   Preference,
   Recommendation,
   RecommendationEngine,
@@ -122,292 +120,13 @@ async function api(path: string, body?: unknown, method = 'POST') {
   });
   return data;
 }
-function Choice({
-  id,
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div className="field">
-      <label id={id + '-label'} htmlFor={id}>
-        {label}
-      </label>
-      <Select
-        value={value}
-        onValueChange={(v) => onChange(v ?? '')}
-        items={options}
-      >
-        <SelectTrigger
-          id={id}
-          aria-labelledby={id + '-label'}
-          className="choice"
-        >
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-function Cover({ game }: { game: Game }) {
-  const [failed, setFailed] = useState(false);
-  return (
-    <div className="cover">
-      {game.cover && !failed ? (
-        <img
-          src={game.cover}
-          alt=""
-          loading="lazy"
-          onError={() => {
-            log('browser', 'cover:failed', { appId: game.appId });
-            setFailed(true);
-          }}
-        />
-      ) : (
-        <Gamepad2 aria-hidden="true" />
-      )}
-    </div>
-  );
-}
-function GameTags({ game }: { game: Game }) {
-  if (!game.steamTags?.length) return null;
-  return (
-    <div className="filter-tags" aria-label="Etiquetas Steam">
-      {game.steamTags.map((tag) => (
-        <span className="filter-tag" key={steamTagKey(tag)}>
-          {tag.name}
-        </span>
-      ))}
-    </div>
-  );
-}
+
 function formatHours(value: number | null | undefined) {
   return value == null
     ? 'sin datos'
     : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
 }
-function StatusControl({
-  game,
-  status = 'pending',
-  onStatus,
-  busy,
-}: {
-  game: Game;
-  status?: GameStatus;
-  onStatus: (status: GameStatus) => void;
-  busy?: boolean;
-}) {
-  return (
-    <Select
-      value={status}
-      onValueChange={(value) => {
-        if (value) onStatus(value as GameStatus);
-      }}
-      disabled={busy}
-      items={Object.entries(STATUS_LABELS).map(([value, label]) => ({
-        value,
-        label,
-      }))}
-    >
-      <SelectTrigger aria-label={'Estado de ' + game.name}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {Object.entries(STATUS_LABELS).map(([value, label]) => (
-          <SelectItem key={value} value={value}>
-            {label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  );
-}
-function GamePick({
-  pick,
-  main,
-  status,
-  onStatus,
-  opinionPreference,
-  onOpinion,
-  onSimilar,
-  busy,
-  saved,
-  onSaved,
-}: {
-  pick: Pick & { game: Game };
-  main?: boolean;
-  opinionPreference?: Preference;
-  onOpinion?: (change: Partial<Preference>) => void;
-  status?: GameStatus;
-  onStatus?: (status: GameStatus) => void;
-  onSimilar: (game: Game) => void;
-  busy?: boolean;
-  saved?: boolean;
-  onSaved?: () => void;
-}) {
-  const { game } = pick;
-  return (
-    <article className={'game-pick ' + (main ? 'main-pick' : '')}>
-      <Cover game={game} />
-      <div className="pick-body">
-        <div className="eyebrow">
-          {main
-            ? 'TU PRÓXIMA PARTIDA'
-            : inLibrary(game)
-              ? 'OTRA BUENA OPCIÓN'
-              : 'POR DESCUBRIR'}
-        </div>
-        <h3>{game.name}</h3>
-        <div className="game-meta">
-          <span>{libraryLabel(game)}</span>
-          {inLibrary(game) && game.playtimeMinutes !== null && (
-            <span>
-              {(game.playtimeMinutes / 60).toLocaleString('es', {
-                maximumFractionDigits: 1,
-              })}{' '}
-              h jugadas
-            </span>
-          )}
-          {game.durationHours != null && (
-            <span>IGDB · ≈ {formatHours(game.durationHours)} de historia</span>
-          )}
-          {game.hltb && (
-            <span>
-              HLTB · Historia: {formatHours(game.hltb.mainHours)} · Historia y
-              extras: {formatHours(game.hltb.extraHours)} · Completista:{' '}
-              {formatHours(game.hltb.completionHours)}
-            </span>
-          )}
-          {game.durationHours == null && !game.hltb && (
-            <span>Duraciones sin datos</span>
-          )}
-        </div>
-        <GameTags game={game} />
-        {onSaved && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy}
-            aria-pressed={!!saved}
-            onClick={onSaved}
-          >
-            {saved ? 'Quitar de lista corta' : 'Guardar en lista corta'}
-          </Button>
-        )}
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          onClick={() => onSimilar(game)}
-        >
-          Algo como este, pero…
-        </Button>
-        <p>{pick.reason}</p>
-        <p>{pick.whyNow}</p>
-        <p className="caveat">
-          <strong>A tener en cuenta: </strong>
-          {pick.caveat}
-        </p>
-        {onStatus && (
-          <div
-            className="pick-actions"
-            aria-label={'Acciones para ' + game.name}
-          >
-            {inLibrary(game) && (
-              <StatusControl
-                game={game}
-                status={status}
-                onStatus={onStatus}
-                busy={busy}
-              />
-            )}
-            <Button
-              variant={status === 'completed' ? 'secondary' : 'outline'}
-              size="sm"
-              disabled={busy}
-              aria-pressed={status === 'completed'}
-              onClick={() =>
-                onStatus(status === 'completed' ? 'pending' : 'completed')
-              }
-            >
-              <Check size={15} /> Ya jugado
-            </Button>
-            <Button
-              variant={status === 'ignored' ? 'destructive' : 'outline'}
-              size="sm"
-              disabled={busy}
-              aria-pressed={status === 'ignored'}
-              onClick={() =>
-                onStatus(status === 'ignored' ? 'pending' : 'ignored')
-              }
-            >
-              <X size={15} /> No me interesa
-            </Button>
-          </div>
-        )}
-        {onOpinion && (
-          <GameOpinion
-            key={JSON.stringify(opinionPreference)}
-            game={game}
-            preference={opinionPreference}
-            busy={busy}
-            onSave={onOpinion}
-          />
-        )}
-        {game.shared && (
-          <p className="small-note">
-            La disponibilidad de una copia libre se comprueba al abrir Steam.
-          </p>
-        )}
-        <div className="pick-footer">
-          <a
-            className="store-link"
-            href={storeUrl(game.appId)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Ver en Steam <ArrowUpRight size={16} />
-          </a>
-          {game.igdbUrl && (
-            <a href={game.igdbUrl} target="_blank" rel="noreferrer">
-              Datos de IGDB
-            </a>
-          )}
-          {game.hltb && (
-            <a
-              href={'https://howlongtobeat.com/game/' + game.hltb.id}
-              target="_blank"
-              rel="noreferrer"
-            >
-              HowLongToBeat · {new Date(game.hltb.at).toLocaleDateString('es')}
-            </a>
-          )}
-          {game.reviews && game.reviews.total > 0 && (
-            <span>
-              {Math.round((100 * game.reviews.positive) / game.reviews.total)}%
-              positivas · {game.reviews.total.toLocaleString('es')} reseñas ·{' '}
-              {new Date(game.reviews.at).toLocaleDateString('es')}
-            </span>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
+
 export default function Home() {
   const [state, setState] = useState<Snapshot | null>(null);
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
@@ -430,23 +149,30 @@ export default function Home() {
   const [error, setError] = useState('');
   const [result, setResult] = useState<Recommendation | null>(null);
   const [tab, setTab] = useState('recommend');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   const activeFilters = useRef(filters);
   const activeCodex = useRef(codex);
   const activeEngine = useRef(engine);
+
   useEffect(() => {
     activeEngine.current = engine;
   }, [engine]);
+
   useEffect(() => {
     activeFilters.current = filters;
     log('browser', 'filters:changed', filters);
   }, [filters]);
+
   useEffect(() => {
     activeCodex.current = codex;
     log('browser', 'codex:changed', codex);
   }, [codex]);
+
   useEffect(() => {
     log('browser', 'view:changed', { tab });
   }, [tab]);
+
   function accept(next: Snapshot) {
     log('browser', 'state:accepted', {
       games: next.games.length,
@@ -464,6 +190,7 @@ export default function Home() {
     setResult(next.conversation.at(-1)?.result ?? null);
     if (next.codex) setCodex(next.codex);
   }
+
   async function load() {
     const next: Snapshot = await api('state');
     accept(next);
@@ -477,6 +204,7 @@ export default function Home() {
     );
     if (next.profile) setProfileUrl(next.profile.url);
   }
+
   useEffect(() => {
     log('browser', 'app:mounted');
     void api('state')
@@ -498,6 +226,8 @@ export default function Home() {
       })
       .finally(() => setLoading(false));
   }, []);
+
+  // WebMCP registration
   useEffect(() => {
     const context = (
       document as Document & {
@@ -603,6 +333,7 @@ export default function Home() {
     });
     return () => lifecycle.abort();
   }, []);
+
   async function action(name: string, fn: () => Promise<void>) {
     const started = Date.now();
     log('browser', 'action:start', { name });
@@ -626,11 +357,13 @@ export default function Home() {
       log('browser', 'action:end', { name, ms: Date.now() - started });
     }
   }
+
   async function sync() {
     await action('sync', async () => {
       accept(await api('steam/sync', { profileUrl, force: true }));
     });
   }
+
   async function recommend(message = text, selectionFilters = filters) {
     if (reference && engine !== 'codex') return;
     await action('recommend', async () => {
@@ -648,6 +381,7 @@ export default function Home() {
       setTab('recommend');
     });
   }
+
   async function preference(game: Game, change: Partial<Preference>) {
     await action('pref-' + game.appId, async () => {
       accept(
@@ -668,6 +402,7 @@ export default function Home() {
       );
     });
   }
+
   async function shortlist(game: Game) {
     await action('shortlist-' + game.appId, async () => {
       accept(
@@ -684,6 +419,7 @@ export default function Home() {
       );
     });
   }
+
   async function reset() {
     await action('reset', async () => {
       accept(await api('conversation/reset', { filters }));
@@ -691,14 +427,23 @@ export default function Home() {
       setReference(null);
     });
   }
+
   function similar(game: Game) {
     setReference(game);
     setText(
       `Busco algo como ${game.name}, pero…\nQuiero conservar: \nQuiero cambiar: `,
     );
     setTab('recommend');
-    requestAnimationFrame(() => document.getElementById('message')?.focus());
+    requestAnimationFrame(() => document.getElementById('copilot-input')?.focus());
   }
+
+  // Quick Roulette / Surprise Me action
+  function surpriseMe() {
+    const updatedFilters = { ...filters, comfortZone: true };
+    setFilters(updatedFilters);
+    void recommend('¡Elige un juego sorpresa de mi biblioteca para jugar ahora mismo!', updatedFilters);
+  }
+
   const games = state?.games ?? [];
   const inProgress = games.filter(
     (game) =>
@@ -726,9 +471,11 @@ export default function Home() {
       !state?.preferences[g.appId]?.status ||
       state.preferences[g.appId].status === 'pending',
   ).length;
+
   const genres = [
     ...new Set(games.flatMap((g) => (g.genres ?? []).map((x) => x.name))),
   ].sort();
+
   const steamTags = [
     ...new Map(
       games
@@ -746,112 +493,13 @@ export default function Home() {
         ]),
     ).values(),
   ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+
   const tagLabels = new Map(steamTags.map((tag) => [tag.value, tag.label]));
-  const selectedTagKeys = filters.tags ?? [];
+
   const filterCounts = state
     ? filterSummary(state, filters, reference?.appId)
     : null;
-  const activeFilterChips: { label: string; patch: Partial<Filters> }[] = [
-    ...(filters.shortlistOnly
-      ? [{ label: 'Solo lista corta', patch: { shortlistOnly: false } }]
-      : []),
-    ...(filters.comfortZone
-      ? [
-          {
-            label: 'Zona de confort (selección)',
-            patch: { comfortZone: false },
-          },
-        ]
-      : []),
-    ...(filters.mode === 'today' &&
-    filters.sessionIntent &&
-    filters.sessionIntent !== 'any'
-      ? [
-          {
-            label:
-              filters.sessionIntent === 'continue'
-                ? 'Continuar partida'
-                : 'Empezar un juego',
-            patch: { sessionIntent: 'any' as const },
-          },
-        ]
-      : []),
-    ...(filters.mode === 'next' && filters.hours !== null
-      ? [
-          {
-            label: 'Historia ≤ ' + filters.hours + ' h',
-            patch: { hours: null },
-          },
-        ]
-      : []),
-    ...(filters.mode === 'today' &&
-    engine === 'codex' &&
-    filters.minutes !== null
-      ? [
-          {
-            label: 'Sesión: ' + filters.minutes + ' min (orientativo)',
-            patch: { minutes: null },
-          },
-        ]
-      : []),
-    ...(filters.minReleaseDate
-      ? [
-          {
-            label: 'Desde ' + filters.minReleaseDate,
-            patch: { minReleaseDate: null },
-          },
-        ]
-      : []),
-    ...(filters.genre ? [{ label: filters.genre, patch: { genre: '' } }] : []),
-    ...(filters.gameMode
-      ? [
-          {
-            label: (
-              {
-                single: 'En solitario',
-                coop: 'Cooperativo',
-                multi: 'Multijugador',
-              } as Record<string, string>
-            )[filters.gameMode],
-            patch: { gameMode: '' },
-          },
-        ]
-      : []),
-    ...selectedTagKeys.map((key) => ({
-      label: tagLabels.get(key) ?? key,
-      patch: { tags: selectedTagKeys.filter((tag) => tag !== key) },
-    })),
-    ...(!filters.replay
-      ? [{ label: 'Excluir terminados y abandonados', patch: { replay: true } }]
-      : []),
-    ...(engine === 'codex' && filters.mood.trim()
-      ? [
-          {
-            label: 'Busco: ' + filters.mood + ' (orientativo)',
-            patch: { mood: '' },
-          },
-        ]
-      : []),
-  ];
-  const tagSuggestions = steamTags.filter(
-    (tag) => !selectedTagKeys.includes(tag.value),
-  );
-  function addTagFilter() {
-    const query = tagSearch.trim().toLocaleLowerCase();
-    if (!query) return;
-    const exact = steamTags.find(
-      (tag) =>
-        tag.value === tagSearch.trim() ||
-        tag.label.toLocaleLowerCase() === query,
-    );
-    const match =
-      exact ??
-      steamTags.find((tag) => tag.label.toLocaleLowerCase().includes(query));
-    if (!match) return;
-    if (!selectedTagKeys.includes(match.value))
-      setFilters({ ...filters, tags: [...selectedTagKeys, match.value] });
-    setTagSearch('');
-  }
+
   const searchText = search.toLocaleLowerCase();
   const filtered = games.filter(
     (g) =>
@@ -874,78 +522,95 @@ export default function Home() {
             ? g.shared
             : g.ownerSteamIds?.includes(libraryOwner))),
   );
+
   const ordered = sortLibraryGames(
     filtered,
     libraryOrderBy,
     state?.preferences,
   );
-  const modelOptions = [
-    ...CODEX_MODELS,
-    ...(CODEX_MODELS.some((m) => m.value === codex.model)
-      ? []
-      : [{ value: codex.model, label: codex.model + ' · configurado' }]),
-  ];
-  const effortOptions = codexEffortsForModel(codex.model).map((value) => ({
-    value,
-    label:
-      value === 'low'
-        ? 'Bajo · más rápido'
-        : value === 'medium'
-          ? 'Medio · equilibrado'
-          : value === 'high'
-            ? 'Alto · más razonado'
-            : value === 'xhigh'
-              ? 'Muy alto'
-              : value === 'max'
-                ? 'Máximo'
-                : 'Ultra',
-  }));
+
   const canRecommend =
-    games.length > 0 && (engine === 'local' || state?.setup.codex);
+    games.length > 0 && (engine === 'local' || !!state?.setup.codex);
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
         Ir al contenido
       </a>
-      <header className="topbar">
-        <Link className="brand" href="/" aria-label="Next Play, inicio">
-          <span className="brand-icon">
-            <Gamepad2 />
-          </span>
-          <span>
-            next<span className="brand-light">play</span>
-            <span className="brand-dot">.</span>
-          </span>
-        </Link>
-        <div className="local-badge">
-          <span /> Tu espacio de juego
-        </div>
-        <div className="user-badge">
-          {state?.profile?.avatar && <img src={state.profile.avatar} alt="" />}
-          <span>{state?.profile?.name ?? 'fineku'}</span>
-          <span className="local-label">LOCAL</span>
-        </div>
-      </header>
+
+      {/* 1. HUD TOPBAR WITH LIVE INDICATORS & SETTINGS TRIGGER */}
+      <TopBar
+        state={state}
+        engine={engine}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onSync={sync}
+        busy={busy}
+      />
+
+      {/* 2. SETTINGS MODAL (Decouples tech configs) */}
+      <SettingsModal
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        state={state}
+        profileUrl={profileUrl}
+        setProfileUrl={setProfileUrl}
+        onSync={sync}
+        onFamilySync={async () => {
+          await action('family', async () => {
+            accept(await api('steam/family/sync', {}));
+          });
+        }}
+        onReload={async () => {
+          await action('reload', load);
+        }}
+        engine={engine}
+        setEngine={setEngine}
+        codex={codex}
+        setCodex={setCodex}
+        busy={busy}
+      />
+
       <main id="main" className="workspace">
+        {/* Hero Title & Stats Bar */}
         <div className="page-heading">
           <div>
-            <div className="eyebrow">MENOS ELEGIR. MÁS JUGAR.</div>
-            <h1>¿Qué te apetece jugar?</h1>
+            <div className="eyebrow">CONSOLA NEXT PLAY · TU ESPACIO DE JUEGO</div>
+            <h1>¿Qué te apetece jugar hoy?</h1>
             <p>
-              Encuentra tu siguiente partida entre lo que tienes y lo que te
-              falta por descubrir.
+              Menos tiempo eligiendo, más tiempo disfrutando de tu catálogo.
             </p>
           </div>
-          <div className="session-note">
-            <span className="status-dot" />A tu ritmo. A tu manera.
+
+          {/* Quick HUD Stats Pills */}
+          <div className="flex items-center gap-3">
+            <div className="hud-pill">
+              <Library size={14} className="text-emerald-400" />
+              <span>
+                <strong>{games.length}</strong> biblioteca
+              </span>
+            </div>
+            <div className="hud-pill">
+              <Clock3 size={14} className="text-amber-400" />
+              <span>
+                <strong>{pending}</strong> pendientes
+              </span>
+            </div>
+            <div className="hud-pill">
+              <Star size={14} className="text-yellow-400" />
+              <span>
+                <strong>{favorites}</strong> favoritos
+              </span>
+            </div>
           </div>
         </div>
+
         {error && (
           <div className="notice error" role="alert">
             <AlertCircle size={18} />
             <span>{error}</span>
             <Button
               variant="ghost"
+              size="sm"
               onClick={() => {
                 setError('');
                 if (!state) void action('reload', load);
@@ -955,974 +620,290 @@ export default function Home() {
             </Button>
           </div>
         )}
-        <div className="content-grid">
-          <aside className="controls">
-            <section className="panel">
-              <div className="panel-title">
-                <SlidersHorizontal size={18} />
-                <h2>Tu próxima experiencia</h2>
-              </div>
-              <Tabs
-                value={filters.mode}
-                onValueChange={(v) =>
-                  setFilters({ ...filters, mode: v as Filters['mode'] })
-                }
-              >
-                <TabsList
-                  className="mode-tabs"
-                  aria-label="Tipo de recomendación"
-                >
-                  <TabsTrigger value="today">
-                    <Clock3 size={16} /> Para hoy
-                  </TabsTrigger>
-                  <TabsTrigger value="next">
-                    <Sparkles size={16} /> Próximo juego
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <p className="field-help">
-                {filters.mode === 'today'
-                  ? 'Un juego para el rato que tienes ahora.'
-                  : 'Una nueva historia para varias sesiones.'}
-              </p>
-              <div className="field" aria-label="Resumen de filtros">
-                <strong>
-                  Filtros activos ·{' '}
-                  {filters.mode === 'today' ? 'Para hoy' : 'Próximo juego'}
-                </strong>
-                <div className="filter-tags">
-                  {activeFilterChips.map(({ label, patch }, index) => (
-                    <span className="filter-tag" key={index}>
-                      {label}
-                      <button
-                        type="button"
-                        aria-label={'Quitar filtro: ' + label}
-                        onClick={() => setFilters({ ...filters, ...patch })}
-                      >
-                        <X size={13} />
-                      </button>
-                    </span>
+
+        {/* 3. MAIN NAVIGATION TABS */}
+        <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
+          <div className="view-navigation">
+            <TabsList variant="line" aria-label="Vista principal">
+              <TabsTrigger value="recommend">
+                <Sparkles size={16} /> Para ti
+              </TabsTrigger>
+              <TabsTrigger value="library">
+                <Library size={16} /> Tu biblioteca ({games.length})
+              </TabsTrigger>
+              <TabsTrigger value="shortlist">
+                <Bookmark size={16} /> Lista corta ({savedGames.length})
+              </TabsTrigger>
+              <TabsTrigger value="tastes">
+                <Star size={16} /> Tus gustos
+              </TabsTrigger>
+              <TabsTrigger value="history">
+                <History size={16} /> Historial
+              </TabsTrigger>
+            </TabsList>
+            <span className="subtle-label">
+              Experiencia Console & Steam Deck HUD
+            </span>
+          </div>
+
+          {/* =================================================================== */}
+          {/* TAB 1: PARA TI (RECOMMENDATIONS & DISCOVERY)                       */}
+          {/* =================================================================== */}
+          <TabsContent value="recommend" className="space-y-6">
+            {/* Quick Vibe & Mode Selector */}
+            <QuickVibeBar
+              filters={filters}
+              setFilters={setFilters}
+              filterCounts={filterCounts}
+              genres={genres}
+              steamTags={steamTags}
+              tagLabels={tagLabels}
+              onRecommend={() => recommend()}
+              onSurpriseMe={surpriseMe}
+              canRecommend={canRecommend}
+              busy={busy}
+              engine={engine}
+              savedGamesCount={savedGames.length}
+            />
+
+            {/* In Progress Shelf (if any) */}
+            {inProgress.length > 0 && (
+              <section aria-labelledby="in-progress-heading" className="hud-shelf-section">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 id="in-progress-heading" className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Play size={15} className="text-emerald-400 fill-current" />
+                    <span>Tus juegos en curso ({inProgress.length})</span>
+                  </h3>
+                  <span className="text-xs text-muted-foreground">
+                    Marca "Estoy jugando" o "En pausa" para tenerlos a mano
+                  </span>
+                </div>
+
+                <div className="hud-bento-grid">
+                  {inProgress.map((game) => (
+                    <article key={game.appId} className="hud-game-card">
+                      <div className="hud-card-cover-wrapper">
+                        {game.cover ? (
+                          <img
+                            src={game.cover}
+                            alt=""
+                            className="hud-card-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="hud-card-cover-fallback">
+                            <Gamepad2 size={28} className="text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="hud-card-overlay-badges">
+                          <span className="hud-meta-badge source">
+                            {libraryLabel(game)}
+                          </span>
+                          <span className="hud-status-badge" data-status={state?.preferences[game.appId]?.status}>
+                            {STATUS_LABELS[state?.preferences[game.appId]?.status ?? 'playing']}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="hud-card-body">
+                        <h4 className="hud-card-title">{game.name}</h4>
+                        <div className="hud-card-actions">
+                          <a
+                            href={storeUrl(game.appId)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hud-card-steam-link"
+                          >
+                            <span>Abrir Steam</span>
+                            <ExternalLink size={12} />
+                          </a>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs ml-auto"
+                            onClick={() =>
+                              preference(game, {
+                                status:
+                                  state?.preferences[game.appId]?.status === 'playing'
+                                    ? 'paused'
+                                    : 'playing',
+                              })
+                            }
+                          >
+                            {state?.preferences[game.appId]?.status === 'playing'
+                              ? 'Pausar'
+                              : 'Reanudar'}
+                          </Button>
+                        </div>
+                      </div>
+                    </article>
                   ))}
                 </div>
-                {!activeFilterChips.length && (
-                  <p className="field-help">Sin filtros opcionales.</p>
-                )}
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setFilters(clearFilters(filters.mode));
-                    setTagSearch('');
-                  }}
-                >
-                  Limpiar filtros
-                </Button>
-                {filterCounts && (
-                  <output className="field-help">
-                    <strong>
-                      {filterCounts.eligible} de {filterCounts.total}
-                    </strong>{' '}
-                    juegos de tu biblioteca cumplen los filtros con los datos
-                    guardados. {filterCounts.missing} excluidos por datos
-                    necesarios sin completar, sin otro incumplimiento conocido.
-                    {selectedTagKeys.length > 1 &&
-                      (filterCounts.relaxedTags
-                        ? ' Se incluyen juegos con cualquiera de las etiquetas: hay menos de 3 con todas.'
-                        : ' Los candidatos tienen todas las etiquetas seleccionadas.')}
-                  </output>
-                )}
-                <p className="field-help">
-                  Los recuentos incluyen juegos propios y compartidos, sin
-                  descubrimientos. Codex puede actualizar metadatos al
-                  recomendar. «No me interesa» siempre se excluye.
-                  {filters.mode === 'today' &&
-                    (engine === 'codex'
-                      ? ' Los minutos orientan a Codex; no excluyen juegos por duración total.'
-                      : ' El motor local no filtra por minutos de sesión.')}
-                  {engine === 'codex' &&
-                    filters.mood.trim() &&
-                    ' «Hoy busco» orienta a Codex y no modifica el recuento.'}
-                </p>
+              </section>
+            )}
+
+            {/* Recommendations Output */}
+            {loading ? (
+              <div className="empty-state">
+                <LoaderCircle className="spin" size={36} />
+                <h2>Abriendo tu espacio de juego…</h2>
               </div>
-              {filters.mode === 'today' && (
-                <>
-                  <Choice
-                    id="session-intent"
-                    label="¿Continuar o empezar?"
-                    value={filters.sessionIntent ?? 'any'}
-                    onChange={(sessionIntent) =>
-                      setFilters({
-                        ...filters,
-                        sessionIntent:
-                          sessionIntent as Filters['sessionIntent'],
-                      })
-                    }
-                    options={[
-                      { value: 'any', label: 'Cualquiera' },
-                      {
-                        value: 'continue',
-                        label: 'Continuar jugando o retomar una pausa',
-                      },
-                      { value: 'start', label: 'Empezar un pendiente' },
-                    ]}
-                  />
-                  <p className="field-help">
-                    Usa los estados que has marcado, sin deducirlos de tus
-                    horas.
-                  </p>
-                </>
-              )}
-              <div className="field">
-                <label htmlFor="time">
-                  {filters.mode === 'today'
-                    ? 'Tiempo para esta sesión'
-                    : 'Duración máxima de la historia'}
-                </label>
-                <div className="number-field">
-                  <Input
-                    id="time"
-                    type="number"
-                    min="1"
-                    max={filters.mode === 'today' ? 1440 : 1000}
-                    placeholder="Sin límite"
-                    value={
-                      (filters.mode === 'today'
-                        ? filters.minutes
-                        : filters.hours) ?? ''
-                    }
-                    onChange={(e) =>
-                      setFilters({
-                        ...filters,
-                        [filters.mode === 'today' ? 'minutes' : 'hours']: e
-                          .target.value
-                          ? Number(e.target.value)
-                          : null,
-                      })
-                    }
-                  />
-                  <span>{filters.mode === 'today' ? 'minutos' : 'horas'}</span>
+            ) : !result ? (
+              <section className="empty-state">
+                <span className="empty-symbol">
+                  <Gamepad2 size={46} className="text-emerald-400" />
+                </span>
+                <div className="eyebrow">
+                  TU PRÓXIMA PARTIDA TE ESTÁ ESPERANDO
                 </div>
-              </div>
-              <div className="field">
-                <label htmlFor="min-release-date">
-                  Fecha mínima de lanzamiento
-                </label>
-                <Input
-                  id="min-release-date"
-                  type="date"
-                  value={filters.minReleaseDate ?? ''}
-                  onChange={(e) =>
-                    setFilters({
-                      ...filters,
-                      minReleaseDate: e.target.value || null,
-                    })
-                  }
-                />
-              </div>
-              <div className="field">
-                <label htmlFor="recommendation-tags">Etiquetas Steam</label>
-                {!!selectedTagKeys.length && (
-                  <div
-                    className="filter-tags"
-                    aria-label="Etiquetas seleccionadas"
-                  >
-                    {selectedTagKeys.map((key) => (
-                      <span className="filter-tag" key={key}>
-                        {tagLabels.get(key) ?? key}
-                        <button
-                          type="button"
-                          aria-label={`Quitar ${tagLabels.get(key) ?? key}`}
-                          onClick={() =>
-                            setFilters({
-                              ...filters,
-                              tags: selectedTagKeys.filter(
-                                (tag) => tag !== key,
-                              ),
+                <h2>
+                  {games.length
+                    ? '¿Listo para encontrar tu siguiente aventura?'
+                    : 'Conecta tu cuenta de Steam para comenzar.'}
+                </h2>
+                <p>
+                  {games.length
+                    ? 'Ajusta el tiempo arriba, pulsa "Encuentra mi próximo juego" o déjate sorprender con la ruleta.'
+                    : 'Abre Ajustes y Conexiones arriba a la derecha para sincronizar tu catálogo de Steam.'}
+                </p>
+                <div className="steps">
+                  <span>
+                    <b>01</b> Biblioteca
+                  </span>
+                  <ArrowRight size={15} />
+                  <span>
+                    <b>02</b> Tiempo y Vibra
+                  </span>
+                  <ArrowRight size={15} />
+                  <span>
+                    <b>03</b> ¡A jugar!
+                  </span>
+                </div>
+              </section>
+            ) : (
+              <div className="hud-results-container space-y-6">
+                {/* Result header banner */}
+                <div className="hud-card-subpanel flex items-center justify-between flex-wrap gap-3">
+                  <p className="text-sm text-foreground flex-1">
+                    {result.message}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={!canRecommend || !!busy}
+                      onClick={() =>
+                        recommend(
+                          'Tráeme otras opciones que encajen con mis filtros y preferencias.',
+                        )
+                      }
+                    >
+                      <RefreshCw size={13} className="mr-1.5" />
+                      Tráeme otras opciones
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={!!busy}
+                      onClick={reset}
+                    >
+                      <RotateCcw size={13} className="mr-1.5" />
+                      Nueva búsqueda
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 1. HERO SPOTLIGHT FOR TOP PICK */}
+                {result.owned.length > 0 && (
+                  <HeroSpotlight
+                    pick={result.owned[0]}
+                    status={state?.preferences[result.owned[0].appId]?.status}
+                    onStatus={(status) => void preference(result.owned[0].game, { status })}
+                    opinionPreference={state?.preferences[result.owned[0].appId]}
+                    onOpinion={(change) => void preference(result.owned[0].game, change)}
+                    onSimilar={similar}
+                    busy={!!busy}
+                    saved={savedIds.has(result.owned[0].appId)}
+                    onSaved={() => void shortlist(result.owned[0].game)}
+                    favorite={state?.preferences[result.owned[0].appId]?.favorite}
+                    onFavorite={() =>
+                      preference(result.owned[0].game, {
+                        favorite: !state?.preferences[result.owned[0].appId]?.favorite,
+                      })
+                    }
+                  />
+                )}
+
+                {/* 2. SECONDARY PICKS IN BENTO GRID */}
+                {result.owned.length > 1 && (
+                  <div>
+                    <div className="section-heading">
+                      <h3 className="text-base font-bold text-foreground">
+                        Otras buenas opciones de tu biblioteca
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        Seleccionadas según tus gustos y el tiempo disponible
+                      </span>
+                    </div>
+
+                    <div className="hud-bento-grid">
+                      {result.owned.slice(1).map((pick) => (
+                        <GameCard
+                          key={pick.appId}
+                          pick={pick}
+                          status={state?.preferences[pick.appId]?.status}
+                          onStatus={(status) => void preference(pick.game, { status })}
+                          opinionPreference={state?.preferences[pick.appId]}
+                          onOpinion={(change) => void preference(pick.game, change)}
+                          onSimilar={similar}
+                          busy={!!busy}
+                          saved={savedIds.has(pick.appId)}
+                          onSaved={() => void shortlist(pick.game)}
+                          favorite={state?.preferences[pick.appId]?.favorite}
+                          onFavorite={() =>
+                            preference(pick.game, {
+                              favorite: !state?.preferences[pick.appId]?.favorite,
                             })
                           }
-                        >
-                          <X size={13} />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <Input
-                  id="recommendation-tags"
-                  list="recommendation-tag-options"
-                  value={tagSearch}
-                  placeholder="Busca una etiqueta y pulsa Enter"
-                  onChange={(e) => setTagSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addTagFilter();
-                    }
-                  }}
-                />
-                <datalist id="recommendation-tag-options">
-                  {tagSuggestions.map((tag) => (
-                    <option key={tag.value} value={tag.label} />
-                  ))}
-                </datalist>
-                <p className="field-help">
-                  Con varias: primero juegos con todas; si no hay suficientes,
-                  se incluyen los que tengan cualquiera.
-                </p>
-              </div>
-              <Choice
-                id="genre"
-                label="Género"
-                value={filters.genre}
-                onChange={(genre) => setFilters({ ...filters, genre })}
-                options={[
-                  { value: '', label: 'Me dejo sorprender' },
-                  ...genres.map((g) => ({ value: g, label: g })),
-                ]}
-              />
-              <Choice
-                id="game-mode"
-                label="¿Con quién juegas?"
-                value={filters.gameMode}
-                onChange={(gameMode) => setFilters({ ...filters, gameMode })}
-                options={[
-                  { value: '', label: 'Sin preferencia' },
-                  { value: 'single', label: 'En solitario' },
-                  { value: 'coop', label: 'En cooperativo' },
-                  { value: 'multi', label: 'Multijugador' },
-                ]}
-              />
-              {engine === 'codex' && (
-                <div className="field">
-                  <label htmlFor="mood">Hoy busco…</label>
-                  <Input
-                    id="mood"
-                    maxLength={200}
-                    value={filters.mood}
-                    placeholder="Algo tranquilo, una buena historia…"
-                    onChange={(e) =>
-                      setFilters({ ...filters, mood: e.target.value })
-                    }
-                  />
-                </div>
-              )}
-              <label className="check-label" htmlFor="comfort-zone">
-                <Checkbox
-                  id="comfort-zone"
-                  checked={!!filters.comfortZone}
-                  onCheckedChange={(v) =>
-                    setFilters({ ...filters, comfortZone: !!v })
-                  }
-                />{' '}
-                Sácame de mi zona de confort
-              </label>
-              {filters.comfortZone && (
-                <p className="field-help">
-                  Una opción afín y otra distinta, con una conexión con tus
-                  gustos. Mantiene tus filtros.
-                </p>
-              )}
-              <label className="check-label" htmlFor="replay">
-                <Checkbox
-                  id="replay"
-                  checked={filters.replay}
-                  onCheckedChange={(v) =>
-                    setFilters({ ...filters, replay: !!v })
-                  }
-                />{' '}
-                Incluir terminados y abandonados
-              </label>
-              <label className="check-label" htmlFor="shortlist-only">
-                <Checkbox
-                  id="shortlist-only"
-                  checked={!!filters.shortlistOnly}
-                  onCheckedChange={(value) =>
-                    setFilters({ ...filters, shortlistOnly: !!value })
-                  }
-                />
-                Solo mi lista corta ({savedGames.length})
-              </label>
-              <Choice
-                id="recommendation-engine"
-                label="Cómo recomendar"
-                value={engine}
-                onChange={(value) => setEngine(value as RecommendationEngine)}
-                options={[
-                  { value: 'codex', label: 'Codex · IA' },
-                  { value: 'local', label: 'Algoritmo local · sin tokens' },
-                ]}
-              />
-              {engine === 'local' && (
-                <p className="field-help">
-                  Usa tus favoritos y los pesos de Tus gustos. Funciona con los
-                  datos guardados, sin interpretar notas ni conversación.
-                </p>
-              )}
-              {engine === 'codex' && (
-                <>
-                  <Choice
-                    id="codex-model"
-                    label="Modelo"
-                    value={codex.model}
-                    onChange={(model) => {
-                      const efforts = codexEffortsForModel(model);
-                      setCodex({
-                        model,
-                        effort: efforts.includes(codex.effort)
-                          ? codex.effort
-                          : 'medium',
-                      });
-                    }}
-                    options={modelOptions}
-                  />
-                  <Choice
-                    id="codex-effort"
-                    label="Esfuerzo de razonamiento"
-                    value={codex.effort}
-                    onChange={(effort) =>
-                      setCodex({
-                        ...codex,
-                        effort: effort as CodexSettings['effort'],
-                      })
-                    }
-                    options={effortOptions}
-                  />
-                </>
-              )}
-              <Button
-                className="recommend-button"
-                disabled={
-                  !canRecommend || !!busy || (!!reference && engine !== 'codex')
-                }
-                onClick={() => recommend()}
-              >
-                {busy === 'recommend' ? (
-                  <LoaderCircle className="spin" size={18} />
-                ) : (
-                  <Sparkles size={18} />
-                )}
-                {busy === 'recommend'
-                  ? 'Buscando tu próxima partida…'
-                  : 'Encuentra mi próximo juego'}
-                <ArrowRight size={17} />
-              </Button>
-              <p className="small-note">
-                La afinidad y el ánimo son orientativos. Tus preferencias
-                mandan.
-              </p>
-            </section>
-            <section className="panel steam-panel">
-              <div className="panel-title">
-                <Library size={18} />
-                <h2>Conecta tu biblioteca</h2>
-              </div>
-              <label className="sr-only" htmlFor="profile">
-                Enlace público del perfil de Steam
-              </label>
-              <Input
-                id="profile"
-                value={profileUrl}
-                onChange={(e) => setProfileUrl(e.target.value)}
-                placeholder="Enlace público de Steam"
-                maxLength={300}
-              />
-              <Button
-                variant="outline"
-                className="sync-button"
-                disabled={!!busy}
-                onClick={sync}
-              >
-                <RefreshCw
-                  size={15}
-                  className={busy === 'sync' ? 'spin' : ''}
-                />
-                {busy === 'sync'
-                  ? 'Sincronizando…'
-                  : state?.syncedAt
-                    ? 'Actualizar biblioteca y datos'
-                    : 'Sincronizar Steam'}
-              </Button>
-              <p className="small-note">
-                {state?.syncedAt
-                  ? 'Última lectura: ' +
-                    new Date(state.syncedAt).toLocaleString('es')
-                  : 'El perfil y los detalles de juegos deben ser públicos.'}
-              </p>
-            </section>
-            <section className="panel steam-panel">
-              <div className="panel-title">
-                <Library size={18} />
-                <h2>Steam Families</h2>
-              </div>
-              <p className="small-note">
-                {state?.family
-                  ? `${state.family.name} · ${state.family.members.length} miembros`
-                  : 'Añade las bibliotecas compartidas contigo, aunque los perfiles sean privados.'}
-              </p>
-              <Button
-                variant="outline"
-                className="sync-button"
-                disabled={!!busy || !state?.profile || !state.setup.family}
-                onClick={() =>
-                  action('family', async () => {
-                    accept(await api('steam/family/sync', {}));
-                  })
-                }
-              >
-                <RefreshCw
-                  size={15}
-                  className={busy === 'family' ? 'spin' : ''}
-                />
-                {busy === 'family'
-                  ? 'Importando bibliotecas…'
-                  : state?.family
-                    ? 'Actualizar Steam Families'
-                    : 'Conectar Steam Families'}
-              </Button>
-              {state?.family && (
-                <p className="small-note">
-                  {games.filter((g) => g.shared).length.toLocaleString('es')}{' '}
-                  juegos compartidos · Última lectura:{' '}
-                  {new Date(state.family.syncedAt).toLocaleString('es')}
-                  <br />
-                  Steam ha excluido{' '}
-                  {state.family.excludedCount.toLocaleString('es')} títulos no
-                  prestables o ajenos al catálogo de juegos.
-                </p>
-              )}
-              {state && !state.setup.family && (
-                <p className="small-note">
-                  Añade <code>STEAM_FAMILY_TOKEN</code> en{' '}
-                  <code>.env.local</code> y pulsa Comprobar conexiones.{' '}
-                  <a
-                    href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Obtener token en Steam ↗
-                  </a>
-                </p>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={!!busy}
-                onClick={() => action('reload', load)}
-              >
-                Comprobar conexiones
-              </Button>
-            </section>
-            <div className="source-note">
-              <span>CON DATOS DE</span>
-              <a
-                href="https://store.steampowered.com/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Steam
-              </a>
-              <span>+</span>
-              <a href="https://www.igdb.com/" target="_blank" rel="noreferrer">
-                IGDB
-              </a>
-              {state?.setup.hltb && (
-                <>
-                  <span>+</span>
-                  <a
-                    href="https://howlongtobeat.com/"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    HLTB
-                  </a>
-                </>
-              )}
-            </div>
-          </aside>
-          <div className="main-column">
-            <div className="library-stats">
-              <div>
-                <Library size={19} />
-                <strong>{games.length || '—'}</strong>
-                <span>en tu biblioteca</span>
-              </div>
-              <div>
-                <Clock3 size={19} />
-                <strong>{games.length ? pending : '—'}</strong>
-                <span>pendientes</span>
-              </div>
-              <div>
-                <Star size={19} />
-                <strong>{games.length ? favorites : '—'}</strong>
-                <span>favoritos</span>
-              </div>
-            </div>
-            <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
-              <div className="view-navigation">
-                <TabsList variant="line" aria-label="Vista principal">
-                  <TabsTrigger value="recommend">
-                    <Sparkles size={17} /> Para ti
-                  </TabsTrigger>
-                  <TabsTrigger value="library">
-                    <Library size={17} /> Tu biblioteca
-                  </TabsTrigger>
-                  <TabsTrigger value="shortlist">
-                    <Plus size={17} /> Lista corta ({savedGames.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="tastes">
-                    <Star size={17} /> Tus gustos
-                  </TabsTrigger>
-                  <TabsTrigger value="history">
-                    <History size={17} /> Historial
-                  </TabsTrigger>
-                </TabsList>
-                <span className="subtle-label">
-                  Una elección que encaja contigo
-                </span>
-              </div>
-              <TabsContent value="shortlist">
-                <div className="results">
-                  <h2>Tus próximos candidatos</h2>
-                  <p className="small-note">
-                    Guarda juegos desde Para ti, el historial o la biblioteca.
-                    Elegiremos entre ellos con el motor y los filtros actuales;
-                    los juegos excluidos no se recomendarán.
-                  </p>
-                  <Button
-                    disabled={!!busy || !savedGames.length || !state?.profile}
-                    onClick={() => {
-                      const nextFilters = { ...filters, shortlistOnly: true };
-                      setFilters(nextFilters);
-                      void recommend(
-                        'Elige entre los juegos de mi lista corta.',
-                        nextFilters,
-                      );
-                    }}
-                  >
-                    Elegir entre estos juegos
-                  </Button>
-                  {!savedGames.length && (
-                    <p>
-                      Tu lista está vacía. Pulsa «Guardar en lista corta» en
-                      cualquier juego.
-                    </p>
-                  )}
-                  <div className="library-grid">
-                    {savedGames.map((game) => (
-                      <article className="library-card" key={game.appId}>
-                        <Cover game={game} />
-                        <div className="library-card-body">
-                          <h3>{game.name}</h3>
-                          <p className="small-note">
-                            {libraryLabel(game)} ·{' '}
-                            {
-                              STATUS_LABELS[
-                                state?.preferences[game.appId]?.status ??
-                                  'pending'
-                              ]
-                            }
-                          </p>
-                          <GameTags game={game} />
-                          <p className="small-note">
-                            IGDB · {formatHours(game.durationHours)} de historia
-                          </p>
-                          <p className="small-note">
-                            HLTB · Historia: {formatHours(game.hltb?.mainHours)}{' '}
-                            · Historia y extras:{' '}
-                            {formatHours(game.hltb?.extraHours)} · Completista:{' '}
-                            {formatHours(game.hltb?.completionHours)}
-                          </p>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!!busy}
-                            onClick={() => void shortlist(game)}
-                          >
-                            Quitar de lista corta
-                          </Button>
-                          <a
-                            className="store-link"
-                            href={storeUrl(game.appId)}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Ver en Steam <ArrowUpRight size={16} />
-                          </a>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="tastes">
-                {state && (
-                  <Tastes
-                    key={JSON.stringify(state.tastes)}
-                    state={state}
-                    busy={!!busy}
-                    onSave={(settings) =>
-                      action('tastes', async () => {
-                        accept(await api('tastes', settings, 'PATCH'));
-                      })
-                    }
-                  />
-                )}
-              </TabsContent>
-              <TabsContent value="history">
-                <div className="results">
-                  <p className="small-note">
-                    Cada consulta conserva sus filtros y resultados originales,
-                    incluso después de empezar otra búsqueda o cambiar tus
-                    gustos.
-                  </p>
-                  {!state?.history?.length && (
-                    <p>Aún no hay búsquedas guardadas.</p>
-                  )}
-                  {state?.history?.toReversed().map((entry) => (
-                    <details className="panel saved-search" key={entry.id}>
-                      <summary>
-                        {entry.filters.mode === 'today'
-                          ? 'Para hoy'
-                          : 'Próximo juego'}
-                        {' · '}
-                        {new Date(entry.result.at).toLocaleString('es')}
-                        {' · '}
-                        {entry.result.engine === 'local'
-                          ? 'Algoritmo local'
-                          : 'Codex'}
-                      </summary>
-                      <p className="small-note">
-                        {entry.filters.mode === 'today'
-                          ? entry.filters.minutes === null
-                            ? 'Sesión sin límite'
-                            : `${entry.filters.minutes} min de sesión`
-                          : entry.filters.hours === null
-                            ? 'Historia sin límite'
-                            : `Historia de hasta ${entry.filters.hours} h`}
-                        {' · '}
-                        {entry.filters.mode === 'today' &&
-                          entry.filters.sessionIntent === 'continue' &&
-                          'Continuar jugando o retomar una pausa · '}
-                        {entry.filters.mode === 'today' &&
-                          entry.filters.sessionIntent === 'start' &&
-                          'Empezar un pendiente · '}
-                        {entry.filters.genre || 'Cualquier género'}
-                        {entry.filters.shortlistOnly && ' · Solo lista corta'}
-                        {entry.filters.comfortZone && ' · Zona de confort'}
-                        {entry.filters.minReleaseDate &&
-                          ` · Lanzados desde ${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString('es')}`}
-                        {(entry.filters.tags ?? []).length > 0 &&
-                          ` · Etiquetas: ${(entry.filters.tags ?? [])
-                            .map((tag) => tagLabels.get(tag) ?? tag)
-                            .join(', ')}`}
-                        {' · '}
-                        {{
-                          single: 'En solitario',
-                          coop: 'Cooperativo',
-                          multi: 'Multijugador',
-                        }[entry.filters.gameMode] || 'Cualquier modalidad'}
-                        {' · '}
-                        {entry.filters.replay
-                          ? 'Incluye terminados y abandonados'
-                          : 'Sin terminados ni abandonados'}
-                        {entry.filters.mood &&
-                          ` · Hoy busco: ${entry.filters.mood}`}
-                      </p>
-                      {entry.text && (
-                        <p>
-                          <strong>{entry.text}</strong>
-                        </p>
-                      )}
-                      <p>{entry.result.message}</p>
-                      <div className="results">
-                        {[
-                          ...entry.result.owned,
-                          ...entry.result.discoveries,
-                        ].map((pick) => (
-                          <GamePick
-                            key={pick.appId}
-                            pick={pick}
-                            saved={savedIds.has(pick.appId)}
-                            onSaved={() => void shortlist(pick.game)}
-                            onSimilar={similar}
-                            status={state.preferences[pick.appId]?.status}
-                            opinionPreference={state?.preferences[pick.appId]}
-                            onOpinion={(change) => {
-                              void preference(pick.game, change);
-                            }}
-                            busy={!!busy}
-                            onStatus={(status) => {
-                              void preference(pick.game, { status });
-                            }}
-                          />
-                        ))}
-                      </div>
-                      {entry.result.warnings.map((warning) => (
-                        <p className="small-note" key={warning}>
-                          {warning}
-                        </p>
+                        />
                       ))}
-                    </details>
-                  ))}
-                </div>
-              </TabsContent>
-              <TabsContent value="recommend">
-                <section aria-labelledby="in-progress-title">
-                  <div className="section-heading">
-                    <h2 id="in-progress-title">Tus juegos en curso</h2>
-                    <span>{inProgress.length} jugando o en pausa</span>
-                  </div>
-                  {!inProgress.length && (
-                    <p className="small-note">
-                      Marca «Estoy jugando» o «En pausa» en tu biblioteca o en
-                      una recomendación para verlos aquí.
-                    </p>
-                  )}
-                  <div className="library-grid">
-                    {inProgress.map((game) => (
-                      <article className="library-card" key={game.appId}>
-                        <Cover game={game} />
-                        <div className="library-card-body">
-                          <h3>{game.name}</h3>
-                          <p className="small-note">{libraryLabel(game)}</p>
-                          <GameTags game={game} />
-                          <p className="small-note">
-                            HLTB · Historia: {formatHours(game.hltb?.mainHours)}{' '}
-                            · IGDB: {formatHours(game.durationHours)}
-                          </p>
-                          <StatusControl
-                            game={game}
-                            status={state?.preferences[game.appId]?.status}
-                            busy={!!busy}
-                            onStatus={(status) => {
-                              void preference(game, { status });
-                            }}
-                          />
-                          <a
-                            className="store-link"
-                            href={storeUrl(game.appId)}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Ver en Steam <ArrowUpRight size={16} />
-                          </a>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                </section>
-                {loading ? (
-                  <div className="empty-state">
-                    <LoaderCircle className="spin" />
-                    <h2>Abriendo tu espacio…</h2>
-                  </div>
-                ) : !result ? (
-                  <section className="empty-state">
-                    <span className="empty-symbol">
-                      <Gamepad2 size={42} />
-                    </span>
-                    <div className="eyebrow">
-                      TU SIGUIENTE FAVORITO ESTÁ POR LLEGAR
                     </div>
-                    <h2>
-                      {games.length
-                        ? 'Vamos a encontrar algo para ti.'
-                        : 'Tu biblioteca es el punto de partida.'}
-                    </h2>
-                    <p>
-                      {games.length
-                        ? 'Ajusta el tiempo, cuéntanos qué te apetece y deja que tus juegos te sorprendan.'
-                        : 'Conecta Steam para recuperar tus juegos. Después elegiremos una partida según tus gustos y el momento.'}
-                    </p>
-                    <div className="steps">
-                      <span>
-                        <b>01</b> Tu biblioteca
-                      </span>
-                      <ArrowRight size={15} />
-                      <span>
-                        <b>02</b> Tus ganas
-                      </span>
-                      <ArrowRight size={15} />
-                      <span>
-                        <b>03</b> A jugar
-                      </span>
-                    </div>
-                  </section>
-                ) : (
-                  <div className="results">
-                    <div className="result-intro">
-                      <p>{result.message}</p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={!canRecommend || !!busy}
-                        onClick={() =>
-                          recommend(
-                            'Tráeme otras opciones que encajen con mis filtros y preferencias.',
-                          )
-                        }
-                      >
-                        <RefreshCw size={15} /> Tráeme otras opciones
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={!!busy}
-                        onClick={reset}
-                      >
-                        <RotateCcw size={15} /> Nueva búsqueda
-                      </Button>
-                    </div>
-                    {result.owned.map((pick, i) => (
-                      <GamePick
-                        key={pick.appId}
-                        pick={pick}
-                        saved={savedIds.has(pick.appId)}
-                        onSaved={() => void shortlist(pick.game)}
-                        onSimilar={similar}
-                        main={i === 0}
-                        status={state?.preferences[pick.appId]?.status}
-                        opinionPreference={state?.preferences[pick.appId]}
-                        onOpinion={(change) => {
-                          void preference(pick.game, change);
-                        }}
-                        busy={!!busy}
-                        onStatus={(status) => {
-                          void preference(pick.game, { status });
-                        }}
-                      />
-                    ))}
-                    {result.discoveries.length > 0 && (
-                      <>
-                        <div className="section-heading">
-                          <h2>Fuera de tu radar</h2>
-                          <span>Juegos que todavía no tienes</span>
-                        </div>
-                        <div className="discoveries">
-                          {result.discoveries.map((pick) => (
-                            <GamePick
-                              key={pick.appId}
-                              pick={pick}
-                              saved={savedIds.has(pick.appId)}
-                              onSaved={() => void shortlist(pick.game)}
-                              onSimilar={similar}
-                              status={state?.preferences[pick.appId]?.status}
-                              opinionPreference={state?.preferences[pick.appId]}
-                              onOpinion={(change) => {
-                                void preference(pick.game, change);
-                              }}
-                              busy={!!busy}
-                              onStatus={(status) => {
-                                void preference(pick.game, { status });
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
-                    <p className="small-note">
-                      {result.engine === 'local'
-                        ? 'Motivos y afinidad: puntuación del algoritmo local.'
-                        : 'Motivos y afinidad: valoración de IA.'}{' '}
-                      Duraciones estimadas de IGDB y HowLongToBeat; no indican
-                      cuánto dura una sesión. Priorizamos variedad respecto a
-                      tus últimas cinco búsquedas. Puede haber repeticiones si
-                      hay pocas alternativas o un juego encaja mejor.
-                    </p>
                   </div>
                 )}
-                {state &&
-                  (!state.setup.steam ||
-                    !state.setup.igdb ||
-                    !state.setup.codex) && (
-                    <section className="setup-panel">
-                      <div className="panel-title">
-                        <span className="setup-icon">
-                          <Plus size={17} />
-                        </span>
-                        <h2>Prepara tus conexiones</h2>
-                      </div>
-                      <p>
-                        Guarda las credenciales en <code>.env.local</code>, en
-                        la carpeta del proyecto, y vuelve a comprobarlas. Solo
-                        las usa el servidor de tu PC.
-                      </p>
-                      <ul>
-                        <li className={state.setup.codex ? 'ready' : ''}>
-                          {state.setup.codex ? (
-                            <Check size={16} />
-                          ) : (
-                            <AlertCircle size={16} />
-                          )}
-                          <span>
-                            Codex ·{' '}
-                            {state.setup.codex
-                              ? 'Conectado con ChatGPT'
-                              : state.setup.codexMessage}
-                          </span>
-                        </li>
-                        <li className={state.setup.steam ? 'ready' : ''}>
-                          {state.setup.steam ? (
-                            <Check size={16} />
-                          ) : (
-                            <Plus size={16} />
-                          )}
-                          <span>
-                            Steam ·{' '}
-                            {state.setup.steam ? (
-                              'Clave configurada'
-                            ) : (
-                              <>
-                                <code>STEAM_API_KEY</code> ·{' '}
-                                <a
-                                  href="https://steamcommunity.com/dev/apikey"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  Obtener clave ↗
-                                </a>
-                              </>
-                            )}
-                          </span>
-                        </li>
-                        <li className={state.setup.igdb ? 'ready' : ''}>
-                          {state.setup.igdb ? (
-                            <Check size={16} />
-                          ) : (
-                            <Plus size={16} />
-                          )}
-                          <span>
-                            IGDB ·{' '}
-                            {state.setup.igdb ? (
-                              'Credenciales configuradas'
-                            ) : (
-                              <>
-                                <code>TWITCH_CLIENT_ID</code> y{' '}
-                                <code>TWITCH_CLIENT_SECRET</code> ·{' '}
-                                <a
-                                  href="https://dev.twitch.tv/console/apps"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  Registrar aplicación ↗
-                                </a>
-                              </>
-                            )}
-                          </span>
-                        </li>
-                      </ul>
-                      <p className="small-note">
-                        En Twitch: tipo Confidential y URL http://localhost.
-                        Codex utiliza tu cupo actual, sin clave de OpenAI.
-                      </p>
-                      <Button
-                        variant="outline"
-                        disabled={!!busy}
-                        onClick={() => action('reload', load)}
-                      >
-                        <RefreshCw size={15} /> Comprobar conexiones
-                      </Button>
-                    </section>
-                  )}
+
+                {/* 3. DISCOVERIES FROM IGDB (Fuera de tu radar) */}
+                {result.discoveries.length > 0 && (
+                  <div>
+                    <div className="section-heading">
+                      <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                        <Sparkles size={16} className="text-cyan-400" />
+                        <span>Fuera de tu radar</span>
+                      </h3>
+                      <span className="text-xs text-muted-foreground">
+                        Juegos recomendados que aún no tienes en tu biblioteca
+                      </span>
+                    </div>
+
+                    <div className="hud-bento-grid">
+                      {result.discoveries.map((pick) => (
+                        <GameCard
+                          key={pick.appId}
+                          pick={pick}
+                          isDiscovery
+                          status={state?.preferences[pick.appId]?.status}
+                          onStatus={(status) => void preference(pick.game, { status })}
+                          opinionPreference={state?.preferences[pick.appId]}
+                          onOpinion={(change) => void preference(pick.game, change)}
+                          onSimilar={similar}
+                          busy={!!busy}
+                          saved={savedIds.has(pick.appId)}
+                          onSaved={() => void shortlist(pick.game)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warnings */}
                 {[
                   ...new Set([
                     ...(state?.warnings ?? []),
@@ -1934,312 +915,267 @@ export default function Home() {
                     <span>{w}</span>
                   </div>
                 ))}
-                {(engine === 'codex' || reference) && (
-                  <section className="conversation">
-                    <div className="panel-title">
-                      <MessageCircle size={18} />
-                      <h2>Vamos afinando</h2>
-                    </div>
-                    <p>
-                      Cuéntanos qué buscas o qué cambiarías de las propuestas.
-                    </p>
-                    {state && state.conversation.length > 0 && (
-                      <details className="history">
-                        <summary>
-                          Conversación · {state.conversation.length} consultas
-                        </summary>
-                        {state.conversation.map((t, i) => (
-                          <div key={i}>
-                            <strong>
-                              {t.text ||
-                                (t.filters.mode === 'today'
-                                  ? 'Una partida para hoy'
-                                  : 'Mi próximo juego')}
-                            </strong>
-                            <p>{t.result.message}</p>
+              </div>
+            )}
+
+            {/* Copilot Bar for instant refinement */}
+            {(engine === 'codex' || reference) && (
+              <CopilotBar
+                text={text}
+                setText={setText}
+                reference={reference}
+                setReference={setReference}
+                engine={engine}
+                setEngine={setEngine}
+                codex={codex}
+                state={state}
+                busy={busy}
+                canRecommend={canRecommend}
+                onRecommend={(msg) => recommend(msg ?? text)}
+                onReset={reset}
+              />
+            )}
+          </TabsContent>
+
+          {/* =================================================================== */}
+          {/* TAB 2: TU BIBLIOTECA (LIBRARY EXPLORER)                             */}
+          {/* =================================================================== */}
+          <TabsContent value="library">
+            <LibraryView
+              state={state}
+              games={games}
+              orderedGames={ordered}
+              totalFiltered={filtered.length}
+              limit={limit}
+              setLimit={setLimit}
+              search={search}
+              setSearch={setSearch}
+              libraryOwner={libraryOwner}
+              setLibraryOwner={setLibraryOwner}
+              libraryTag={libraryTag}
+              setLibraryTag={setLibraryTag}
+              libraryOrderBy={libraryOrderBy}
+              setLibraryOrderBy={setLibraryOrderBy}
+              steamTags={steamTags}
+              savedIds={savedIds}
+              onShortlist={shortlist}
+              onPreference={preference}
+              onSimilar={similar}
+              busy={busy}
+            />
+          </TabsContent>
+
+          {/* =================================================================== */}
+          {/* TAB 3: LISTA CORTA (SHORTLIST)                                      */}
+          {/* =================================================================== */}
+          <TabsContent value="shortlist">
+            <div className="hud-shelf-section space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Tus próximos candidatos ({savedGames.length})
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Juegos guardados para decidir entre ellos cuando quieras.
+                  </p>
+                </div>
+                <Button
+                  disabled={!!busy || !savedGames.length || !state?.profile}
+                  onClick={() => {
+                    const nextFilters = { ...filters, shortlistOnly: true };
+                    setFilters(nextFilters);
+                    void recommend(
+                      'Elige entre los juegos de mi lista corta.',
+                      nextFilters,
+                    );
+                  }}
+                  className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold"
+                >
+                  <Sparkles size={15} className="mr-1.5" />
+                  Elegir entre estos juegos
+                </Button>
+              </div>
+
+              {!savedGames.length ? (
+                <div className="empty-state">
+                  <Bookmark size={36} className="text-muted-foreground mb-2" />
+                  <h3 className="text-sm font-semibold">Tu lista corta está vacía</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Guarda juegos con el icono de marcador desde "Para ti" o "Tu biblioteca".
+                  </p>
+                </div>
+              ) : (
+                <div className="hud-bento-grid">
+                  {savedGames.map((game) => (
+                    <article key={game.appId} className="hud-game-card">
+                      <div className="hud-card-cover-wrapper">
+                        {game.cover ? (
+                          <img
+                            src={game.cover}
+                            alt=""
+                            className="hud-card-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="hud-card-cover-fallback">
+                            <Gamepad2 size={24} className="text-muted-foreground" />
                           </div>
-                        ))}
-                      </details>
-                    )}
-                    {reference && (
-                      <div className="notice">
-                        <div>
-                          <p>
-                            Referencia: <strong>{reference.name}</strong>. Se
-                            usa como punto de partida y no se recomendará a sí
-                            mismo.
-                          </p>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={!!busy}
-                            onClick={() => {
-                              setReference(null);
-                              setText('');
-                            }}
-                          >
-                            Quitar referencia
-                          </Button>
-                          {engine === 'local' && (
-                            <>
-                              <p>
-                                El motor local no interpreta estos ajustes.
-                                Cambia a Codex (consume cuota) y después envía
-                                el mensaje.
-                              </p>
-                              <Button
-                                variant="outline"
-                                disabled={!!busy}
-                                onClick={() => setEngine('codex')}
-                              >
-                                Usar Codex
-                              </Button>
-                            </>
-                          )}
+                        )}
+                        <div className="hud-card-overlay-badges">
+                          <span className="hud-meta-badge source">
+                            {libraryLabel(game)}
+                          </span>
                         </div>
                       </div>
-                    )}
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void recommend();
-                      }}
-                    >
-                      <label className="sr-only" htmlFor="message">
-                        Mensaje para afinar la recomendación
-                      </label>
-                      <Textarea
-                        id="message"
-                        maxLength={2000}
-                        value={text}
-                        onChange={(e) => setText(e.target.value)}
-                        placeholder="Por ejemplo: hoy prefiero explorar sin prisas, nada competitivo…"
-                      />
-                      <Button
-                        type="submit"
-                        disabled={
-                          !canRecommend ||
-                          !!busy ||
-                          (!!reference && engine !== 'codex')
-                        }
-                        aria-label="Enviar mensaje"
-                      >
-                        <ArrowRight size={20} />
-                      </Button>
-                    </form>
-                    <div className="chat-footnote">
-                      <span>
-                        <span className="status-dot" />{' '}
-                        {engine === 'codex'
-                          ? `Codex · ${codex.model} · ${codex.effort}`
-                          : 'Motor local · cambia a Codex para enviar'}
-                      </span>
-                      <span>
-                        {busy === 'recommend'
-                          ? 'Puede tardar hasta dos minutos'
-                          : 'Tus filtros se mantienen en cada consulta'}
-                      </span>
-                    </div>
-                  </section>
-                )}
-              </TabsContent>
-              <TabsContent value="library">
-                <Choice
-                  id="library-owner"
-                  label="Biblioteca"
-                  value={libraryOwner}
-                  onChange={(value) => {
-                    setLibraryOwner(value);
-                    setLimit(36);
-                  }}
-                  options={[
-                    { value: '', label: 'Todas mis bibliotecas' },
-                    { value: 'own', label: 'Mis juegos propios' },
-                    { value: 'shared', label: 'Solo juegos compartidos' },
-                    ...(state?.family?.members ?? [])
-                      .filter((m) => m.steamId !== state?.profile?.steamId)
-                      .map((m) => ({
-                        value: m.steamId,
-                        label: 'Biblioteca de ' + m.name,
-                      })),
-                  ]}
-                />
-                <Choice
-                  id="library-tag"
-                  label="Etiqueta Steam"
-                  value={libraryTag}
-                  onChange={(value) => {
-                    setLibraryTag(value);
-                    setLimit(36);
-                  }}
-                  options={[
-                    { value: '', label: 'Todas las etiquetas' },
-                    ...steamTags,
-                  ]}
-                />
-                <Choice
-                  id="library-order"
-                  label="Ordenar por"
-                  value={libraryOrderBy}
-                  onChange={(value) => {
-                    setLibraryOrderBy(value as LibraryOrderBy);
-                    setLimit(36);
-                  }}
-                  options={[
-                    { value: 'original', label: 'Orden original' },
-                    { value: 'name', label: 'Nombre (A-Z)' },
-                    {
-                      value: 'release-newest',
-                      label: 'Lanzamiento: más recientes',
-                    },
-                    {
-                      value: 'release-oldest',
-                      label: 'Lanzamiento: más antiguos',
-                    },
-                    { value: 'playtime-most', label: 'Más horas jugadas' },
-                    { value: 'playtime-least', label: 'Menos horas jugadas' },
-                    { value: 'recent-most', label: 'Más actividad reciente' },
-                    {
-                      value: 'duration-shortest',
-                      label: 'Duración: más cortos',
-                    },
-                    {
-                      value: 'duration-longest',
-                      label: 'Duración: más largos',
-                    },
-                    { value: 'favorite', label: 'Favoritos primero' },
-                  ]}
-                />
-                <div className="library-toolbar">
-                  <h2>
-                    Tus juegos <span>{filtered.length}</span>
-                  </h2>
-                  <label className="sr-only" htmlFor="search">
-                    Buscar en tu biblioteca
-                  </label>
-                  <Input
-                    id="search"
-                    value={search}
-                    onChange={(e) => {
-                      setSearch(e.target.value);
-                      setLimit(36);
-                    }}
-                    placeholder="Buscar un juego o etiqueta…"
-                  />
-                </div>
-                <p className="small-note">
-                  Marca tus favoritos y corrige el estado de tus juegos. Las
-                  horas no deciden por ti.
-                </p>
-                {!filtered.length && (
-                  <div className="empty-state">
-                    <Library size={35} />
-                    <h2>
-                      {games.length
-                        ? 'No hay juegos que coincidan con esta búsqueda y biblioteca.'
-                        : 'Tu biblioteca aparecerá aquí.'}
-                    </h2>
-                  </div>
-                )}
-                <div className="library-grid">
-                  {ordered.slice(0, limit).map((game) => {
-                    const pref = state?.preferences[game.appId] ?? {
-                      status: 'pending',
-                      favorite: false,
-                    };
-                    return (
-                      <article className="library-card" key={game.appId}>
-                        <Cover game={game} />
-                        <div className="library-card-body">
-                          <h3>{game.name}</h3>
-                          <p className="small-note">{libraryLabel(game)}</p>
-                          <GameTags game={game} />
-                          <p className="small-note">
-                            {game.playtimeMinutes === null
-                              ? 'Horas no disponibles'
-                              : (game.playtimeMinutes / 60).toLocaleString(
-                                  'es',
-                                  { maximumFractionDigits: 1 },
-                                ) + ' h jugadas'}
-                          </p>
+                      <div className="hud-card-body">
+                        <h4 className="hud-card-title">{game.name}</h4>
+                        <div className="text-xs text-muted-foreground space-y-1 mb-2">
+                          {game.hltb?.mainHours && (
+                            <div>HLTB: {formatHours(game.hltb.mainHours)} de historia</div>
+                          )}
+                          {game.durationHours && (
+                            <div>IGDB: ≈ {formatHours(game.durationHours)}</div>
+                          )}
+                        </div>
+                        <div className="hud-card-actions">
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={!!busy}
-                            aria-pressed={savedIds.has(game.appId)}
+                            className="h-7 text-xs text-amber-400 border-amber-500/30"
                             onClick={() => void shortlist(game)}
                           >
-                            {savedIds.has(game.appId)
-                              ? 'Quitar de lista corta'
-                              : 'Guardar en lista corta'}
+                            <Bookmark size={12} className="mr-1 fill-current" />
+                            Quitar
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={!!busy}
-                            onClick={() => similar(game)}
+                          <a
+                            href={storeUrl(game.appId)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="hud-card-steam-link ml-auto"
                           >
-                            Algo como este, pero…
-                          </Button>
-                          <div className="preference-controls">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              disabled={!!busy}
-                              aria-label={'Favorito: ' + game.name}
-                              aria-pressed={pref.favorite}
-                              onClick={() =>
-                                preference(game, { favorite: !pref.favorite })
-                              }
-                              className={pref.favorite ? 'favorite' : ''}
-                            >
-                              <Star
-                                size={17}
-                                fill={pref.favorite ? 'currentColor' : 'none'}
-                              />
-                            </Button>
-                            <StatusControl
-                              game={game}
-                              status={pref.status}
-                              busy={!!busy}
-                              onStatus={(status) => {
-                                void preference(game, { status });
-                              }}
-                            />
-                          </div>
-                          <GameOpinion
-                            key={JSON.stringify(pref)}
-                            game={game}
-                            preference={pref}
-                            busy={!!busy}
-                            onSave={(change) => {
-                              void preference(game, change);
-                            }}
-                          />
+                            <span>Steam</span>
+                            <ExternalLink size={12} />
+                          </a>
                         </div>
-                      </article>
-                    );
-                  })}
+                      </div>
+                    </article>
+                  ))}
                 </div>
-                {filtered.length > limit && (
-                  <Button
-                    variant="outline"
-                    className="load-more"
-                    onClick={() => setLimit(limit + 36)}
-                  >
-                    Mostrar más juegos
-                  </Button>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* =================================================================== */}
+          {/* TAB 4: TUS GUSTOS (TASTES & WEIGHTS)                                */}
+          {/* =================================================================== */}
+          <TabsContent value="tastes">
+            {state && (
+              <Tastes
+                key={JSON.stringify(state.tastes)}
+                state={state}
+                busy={!!busy}
+                onSave={(settings) =>
+                  action('tastes', async () => {
+                    accept(await api('tastes', settings, 'PATCH'));
+                  })
+                }
+              />
+            )}
+          </TabsContent>
+
+          {/* =================================================================== */}
+          {/* TAB 5: HISTORIAL (SAVED SEARCHES)                                   */}
+          {/* =================================================================== */}
+          <TabsContent value="history">
+            <div className="results space-y-4">
+              <p className="small-note">
+                Cada consulta conserva sus filtros y resultados originales, incluso después de empezar otra búsqueda.
+              </p>
+              {!state?.history?.length && (
+                <p>Aún no hay búsquedas guardadas.</p>
+              )}
+              {state?.history?.toReversed().map((entry) => (
+                <details className="panel saved-search" key={entry.id}>
+                  <summary>
+                    {entry.filters.mode === 'today'
+                      ? 'Para hoy'
+                      : 'Próximo juego'}
+                    {' · '}
+                    {new Date(entry.result.at).toLocaleString('es')}
+                    {' · '}
+                    {entry.result.engine === 'local'
+                      ? 'Algoritmo local'
+                      : 'Codex'}
+                  </summary>
+                  <p className="small-note">
+                    {entry.filters.mode === 'today'
+                      ? entry.filters.minutes === null
+                        ? 'Sesión sin límite'
+                        : `${entry.filters.minutes} min de sesión`
+                      : entry.filters.hours === null
+                        ? 'Historia sin límite'
+                        : `Historia de hasta ${entry.filters.hours} h`}
+                    {' · '}
+                    {entry.filters.mode === 'today' &&
+                      entry.filters.sessionIntent === 'continue' &&
+                      'Continuar partida o retomar · '}
+                    {entry.filters.mode === 'today' &&
+                      entry.filters.sessionIntent === 'start' &&
+                      'Empezar un pendiente · '}
+                    {entry.filters.genre || 'Cualquier género'}
+                    {entry.filters.shortlistOnly && ' · Solo lista corta'}
+                    {entry.filters.comfortZone && ' · Zona de confort'}
+                    {entry.filters.minReleaseDate &&
+                      ` · Desde ${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString('es')}`}
+                    {(entry.filters.tags ?? []).length > 0 &&
+                      ` · Etiquetas: ${(entry.filters.tags ?? [])
+                        .map((tag) => tagLabels.get(tag) ?? tag)
+                        .join(', ')}`}
+                  </p>
+                  {entry.text && (
+                    <p>
+                      <strong>{entry.text}</strong>
+                    </p>
+                  )}
+                  <p>{entry.result.message}</p>
+                  <div className="hud-bento-grid mt-4">
+                    {[
+                      ...entry.result.owned,
+                      ...entry.result.discoveries,
+                    ].map((pick) => (
+                      <GameCard
+                        key={pick.appId}
+                        pick={pick}
+                        saved={savedIds.has(pick.appId)}
+                        onSaved={() => void shortlist(pick.game)}
+                        onSimilar={similar}
+                        status={state.preferences[pick.appId]?.status}
+                        opinionPreference={state?.preferences[pick.appId]}
+                        onOpinion={(change) => void preference(pick.game, change)}
+                        busy={!!busy}
+                        onStatus={(status) => void preference(pick.game, { status })}
+                        favorite={state?.preferences[pick.appId]?.favorite}
+                        onFavorite={() =>
+                          preference(pick.game, {
+                            favorite: !state?.preferences[pick.appId]?.favorite,
+                          })
+                        }
+                      />
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
+
+      {/* FOOTER */}
       <footer className="footer">
         <span>
           nextplay. <span>Un juego para cada momento.</span>
         </span>
-        <span>Hecho para disfrutar de tu biblioteca.</span>
+        <span>HUD Console Edition · Diseñado para disfrutar de tu biblioteca.</span>
       </footer>
     </div>
   );
