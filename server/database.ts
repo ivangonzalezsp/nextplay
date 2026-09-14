@@ -30,7 +30,7 @@ export function openDatabase(path: string, readOnly = false) {
     try {
       db.exec(`
         CREATE TABLE IF NOT EXISTS games (
-          app_id INTEGER PRIMARY KEY CHECK (app_id > 0),
+          app_id INTEGER PRIMARY KEY CHECK (app_id != 0),
           position INTEGER NOT NULL,
           data TEXT NOT NULL CHECK (json_valid(data))
         ) STRICT;
@@ -63,6 +63,16 @@ export function replaceGames(db: DatabaseSync, games: Game[]) {
   );
   games.forEach((game, position) =>
     insert.run(game.appId, position, JSON.stringify(game)),
+  );
+}
+
+export function needsManualGameMigration(db: DatabaseSync, games: Game[]) {
+  return (
+    games.some((game) => game.appId < 0) &&
+    String(
+      db.prepare("SELECT sql FROM sqlite_master WHERE name = 'games'").get()
+        ?.sql,
+    ).includes('CHECK (app_id > 0)')
   );
 }
 
@@ -216,6 +226,16 @@ export function storeState(
       !db.prepare('SELECT id FROM app_state WHERE id = 1').get()
     ) {
       const { games, ...rest } = state;
+      if (needsManualGameMigration(db, games)) {
+        // The full snapshot is reinserted below, in this same transaction.
+        db.exec(`DROP TABLE games;
+          CREATE TABLE games (
+            app_id INTEGER PRIMARY KEY CHECK (app_id != 0),
+            position INTEGER NOT NULL,
+            data TEXT NOT NULL CHECK (json_valid(data))
+          ) STRICT;
+          CREATE INDEX idx_games_position ON games(position);`);
+      }
       // ponytail: one local library; use incremental upserts if full snapshot writes become slow.
       replaceGames(db, games);
       db.prepare(

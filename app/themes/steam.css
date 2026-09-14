@@ -1,0 +1,18 @@
+html[data-theme='steam'] {
+  --background: #1b2838;
+  --foreground: #e5edf5;
+  --muted-foreground: #acbdce;
+  --border: #3b5168;
+  --theme-accent: #66c0f4;
+  --theme-accent-rgb: 102, 192, 244;
+  --theme-accent-hover: #9bd9fc;
+  --theme-accent-end: #399bd3;
+  --theme-on-accent: #081e2e;
+  --theme-surface: #213448;
+  --theme-inset: #162330;
+  --theme-selected: #284c65;
+  --theme-backdrop: linear-gradient(150deg, #29455e, #1b2838 55%, #101923);
+  --theme-panel: linear-gradient(135deg, #263e53, #182838);
+  --theme-radius: 4px;
+  --theme-button-radius: 3px;
+}

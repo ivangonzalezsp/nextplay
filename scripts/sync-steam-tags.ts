@@ -82,7 +82,11 @@ async function main() {
       backup.close();
     }
 
-    const appIds = [...new Set(before.games.map((game) => game.appId))];
+    const appIds = [
+      ...new Set(
+        before.games.filter((game) => game.appId > 0).map((game) => game.appId),
+      ),
+    ];
     const records = readSteamTagRecords(db);
     const completed = new Set(
       [...records.values()]

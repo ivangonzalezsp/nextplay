@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ThemeSelector } from './ThemeSelector';
 import { Gamepad2, Settings, Users, Library, Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Snapshot, RecommendationEngine } from '@/lib/model';
@@ -43,7 +44,7 @@ export function TopBar({
           title={
             state?.syncedAt
               ? `Última sincronización: ${new Date(state.syncedAt).toLocaleString('es')}`
-              : 'Biblioteca de Steam'
+              : 'Tu biblioteca'
           }
         >
           <span className={`hud-pulse-dot ${gamesCount > 0 ? 'active' : ''}`} />
@@ -57,7 +58,7 @@ export function TopBar({
               'Steam sin conectar'
             )}
           </span>
-          {gamesCount > 0 && (
+          {state?.profile && (
             <button
               type="button"
               className="hud-pill-refresh"
@@ -89,6 +90,7 @@ export function TopBar({
       </div>
 
       <div className="hud-actions-group">
+        <ThemeSelector />
         <Button
           variant="outline"
           size="sm"

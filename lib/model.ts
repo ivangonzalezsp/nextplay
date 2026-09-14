@@ -100,7 +100,9 @@ export const DEFAULT_FILTERS: Filters = {
   sessionIntent: 'any',
 };
 export type Game = {
+  // Positive IDs are Steam AppIDs; negative IDs identify manually added games.
   appId: number;
+  platform?: string;
   name: string;
   owned: boolean;
   shared?: boolean;
@@ -130,6 +132,13 @@ export type Game = {
   isGame?: boolean;
   metadataAt?: number;
   reviews?: { positive: number; total: number; at: number };
+};
+export type IgdbSearchResult = {
+  id: number;
+  name: string;
+  cover?: string;
+  releasedAt?: number;
+  platforms: string[];
 };
 export const steamTagKey = (tag: NonNullable<Game['steamTags']>[number]) =>
   tag.id ? `id:${tag.id}` : `name:${tag.name}`;
@@ -166,6 +175,14 @@ export type Recommendation = {
 };
 export type Turn = { text: string; filters: Filters; result: Recommendation };
 export type HistoryEntry = Turn & { id: string };
+export type PlayEvent = {
+  appId: number;
+  name: string;
+  cover?: string;
+  kind: 'started' | GameStatus;
+  from?: GameStatus;
+  at: number;
+};
 export type State = {
   version: 1;
   profile: Profile | null;
@@ -184,6 +201,7 @@ export type State = {
   codex?: CodexSettings;
   engine?: RecommendationEngine;
   history?: HistoryEntry[];
+  playHistory?: PlayEvent[];
   conversation: Turn[];
   filters: Filters;
 };
@@ -222,6 +240,8 @@ export const STATUS_LABELS: Record<GameStatus, string> = {
 };
 export const storeUrl = (appId: number) =>
   `https://store.steampowered.com/app/${appId}/`;
+export const gameUrl = (game: { appId: number; igdbUrl?: string }) =>
+  game.appId > 0 ? storeUrl(game.appId) : game.igdbUrl;
 export const storyHours = (game: Game) =>
   game.hltb?.mainHours ?? game.durationHours;
 export const releaseDateAt = (date: string) => {
@@ -233,11 +253,11 @@ export const releaseDateAt = (date: string) => {
 };
 export const inLibrary = (game: Game) => game.owned || game.shared === true;
 export const libraryLabel = (game: Game) =>
-  game.owned
+  game.platform ?? (game.owned
     ? 'Propio'
     : game.shared
       ? 'Compartido · Steam Families'
-      : 'Descubrimiento';
+      : 'Descubrimiento');
 export function sortLibraryGames(
   games: Game[],
   orderBy: LibraryOrderBy,

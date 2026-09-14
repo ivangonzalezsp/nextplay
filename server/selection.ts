@@ -150,6 +150,7 @@ export function parsePreference(value: unknown): Preference {
   if (
     !p ||
     typeof p.favorite !== 'boolean' ||
+    typeof p.status !== 'string' ||
     !Object.hasOwn(STATUS_LABELS, p.status) ||
     (p.opinion !== undefined &&
       !['loved', 'liked', 'disliked'].includes(p.opinion)) ||
@@ -170,7 +171,7 @@ export function updateShortlist(state: State, appId: unknown, saved: unknown) {
   if (
     typeof appId !== 'number' ||
     !Number.isSafeInteger(appId) ||
-    appId <= 0 ||
+    appId === 0 ||
     typeof saved !== 'boolean'
   )
     throw new AppError('El juego o la opción de lista corta no es válido.');

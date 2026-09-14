@@ -70,10 +70,27 @@ Como alternativa al modo de desarrollo:
 
 ```powershell
 npm run build
-npm start
+npm run start:production
 ```
 
-Detén antes el servidor de desarrollo para liberar el puerto 3000. Tras cambiar o actualizar el código, vuelve a ejecutar `npm ci` y `npm run build` antes de `npm start`.
+Este servidor utiliza `127.0.0.1:3001`; `npm start` sigue disponible en el puerto 3000. Tras cambiar o actualizar el código, vuelve a ejecutar `npm run build` antes de arrancar la compilación.
+
+### Arranque automático en Windows
+
+Después de crear una compilación, puedes hacer que este servidor se inicie al entrar en Windows:
+
+```powershell
+npm run build
+npm run startup:install
+```
+
+Se instala un lanzador oculto en la carpeta de inicio de sesión y la app queda disponible en [http://127.0.0.1:3001](http://127.0.0.1:3001). Para quitarlo:
+
+```powershell
+npm run startup:uninstall
+```
+
+Si mueves la carpeta del proyecto, quita el arranque anterior y vuelve a instalarlo desde la nueva ubicación. Después de cambiar el código, ejecuta `npm run build` para que el siguiente arranque use la versión nueva.
 
 ## Conectar tus datos
 

@@ -4,7 +4,13 @@ import { randomUUID } from 'node:crypto';
 import { parseEnv } from 'node:util';
 import { EMPTY_STATE } from '../lib/model.ts';
 import type { State } from '../lib/model.ts';
-import { loadState, openDatabase, storeState } from './database.ts';
+import {
+  backupDatabase,
+  loadState,
+  needsManualGameMigration,
+  openDatabase,
+  storeState,
+} from './database.ts';
 
 export const dataDir = () => resolve(process.env.NEXTPLAY_DATA_DIR || 'data');
 export class AppError extends Error {
@@ -82,7 +88,8 @@ function validState(state: State): State {
     (state.shortlist !== undefined &&
       (!Array.isArray(state.shortlist) ||
         !state.shortlist.every(
-          (game) => game && Number.isSafeInteger(game.appId) && game.appId > 0,
+          (game) =>
+            game && Number.isSafeInteger(game.appId) && game.appId !== 0,
         ))) ||
     (state.history !== undefined && !Array.isArray(state.history)) ||
     !state.preferences ||
@@ -104,6 +111,11 @@ export async function saveState(state: State) {
   await mkdir(dataDir(), { recursive: true });
   const db = openDatabase(join(dataDir(), 'library.sqlite'));
   try {
+    if (needsManualGameMigration(db, state.games))
+      backupDatabase(
+        db,
+        join(dataDir(), `library.before-manual-games.${randomUUID()}.sqlite`),
+      );
     storeState(db, state);
   } finally {
     db.close();

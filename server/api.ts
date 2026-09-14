@@ -5,6 +5,8 @@ import {
   discover,
   enrich,
   getCache,
+  getIgdbGame,
+  searchIgdb,
   review,
   saveCache,
   syncSteam,
@@ -26,6 +28,7 @@ import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import { DEFAULT_CODEX_SETTINGS } from '../lib/model.ts';
 import type { Game, Snapshot, State, Turn } from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
+import { recordPreference } from '../lib/play-history.ts';
 import { inLibrary } from '../lib/model.ts';
 import { log, logError } from '../lib/log.ts';
 import {
@@ -139,6 +142,12 @@ export async function handle(request: Request): Promise<Response> {
   try {
     phase('request:validate');
     verifyRequest(request);
+    if (path === '/api/igdb/search' && request.method === 'GET') {
+      const query = new URL(request.url).searchParams.get('q')?.trim() ?? '';
+      if (query.length < 2 || query.length > 100 || query.split('').some((char) => char < ' '))
+        throw new AppError('Busca un título de entre 2 y 100 caracteres.');
+      return complete(Response.json({ games: await searchIgdb(query) }, { headers }));
+    }
     if (path === '/api/state' && request.method === 'GET') {
       phase('state:read:start');
       const next = await snapshot(await readState());
@@ -159,6 +168,30 @@ export async function handle(request: Request): Promise<Response> {
         conversation: state.conversation.length,
         hasProfile: !!state.profile,
       });
+      if (path === '/api/library/games' && request.method === 'POST') {
+        if (typeof payload.igdbId !== 'number' || !Number.isSafeInteger(payload.igdbId) || payload.igdbId <= 0)
+          throw new AppError('Selecciona un juego de los resultados de IGDB.');
+        if (typeof payload.platform !== 'string' || !payload.platform.trim() || payload.platform.trim().length > 80 ||
+          payload.platform.split('').some((char) => char < ' ') || payload.platform.trim().toLowerCase() === 'steam')
+          throw new AppError('Indica una plataforma distinta de Steam (máximo 80 caracteres).');
+        const platform = payload.platform.trim();
+        const preference = parsePreference({ status: payload.status, favorite: false });
+        if (state.games.some((game) => game.appId < 0 && game.igdbId === payload.igdbId &&
+          game.platform?.toLowerCase() === platform.toLowerCase()))
+          throw new AppError('Ya tienes ese juego en esa plataforma. Puedes cambiar su estado en tu biblioteca.', 409);
+        const game: Game = {
+          ...await getIgdbGame(payload.igdbId),
+          appId: state.games.reduce((lowest, game) => Math.min(lowest, game.appId), 0) - 1,
+          platform,
+          owned: true,
+          playtimeMinutes: null,
+          recentMinutes: null,
+        };
+        state.games.push(game);
+        recordPreference(state, game, preference);
+        await saveState(state);
+        return snapshot(state);
+      }
       if (path === '/api/tastes' && request.method === 'PATCH') {
         phase('tastes:update:start');
         state.tastes = parseTastes(payload, state);
@@ -183,9 +216,11 @@ export async function handle(request: Request): Promise<Response> {
           throw new AppError(
             'Ese juego no pertenece a la biblioteca sincronizada.',
           );
-        state.preferences[String(payload.appId)] = parsePreference(
-          payload.preference,
-        );
+        const game = state.games.find((g) => g.appId === payload.appId)
+          ?? [...state.conversation, ...(state.history ?? [])]
+            .flatMap((turn) => [...turn.result.owned, ...turn.result.discoveries])
+            .find((pick) => pick.appId === payload.appId)!.game;
+        recordPreference(state, game, parsePreference(payload.preference));
         await saveState(state);
         const next = await snapshot(state);
         phase('preference:update:complete', { appId: payload.appId });
@@ -234,7 +269,7 @@ export async function handle(request: Request): Promise<Response> {
           ...state,
           profile: fresh.profile,
           games: mergeLibraries(
-            fresh.games,
+            [...fresh.games, ...state.games.filter((game) => game.appId < 0)],
             retainedFamilyGames(state),
             fresh.profile.steamId,
           ),
@@ -329,9 +364,9 @@ export async function handle(request: Request): Promise<Response> {
           throw new AppError(
             'El mensaje no puede superar los 2000 caracteres.',
           );
-        if (!state.profile)
+        if (!state.profile && !state.games.some(inLibrary))
           throw new AppError(
-            'Conecta tu perfil de Steam antes de pedir recomendaciones.',
+            'Añade un juego o conecta tu perfil de Steam antes de pedir recomendaciones.',
           );
         const engine = parseEngine(
           payload.engine === undefined
@@ -440,7 +475,7 @@ export async function handle(request: Request): Promise<Response> {
           }
         }
         if (
-          c.familyToken &&
+          state.profile && c.familyToken &&
           (!state.family || Date.now() - state.family.syncedAt >= DAY)
         ) {
           phase('recommendations:family-refresh:start');

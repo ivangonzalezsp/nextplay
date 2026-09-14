@@ -12,6 +12,8 @@ import { HeroSpotlight } from '@/components/recommendations/HeroSpotlight';
 import { GameCard } from '@/components/recommendations/GameCard';
 import { CopilotBar } from '@/components/ai/CopilotBar';
 import { LibraryView } from '@/components/library/LibraryView';
+import type { AddGameInput } from '@/components/library/AddGameDialog';
+import { PlayHistory } from '@/components/library/PlayHistory';
 
 import {
   Gamepad2,
@@ -42,7 +44,7 @@ import {
   DEFAULT_FILTERS,
   DEFAULT_CODEX_SETTINGS,
   STATUS_LABELS,
-  storeUrl,
+  gameUrl,
   inLibrary,
   libraryLabel,
   sortLibraryGames,
@@ -403,6 +405,16 @@ export default function Home() {
     });
   }
 
+  async function addGame(input: AddGameInput) {
+    setBusy('add-game');
+    try {
+      const next: Snapshot = await api('library/games', input);
+      accept(next);
+      setSearch(next.games.find((game) => game.igdbId === input.igdbId && game.platform === input.platform)?.name ?? '');
+      setLibraryOwner(''); setLibraryTag(''); setLimit(36);
+    } finally { setBusy(''); }
+  }
+
   async function shortlist(game: Game) {
     await action('shortlist-' + game.appId, async () => {
       accept(
@@ -640,6 +652,9 @@ export default function Home() {
               <TabsTrigger value="history">
                 <History size={16} /> Historial
               </TabsTrigger>
+              <TabsTrigger value="year">
+                <Gamepad2 size={16} /> Mi año
+              </TabsTrigger>
             </TabsList>
             <span className="subtle-label">
               Experiencia Console & Steam Deck HUD
@@ -708,12 +723,12 @@ export default function Home() {
                         <h4 className="hud-card-title">{game.name}</h4>
                         <div className="hud-card-actions">
                           <a
-                            href={storeUrl(game.appId)}
+                            href={gameUrl(game)}
                             target="_blank"
                             rel="noreferrer"
                             className="hud-card-steam-link"
                           >
-                            <span>Abrir Steam</span>
+                            <span>{game.appId > 0 ? 'Abrir Steam' : 'Ver en IGDB'}</span>
                             <ExternalLink size={12} />
                           </a>
                           <Button
@@ -758,12 +773,12 @@ export default function Home() {
                 <h2>
                   {games.length
                     ? '¿Listo para encontrar tu siguiente aventura?'
-                    : 'Conecta tu cuenta de Steam para comenzar.'}
+                    : 'Añade juegos a tu biblioteca para comenzar.'}
                 </h2>
                 <p>
                   {games.length
                     ? 'Ajusta el tiempo arriba, pulsa "Encuentra mi próximo juego" o déjate sorprender con la ruleta.'
-                    : 'Abre Ajustes y Conexiones arriba a la derecha para sincronizar tu catálogo de Steam.'}
+                    : 'Usa Añadir un juego en Tu biblioteca o conecta Steam desde Ajustes y Conexiones.'}
                 </p>
                 <div className="steps">
                   <span>
@@ -961,6 +976,7 @@ export default function Home() {
               onShortlist={shortlist}
               onPreference={preference}
               onSimilar={similar}
+              onAdd={addGame}
               busy={busy}
             />
           </TabsContent>
@@ -980,7 +996,7 @@ export default function Home() {
                   </p>
                 </div>
                 <Button
-                  disabled={!!busy || !savedGames.length || !state?.profile}
+                  disabled={!!busy || !savedGames.length || !games.length}
                   onClick={() => {
                     const nextFilters = { ...filters, shortlistOnly: true };
                     setFilters(nextFilters);
@@ -1048,12 +1064,12 @@ export default function Home() {
                             Quitar
                           </Button>
                           <a
-                            href={storeUrl(game.appId)}
+                            href={gameUrl(game)}
                             target="_blank"
                             rel="noreferrer"
                             className="hud-card-steam-link ml-auto"
                           >
-                            <span>Steam</span>
+                            <span>{game.appId > 0 ? 'Steam' : 'IGDB'}</span>
                             <ExternalLink size={12} />
                           </a>
                         </div>
@@ -1166,6 +1182,9 @@ export default function Home() {
                 </details>
               ))}
             </div>
+          </TabsContent>
+          <TabsContent value="year">
+            {state && <PlayHistory state={state} />}
           </TabsContent>
         </Tabs>
       </main>

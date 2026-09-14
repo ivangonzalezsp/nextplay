@@ -4,7 +4,7 @@ import { AppError, atomicJson, config, dataDir, readJson } from './store.ts';
 import { openDatabase, overlaySteamTags } from './database.ts';
 import { parseProfile } from './selection.ts';
 import { log, logError } from '../lib/log.ts';
-import type { Game, Profile, State } from '../lib/model.ts';
+import type { Game, IgdbSearchResult, Profile, State } from '../lib/model.ts';
 import {
   affinityScore,
   buildTasteProfile,
@@ -62,6 +62,7 @@ type IgdbGame = {
   similar_games?: number[];
   first_release_date?: number;
   game_type?: number;
+  platforms?: { name: string }[];
 };
 type IgdbLink = { uid: string; game: number; url?: string };
 export function steamAppLink(link: IgdbLink) {
@@ -432,6 +433,53 @@ export function metadata(
     metadataAt: Date.now(),
   };
 }
+export async function searchIgdb(query: string): Promise<IgdbSearchResult[]> {
+  const rows = await igdb(
+    'games',
+    `search ${JSON.stringify(query)}; fields name,cover.url,first_release_date,platforms.name; limit 12;`,
+  );
+  return rows
+    .filter(
+      (raw) =>
+        natural(raw.id) &&
+        raw.id > 0 &&
+        typeof raw.name === 'string' &&
+        raw.name.trim(),
+    )
+    .map((raw) => ({
+      id: raw.id,
+      name: raw.name.slice(0, 300),
+      cover: metadata(raw, undefined, new Set()).cover,
+      releasedAt: natural(raw.first_release_date)
+        ? raw.first_release_date * 1000
+        : undefined,
+      platforms: (raw.platforms ?? [])
+        .filter((platform) => typeof platform.name === 'string')
+        .map((platform) => platform.name),
+    }));
+}
+
+export async function getIgdbGame(id: number) {
+  const [raw] = await igdb(
+    'games',
+    `fields ${fields}; where id = ${id}; limit 1;`,
+  );
+  if (!raw || raw.id !== id || typeof raw.name !== 'string' || !raw.name.trim())
+    throw new AppError(
+      'No se ha encontrado ese juego en IGDB. Vuelve a buscarlo.',
+      404,
+    );
+  const d = await dictionary();
+  const [duration] = await igdb<Duration>(
+    'game_time_to_beats',
+    `fields game_id,hastily,count; where game_id = ${id}; limit 1;`,
+  );
+  return {
+    ...metadata(raw, duration, d.gameTypes),
+    name: raw.name.slice(0, 300),
+  };
+}
+
 export async function enrich(games: Game[], cache: Cache, force = false) {
   const c = await config();
   if (!c.clientId || !c.clientSecret)
@@ -447,18 +495,27 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
   const missing = games.filter(
     (g) =>
       force ||
-      Date.now() - (cache.metadata[g.appId]?.metadataAt ?? 0) >= 7 * DAY,
+      Date.now() - (cache.metadata[g.appId]?.metadataAt ?? g.metadataAt ?? 0) >=
+        7 * DAY,
   );
   try {
     if (missing.length) {
       const d = await dictionary();
       for (let i = 0; i < missing.length; i += 100) {
         const batch = missing.slice(i, i + 100);
-        const links = await igdb<IgdbLink>(
-          'external_games',
-          `fields uid,game,url; where external_game_source = ${d.source} & uid = (${batch.map((g) => '"' + g.appId + '"').join(',')}); limit 500;`,
-        );
-        const gameIds = ids(links.map((x) => x.game));
+        const steam = batch.filter((g) => g.appId > 0);
+        const links = steam.length
+          ? await igdb<IgdbLink>(
+              'external_games',
+              `fields uid,game,url; where external_game_source = ${d.source} & uid = (${steam.map((g) => '"' + g.appId + '"').join(',')}); limit 500;`,
+            )
+          : [];
+        const gameIds = ids([
+          ...links.map((x) => x.game),
+          ...batch
+            .filter((g) => g.appId < 0)
+            .flatMap((g) => (g.igdbId ? [g.igdbId] : [])),
+        ]);
         const records = gameIds
           ? await igdb(
               'games',
@@ -472,16 +529,20 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
             )
           : [];
         for (const game of batch) {
-          const matches = [
-            ...new Set(
-              links
-                .filter(
-                  (x) =>
-                    steamAppLink(x) && String(x.uid) === String(game.appId),
-                )
-                .map((x) => x.game),
-            ),
-          ];
+          const matches =
+            game.appId < 0
+              ? [game.igdbId]
+              : [
+                  ...new Set(
+                    links
+                      .filter(
+                        (x) =>
+                          steamAppLink(x) &&
+                          String(x.uid) === String(game.appId),
+                      )
+                      .map((x) => x.game),
+                  ),
+                ];
           const raw =
             matches.length === 1
               ? records.find((r) => r.id === matches[0])
@@ -539,6 +600,7 @@ export async function discover(state: State, cache: Cache): Promise<Game[]> {
     `fields uid,game,url; where external_game_source = ${d.source} & game = (${ids(raw.map((g) => g.id))}); limit 500;`,
   );
   const own = new Set(state.games.map((g) => g.appId));
+  const ownIgdb = new Set(state.games.map((g) => g.igdbId));
   const games: Game[] = [];
   for (const link of links) {
     if (!steamAppLink(link)) continue;
@@ -550,6 +612,7 @@ export async function discover(state: State, cache: Cache): Promise<Game[]> {
       !d.gameTypes.has(g.game_type) ||
       typeof g.name !== 'string' ||
       own.has(appId) ||
+      ownIgdb.has(g.id) ||
       !natural(appId) ||
       !appId
     )
@@ -583,6 +646,7 @@ export async function review(
   cache: Cache,
   force = false,
 ): Promise<Game> {
+  if (game.appId < 0) return game;
   const old = cache.reviews[game.appId];
   if (
     !force &&

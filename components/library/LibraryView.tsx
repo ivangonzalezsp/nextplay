@@ -24,9 +24,10 @@ import {
   SelectItem,
 } from '@/components/ui/select';
 import GameOpinion from '@/app/opinion';
+import { AddGameDialog, type AddGameInput } from './AddGameDialog';
 import {
   STATUS_LABELS,
-  storeUrl,
+  gameUrl,
   inLibrary,
   libraryLabel,
   steamTagKey,
@@ -63,6 +64,7 @@ export function LibraryView({
   onShortlist,
   onPreference,
   onSimilar,
+  onAdd,
   busy,
 }: {
   state: Snapshot | null;
@@ -84,6 +86,7 @@ export function LibraryView({
   onShortlist: (game: Game) => void;
   onPreference: (game: Game, change: Partial<Preference>) => void;
   onSimilar: (game: Game) => void;
+  onAdd: (input: AddGameInput) => Promise<void>;
   busy: string;
 }) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -131,26 +134,37 @@ export function LibraryView({
           )}
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="hud-view-switcher">
-          <button
-            type="button"
-            className={`hud-view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
-            onClick={() => setViewMode('grid')}
-            title="Vista de cuadrícula (pósters)"
-            aria-label="Vista cuadrícula"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            type="button"
-            className={`hud-view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
-            onClick={() => setViewMode('list')}
-            title="Vista de lista detallada"
-            aria-label="Vista lista"
-          >
-            <List size={16} />
-          </button>
+        <div className="hud-library-toolbar-actions">
+          <AddGameDialog
+            igdbReady={!!state?.setup.igdb}
+            busy={!!busy || !state}
+            onAdd={async (input) => {
+              await onAdd(input);
+              setQuickFilter('all');
+            }}
+          />
+
+          {/* View Mode Toggle */}
+          <div className="hud-view-switcher">
+            <button
+              type="button"
+              className={`hud-view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
+              onClick={() => setViewMode('grid')}
+              title="Vista de cuadrícula (pósters)"
+              aria-label="Vista cuadrícula"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              type="button"
+              className={`hud-view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
+              onClick={() => setViewMode('list')}
+              title="Vista de lista detallada"
+              aria-label="Vista lista"
+            >
+              <List size={16} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -292,10 +306,24 @@ export function LibraryView({
       {visibleGames.length === 0 ? (
         <div className="hud-empty-library">
           <Gamepad2 size={40} className="text-muted-foreground mb-3" />
-          <h3 className="text-base font-semibold">No se encontraron juegos</h3>
-          <p className="text-xs text-muted-foreground mt-1">
-            Prueba a cambiar los filtros o el texto de búsqueda.
+          <h3 className="text-base font-semibold">
+            {games.length === 0 ? 'Tu biblioteca está vacía' : 'No se encontraron juegos'}
+          </h3>
+          <p className="text-xs text-muted-foreground mt-1 mb-4">
+            {games.length === 0
+              ? 'Conecta tu cuenta de Steam en Ajustes o añade tus primeros juegos manualmente.'
+              : 'Prueba a cambiar los filtros o el texto de búsqueda.'}
           </p>
+          {games.length === 0 && (
+            <AddGameDialog
+              igdbReady={!!state?.setup.igdb}
+              busy={!!busy || !state}
+              onAdd={async (input) => {
+                await onAdd(input);
+                setQuickFilter('all');
+              }}
+            />
+          )}
         </div>
       ) : viewMode === 'grid' ? (
         <div className="hud-library-grid">
@@ -388,11 +416,11 @@ export function LibraryView({
                     </Button>
 
                     <a
-                      href={storeUrl(game.appId)}
+                      href={gameUrl(game)}
                       target="_blank"
                       rel="noreferrer"
                       className="hud-lib-steam-link ml-auto"
-                      title="Ver en tienda Steam"
+                      title={game.appId > 0 ? 'Ver en tienda Steam' : 'Ver en IGDB'}
                     >
                       <ExternalLink size={12} />
                     </a>
@@ -525,11 +553,11 @@ export function LibraryView({
                           Similar
                         </Button>
                         <a
-                          href={storeUrl(game.appId)}
+                          href={gameUrl(game)}
                           target="_blank"
                           rel="noreferrer"
                           className="hud-lib-steam-link"
-                          title="Abrir en Steam"
+                          title={game.appId > 0 ? 'Abrir en Steam' : 'Ver en IGDB'}
                         >
                           <ExternalLink size={12} />
                         </a>

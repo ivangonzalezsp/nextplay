@@ -25,7 +25,7 @@ import {
 import GameOpinion from '@/app/opinion';
 import {
   STATUS_LABELS,
-  storeUrl,
+  gameUrl,
   inLibrary,
   libraryLabel,
   steamTagKey,
@@ -178,12 +178,12 @@ export function HeroSpotlight({
           {/* Action Row */}
           <div className="hud-hero-actions-row">
             <a
-              href={storeUrl(game.appId)}
+              href={gameUrl(game)}
               target="_blank"
               rel="noreferrer"
               className="hud-play-steam-btn"
             >
-              <span>Ver en Steam</span>
+              <span>{game.appId > 0 ? 'Ver en Steam' : 'Ver en IGDB'}</span>
               <ExternalLink size={15} />
             </a>
 

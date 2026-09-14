@@ -12,7 +12,7 @@
   --color-popover: var(--card);
   --color-popover-foreground: var(--foreground);
   --color-primary: var(--primary);
-  --color-primary-foreground: #09271f;
+  --color-primary-foreground: var(--theme-on-accent, #09271f);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--foreground);
   --color-muted: var(--secondary);
@@ -266,13 +266,13 @@ h1 {
 .field input,
 .steam-panel input {
   min-height: 42px;
-  background: #11181c;
+  background: var(--theme-surface, #11181c);
 }
 .choice {
   min-height: 42px;
   width: 100%;
   font-size: 0.9375rem;
-  background: #11181c;
+  background: var(--theme-surface, #11181c);
 }
 .filter-tags {
   display: flex;
@@ -1098,16 +1098,16 @@ h1 {
   height: 36px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, rgba(0, 240, 168, 0.2), rgba(16, 185, 129, 0.05));
-  border: 1px solid rgba(0, 240, 168, 0.4);
+  background: linear-gradient(135deg, rgba(var(--theme-accent-rgb, 0, 240, 168), 0.2), rgba(16, 185, 129, 0.05));
+  border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.4);
   border-radius: 10px;
-  box-shadow: 0 0 16px rgba(0, 240, 168, 0.2);
+  box-shadow: 0 0 16px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.2);
 }
 
 .hud-controller-icon {
   width: 22px;
   height: 22px;
-  color: #00f0a8;
+  color: var(--theme-accent, #00f0a8);
 }
 
 .hud-brand-text {
@@ -1121,7 +1121,7 @@ h1 {
 }
 
 .hud-brand-dot {
-  color: #00f0a8;
+  color: var(--theme-accent, #00f0a8);
 }
 
 .hud-badge-tag {
@@ -1130,9 +1130,9 @@ h1 {
   letter-spacing: 1.5px;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(0, 240, 168, 0.12);
-  border: 1px solid rgba(0, 240, 168, 0.3);
-  color: #00f0a8;
+  background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.12);
+  border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.3);
+  color: var(--theme-accent, #00f0a8);
 }
 
 .hud-status-pills {
@@ -1160,8 +1160,8 @@ h1 {
 }
 
 .hud-pill.engine {
-  border-color: rgba(0, 240, 168, 0.25);
-  background: rgba(0, 240, 168, 0.05);
+  border-color: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.25);
+  background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.05);
 }
 
 .hud-pill-icon {
@@ -1177,8 +1177,8 @@ h1 {
 }
 
 .hud-pulse-dot.active {
-  background: #00f0a8;
-  box-shadow: 0 0 10px #00f0a8;
+  background: var(--theme-accent, #00f0a8);
+  box-shadow: 0 0 10px var(--theme-accent, #00f0a8);
   animation: pulse-glow 2s infinite;
 }
 
@@ -1199,7 +1199,7 @@ h1 {
 }
 
 .hud-pill-refresh:hover {
-  color: #00f0a8;
+  color: var(--theme-accent, #00f0a8);
 }
 
 .hud-actions-group {
@@ -1219,9 +1219,9 @@ h1 {
 }
 
 .hud-settings-btn:hover {
-  border-color: #00f0a8;
-  color: #00f0a8;
-  background: rgba(0, 240, 168, 0.06);
+  border-color: var(--theme-accent, #00f0a8);
+  color: var(--theme-accent, #00f0a8);
+  background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.06);
 }
 
 .hud-user-profile {
@@ -1234,7 +1234,7 @@ h1 {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 240, 168, 0.4);
+  border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.4);
 }
 
 .hud-avatar-fallback {
@@ -1242,12 +1242,12 @@ h1 {
   height: 30px;
   border-radius: 50%;
   background: #202c28;
-  color: #00f0a8;
+  color: var(--theme-accent, #00f0a8);
   display: grid;
   place-items: center;
   font-size: 0.8125rem;
   font-weight: 700;
-  border: 1px solid rgba(0, 240, 168, 0.4);
+  border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.4);
 }
 
 .hud-user-name {
@@ -1278,7 +1278,7 @@ h1 {
 .hud-mode-segmented {
   display: inline-flex;
   padding: 3px;
-  background: #090e11;
+  background: var(--theme-inset, #090e11);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   gap: 3px;
@@ -1304,8 +1304,8 @@ h1 {
 }
 
 .hud-mode-btn.active {
-  background: #1c2e26;
-  color: #00f0a8;
+  background: var(--theme-selected, #1c2e26);
+  color: var(--theme-accent, #00f0a8);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
 }
 
@@ -1339,8 +1339,8 @@ h1 {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #00f0a8;
-  color: #06281e;
+  background: var(--theme-accent, #00f0a8);
+  color: var(--theme-on-accent, #06281e);
   font-size: 10px;
   font-weight: 800;
   margin-left: 6px;
@@ -1371,7 +1371,7 @@ h1 {
   border-radius: 8px;
   font-size: 0.75rem;
   font-weight: 500;
-  background: #131b20;
+  background: var(--theme-surface, #131b20);
   border: 1px solid #28373e;
   color: #cbd5e1;
   cursor: pointer;
@@ -1386,9 +1386,9 @@ h1 {
 }
 
 .hud-chip.active {
-  background: #1b2d25;
-  border-color: #00f0a8;
-  color: #6ee7b7;
+  background: var(--theme-selected, #1b2d25);
+  border-color: var(--theme-accent, #00f0a8);
+  color: var(--theme-accent, #6ee7b7);
   font-weight: 600;
 }
 
@@ -1398,9 +1398,9 @@ h1 {
 }
 
 .hud-chip.vibe.active {
-  background: #192b23;
+  background: var(--theme-selected, #192b23);
   border-color: #34d399;
-  color: #a7f3d0;
+  color: var(--theme-accent, #a7f3d0);
 }
 
 .hud-cta-strip {
@@ -1426,7 +1426,7 @@ h1 {
   padding: 3px 8px;
   border-radius: 999px;
   font-size: 0.75rem;
-  background: #1a2723;
+  background: var(--theme-selected, #1a2723);
   border: 1px solid #325847;
   color: #86efac;
 }
@@ -1441,20 +1441,20 @@ h1 {
 }
 
 .hud-main-recommend-btn {
-  background: linear-gradient(135deg, #00f0a8 0%, #10b981 100%);
-  color: #05261d;
+  background: linear-gradient(135deg, var(--theme-accent, #00f0a8) 0%, var(--theme-accent-end, #10b981) 100%);
+  color: var(--theme-on-accent, #05261d);
   font-weight: 750;
   font-size: 0.9375rem;
   border-radius: 12px;
-  box-shadow: 0 4px 18px rgba(0, 240, 168, 0.3);
+  box-shadow: 0 4px 18px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.3);
   transition: all 0.2s ease;
   white-space: normal;
 }
 
 .hud-main-recommend-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 6px 22px rgba(0, 240, 168, 0.4);
-  background: linear-gradient(135deg, #1afcb5 0%, #059669 100%);
+  box-shadow: 0 6px 22px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.4);
+  background: linear-gradient(135deg, var(--theme-accent-hover, #1afcb5) 0%, var(--theme-accent-end, #059669) 100%);
 }
 
 .hud-btn-arrow {
@@ -1470,11 +1470,11 @@ h1 {
   position: relative;
   overflow: hidden;
   border-radius: 18px;
-  border: 1px solid rgba(0, 240, 168, 0.3);
+  border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.3);
   background: linear-gradient(135deg, rgba(16, 26, 23, 0.97), rgba(12, 17, 21, 0.99));
   padding: 24px;
   margin-bottom: 24px;
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 35px rgba(0, 240, 168, 0.08);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 0 35px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.08);
 }
 
 .hud-hero-backdrop {
@@ -1668,15 +1668,15 @@ h1 {
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 700;
-  background: #00f0a8;
-  color: #05261d;
-  box-shadow: 0 4px 14px rgba(0, 240, 168, 0.3);
+  background: var(--theme-accent, #00f0a8);
+  color: var(--theme-on-accent, #05261d);
+  box-shadow: 0 4px 14px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.3);
   transition: all 0.2s ease;
 }
 
 .hud-play-steam-btn:hover {
-  background: #1afcb5;
-  color: #041f17;
+  background: var(--theme-accent-hover, #1afcb5);
+  color: var(--theme-on-accent, #041f17);
   transform: translateY(-1px);
 }
 
@@ -1695,7 +1695,7 @@ h1 {
 }
 
 .hud-game-card {
-  background: #11181c;
+  background: var(--theme-surface, #11181c);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 14px;
   overflow: hidden;
@@ -1706,7 +1706,7 @@ h1 {
 
 .hud-game-card:hover {
   transform: translateY(-3px);
-  border-color: rgba(0, 240, 168, 0.3);
+  border-color: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.3);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
@@ -1717,7 +1717,7 @@ h1 {
 .hud-card-cover-wrapper {
   position: relative;
   aspect-ratio: 16 / 9;
-  background: #090d10;
+  background: var(--theme-inset, #090d10);
   overflow: hidden;
 }
 
@@ -1809,7 +1809,7 @@ h1 {
   gap: 4px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #00f0a8;
+  color: var(--theme-accent, #00f0a8);
 }
 
 .hud-card-steam-link:hover {
@@ -1819,7 +1819,7 @@ h1 {
 /* COPILOT DOCK */
 .hud-copilot-dock {
   background: linear-gradient(180deg, #12181d 0%, #0d1215 100%);
-  border: 1px solid rgba(0, 240, 168, 0.25);
+  border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.25);
   border-radius: 16px;
   padding: 18px 22px;
   margin-top: 24px;
@@ -1837,8 +1837,8 @@ h1 {
   width: 30px;
   height: 30px;
   border-radius: 8px;
-  background: rgba(0, 240, 168, 0.15);
-  color: #00f0a8;
+  background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.15);
+  color: var(--theme-accent, #00f0a8);
   display: grid;
   place-items: center;
 }
@@ -1882,9 +1882,9 @@ h1 {
 }
 
 .hud-prompt-chip:hover {
-  background: rgba(0, 240, 168, 0.12);
-  border-color: #00f0a8;
-  color: #a7f3d0;
+  background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.12);
+  border-color: var(--theme-accent, #00f0a8);
+  color: var(--theme-accent, #a7f3d0);
 }
 
 .hud-copilot-form {
@@ -1894,7 +1894,7 @@ h1 {
 .hud-copilot-textarea {
   min-height: 70px;
   padding: 12px 50px 12px 14px;
-  background: #090e11 !important;
+  background: var(--theme-inset, #090e11) !important;
   border: 1px solid #233137 !important;
   border-radius: 10px;
   font-size: 0.875rem !important;
@@ -1908,8 +1908,8 @@ h1 {
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  background: #00f0a8;
-  color: #06281e;
+  background: var(--theme-accent, #00f0a8);
+  color: var(--theme-on-accent, #06281e);
   display: grid;
   place-items: center;
   padding: 0;
@@ -1933,7 +1933,7 @@ h1 {
 }
 
 .hud-copilot-history {
-  background: #090d10;
+  background: var(--theme-inset, #090d10);
   border: 1px solid #233137;
   border-radius: 10px;
   padding: 12px;
@@ -1947,7 +1947,7 @@ h1 {
 
 .hud-history-turn {
   font-size: 0.8125rem;
-  border-left: 2px solid #00f0a8;
+  border-left: 2px solid var(--theme-accent, #00f0a8);
   padding-left: 10px;
 }
 
@@ -1998,7 +1998,7 @@ h1 {
 .hud-search-input {
   padding-left: 36px !important;
   padding-right: 32px !important;
-  background: #11181c !important;
+  background: var(--theme-surface, #11181c) !important;
   height: 38px;
 }
 
@@ -2013,9 +2013,61 @@ h1 {
   cursor: pointer;
 }
 
+.hud-library-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hud-add-game-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--theme-selected, #1e2c25) !important;
+  border: 1px solid var(--theme-accent, #00f0a8) !important;
+  color: var(--theme-accent, #00f0a8) !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.hud-add-game-btn:hover:not(:disabled) {
+  background: var(--theme-accent, #00f0a8) !important;
+  color: #0c1215 !important;
+  box-shadow: 0 0 14px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.35);
+}
+
+.hud-add-game-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .hud-library-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .hud-library-search-box {
+    max-width: 100%;
+  }
+
+  .hud-library-toolbar-actions {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+}
+
 .hud-view-switcher {
   display: inline-flex;
-  background: #11181c;
+  background: var(--theme-surface, #11181c);
   border: 1px solid #233137;
   border-radius: 8px;
   padding: 2px;
@@ -2034,8 +2086,8 @@ h1 {
 }
 
 .hud-view-mode-btn.active {
-  background: #1e2c25;
-  color: #00f0a8;
+  background: var(--theme-selected, #1e2c25);
+  color: var(--theme-accent, #00f0a8);
 }
 
 .hud-library-filter-strip {
@@ -2059,7 +2111,7 @@ h1 {
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 500;
-  background: #11181c;
+  background: var(--theme-surface, #11181c);
   border: 1px solid #233137;
   color: #94a3b8;
   cursor: pointer;
@@ -2071,9 +2123,9 @@ h1 {
 }
 
 .hud-lib-chip.active {
-  background: #1a2c23;
-  border-color: #00f0a8;
-  color: #6ee7b7;
+  background: var(--theme-selected, #1a2c23);
+  border-color: var(--theme-accent, #00f0a8);
+  color: var(--theme-accent, #6ee7b7);
   font-weight: 600;
 }
 
@@ -2097,7 +2149,7 @@ h1 {
 }
 
 .hud-library-card {
-  background: #11181c;
+  background: var(--theme-surface, #11181c);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
   overflow: hidden;
@@ -2114,7 +2166,7 @@ h1 {
 .hud-lib-cover-wrap {
   position: relative;
   aspect-ratio: 2 / 3;
-  background: #090d10;
+  background: var(--theme-inset, #090d10);
   overflow: hidden;
 }
 
@@ -2248,7 +2300,7 @@ h1 {
 }
 
 .hud-lib-steam-link {
-  color: #00f0a8;
+  color: var(--theme-accent, #00f0a8);
   display: grid;
   place-items: center;
   padding: 4px;
@@ -2259,7 +2311,7 @@ h1 {
   overflow-x: auto;
   border: 1px solid #233137;
   border-radius: 12px;
-  background: #11181c;
+  background: var(--theme-surface, #11181c);
 }
 
 .hud-library-table {
@@ -2271,7 +2323,7 @@ h1 {
 .hud-library-table th {
   text-align: left;
   padding: 10px 14px;
-  background: #090e11;
+  background: var(--theme-inset, #090e11);
   color: #94a3b8;
   font-weight: 600;
   border-bottom: 1px solid #233137;
@@ -2288,8 +2340,8 @@ h1 {
 
 /* SETTINGS MODAL */
 .hud-settings-modal {
-  background: #0e1418 !important;
-  border: 1px solid rgba(0, 240, 168, 0.3) !important;
+  background: var(--theme-surface, #0e1418) !important;
+  border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.3) !important;
   border-radius: 16px !important;
 }
 
@@ -2297,8 +2349,8 @@ h1 {
   width: 36px;
   height: 36px;
   border-radius: 10px;
-  background: rgba(0, 240, 168, 0.15);
-  color: #00f0a8;
+  background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.15);
+  color: var(--theme-accent, #00f0a8);
   display: grid;
   place-items: center;
 }
@@ -2308,7 +2360,7 @@ h1 {
 }
 
 .hud-card-subpanel {
-  background: #131b20;
+  background: var(--theme-surface, #131b20);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 12px;
   padding: 16px;

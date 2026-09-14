@@ -47,7 +47,13 @@ export const querySchema = z
     favorite: z.boolean().optional(),
     unplayed: z.boolean().optional(),
     appIds: z
-      .array(z.number().int().positive().safe())
+      .array(
+        z
+          .number()
+          .int()
+          .safe()
+          .refine((id) => id !== 0),
+      )
       .min(1)
       .max(50)
       .optional(),

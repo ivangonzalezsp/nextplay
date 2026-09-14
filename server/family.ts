@@ -216,6 +216,10 @@ export function mergeLibraries(own: Game[], family: Game[], viewerId: string) {
   const all = new Map<number, Game>();
   for (const game of family) all.set(game.appId, { ...game });
   for (const game of own.filter((g) => g.owned)) {
+    if (game.appId < 0) {
+      all.set(game.appId, game);
+      continue;
+    }
     const shared = all.get(game.appId);
     all.set(game.appId, {
       ...game,
@@ -254,7 +258,7 @@ export async function refreshLibraries(
       credentials.steam,
       fetcher,
     );
-    own = fresh.games;
+    own = [...fresh.games, ...state.games.filter((game) => game.appId < 0)];
     next.profile = fresh.profile;
     next.syncedAt = Date.now();
     warnings.push(...fresh.warnings);

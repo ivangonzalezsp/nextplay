@@ -140,7 +140,9 @@ export async function refreshHltb(
 ) {
   const missing = games
     .filter(
-      (g) => force || Date.now() - (cache[g.appId]?.checkedAt ?? 0) >= WEEK,
+      (g) =>
+        g.appId > 0 &&
+        (force || Date.now() - (cache[g.appId]?.checkedAt ?? 0) >= WEEK),
     )
     .slice(0, 8);
   if (!missing.length) {

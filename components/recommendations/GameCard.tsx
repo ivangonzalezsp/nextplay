@@ -23,7 +23,7 @@ import {
 import GameOpinion from '@/app/opinion';
 import {
   STATUS_LABELS,
-  storeUrl,
+  gameUrl,
   inLibrary,
   libraryLabel,
   steamTagKey,
@@ -146,12 +146,12 @@ export function GameCard({
         {/* Action Toolbar */}
         <div className="hud-card-actions">
           <a
-            href={storeUrl(game.appId)}
+            href={gameUrl(game)}
             target="_blank"
             rel="noreferrer"
             className="hud-card-steam-link"
           >
-            <span>Steam</span>
+            <span>{game.appId > 0 ? 'Steam' : 'IGDB'}</span>
             <ExternalLink size={12} />
           </a>
 
