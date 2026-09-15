@@ -32,6 +32,14 @@ import {
     SelectContent,
     SelectItem,
 } from '@/components/ui/select';
+import {
+    Combobox,
+    ComboboxContent,
+    ComboboxEmpty,
+    ComboboxInput,
+    ComboboxItem,
+    ComboboxList,
+} from '@/components/ui/combobox';
 import { clearFilters } from '@/lib/filters';
 import type { Filters, RecommendationEngine, State } from '@/lib/model';
 
@@ -69,8 +77,12 @@ export function QuickVibeBar({
 }) {
     const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
     const [tagSearch, setTagSearch] = useState('');
+    const [tagsMenuOpen, setTagsMenuOpen] = useState(false);
 
     const selectedTagKeys = filters.tags ?? [];
+    const availableSteamTags = steamTags.filter(
+        (tag) => !selectedTagKeys.includes(tag.value),
+    );
 
     const activeFilterChips: { label: string; patch: Partial<Filters> }[] = [
         ...(filters.shortlistOnly
@@ -172,22 +184,9 @@ export function QuickVibeBar({
         },
     ];
 
-    function addTagFilter() {
-        const query = tagSearch.trim().toLocaleLowerCase();
-        if (!query) return;
-        const exact = steamTags.find(
-            (tag) =>
-                tag.value === tagSearch.trim() ||
-                tag.label.toLocaleLowerCase() === query,
-        );
-        const match =
-            exact ??
-            steamTags.find((tag) =>
-                tag.label.toLocaleLowerCase().includes(query),
-            );
-        if (!match) return;
-        if (!selectedTagKeys.includes(match.value)) {
-            setFilters({ ...filters, tags: [...selectedTagKeys, match.value] });
+    function addTagFilter(tag: (typeof steamTags)[number]) {
+        if (!selectedTagKeys.includes(tag.value)) {
+            setFilters({ ...filters, tags: [...selectedTagKeys, tag.value] });
         }
         setTagSearch('');
     }
@@ -252,7 +251,7 @@ export function QuickVibeBar({
                     >
                         <SheetContent
                             side="right"
-                            className="hud-filters-sheet sm:max-w-md"
+                            className="hud-filters-sheet p-6 sm:max-w-md"
                         >
                             <SheetHeader>
                                 <SheetTitle className="flex items-center gap-2">
@@ -414,58 +413,73 @@ export function QuickVibeBar({
                                 </div>
 
                                 {/* Steam Tags Autocomplete */}
-                                <div>
+                                <div className="space-y-2">
                                     <label
                                         htmlFor="hud-tags-input"
-                                        className="text-xs font-semibold text-foreground mb-1 block"
+                                        className="text-xs font-semibold text-foreground block"
                                     >
                                         Etiquetas de Steam
                                     </label>
-                                    <div className="flex gap-2">
-                                        <Input
-                                            id="hud-tags-input"
-                                            list="hud-tags-suggestions"
-                                            value={tagSearch}
-                                            placeholder="Buscar etiqueta y pulsar Enter…"
-                                            onChange={(e) =>
-                                                setTagSearch(e.target.value)
+                                    <Combobox<(typeof steamTags)[number]>
+                                        items={availableSteamTags}
+                                        value={null}
+                                        inputValue={tagSearch}
+                                        open={tagsMenuOpen}
+                                        autoHighlight
+                                        onOpenChange={setTagsMenuOpen}
+                                        itemToStringLabel={(tag) => tag.label}
+                                        onValueChange={(tag) => {
+                                            if (tag) addTagFilter(tag);
+                                        }}
+                                        onInputValueChange={(
+                                            value,
+                                            details,
+                                        ) => {
+                                            setTagSearch(value);
+                                            if (
+                                                details.reason ===
+                                                    'input-change' ||
+                                                details.reason ===
+                                                    'input-clear' ||
+                                                details.reason === 'clear-press'
+                                            ) {
+                                                setTagsMenuOpen(true);
                                             }
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter') {
-                                                    e.preventDefault();
-                                                    addTagFilter();
-                                                }
-                                            }}
-                                            className="bg-black/30"
+                                        }}
+                                    >
+                                        <ComboboxInput
+                                            id="hud-tags-input"
+                                            placeholder="Buscar una etiqueta…"
+                                            autoComplete="off"
+                                            showClear
                                         />
-                                        <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="secondary"
-                                            onClick={addTagFilter}
-                                        >
-                                            Añadir
-                                        </Button>
-                                    </div>
-                                    <datalist id="hud-tags-suggestions">
-                                        {steamTags
-                                            .filter(
-                                                (t) =>
-                                                    !selectedTagKeys.includes(
-                                                        t.value,
-                                                    ),
-                                            )
-                                            .slice(0, 30)
-                                            .map((t) => (
-                                                <option
-                                                    key={t.value}
-                                                    value={t.label}
-                                                />
-                                            ))}
-                                    </datalist>
+                                        <ComboboxContent>
+                                            <ComboboxEmpty>
+                                                {tagSearch.trim()
+                                                    ? 'No hay etiquetas que coincidan.'
+                                                    : 'Escribe para buscar etiquetas.'}
+                                            </ComboboxEmpty>
+                                            <ComboboxList>
+                                                {(
+                                                    tag: (typeof steamTags)[number],
+                                                ) => (
+                                                    <ComboboxItem
+                                                        key={tag.value}
+                                                        value={tag}
+                                                    >
+                                                        {tag.label}
+                                                    </ComboboxItem>
+                                                )}
+                                            </ComboboxList>
+                                        </ComboboxContent>
+                                    </Combobox>
+                                    <p className="text-[11px] text-muted-foreground">
+                                        Escribe para filtrar y selecciona una
+                                        etiqueta o pulsa Enter.
+                                    </p>
 
                                     {selectedTagKeys.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 mt-2">
+                                        <div className="flex flex-wrap gap-1.5">
                                             {selectedTagKeys.map((key) => (
                                                 <span
                                                     key={key}
@@ -484,6 +498,7 @@ export function QuickVibeBar({
                                                                 ),
                                                             })
                                                         }
+                                                        aria-label={`Quitar etiqueta ${tagLabels.get(key) ?? key}`}
                                                     >
                                                         <X size={12} />
                                                     </button>
