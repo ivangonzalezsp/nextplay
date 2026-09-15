@@ -38,6 +38,25 @@ export function periodSpan(period: PlayPeriod, from: Date, to: Date, now: number
   return start <= end ? { start: start - first, end: end - first } : null;
 }
 
+export const dateInputValue = (at: number) => {
+  const date = new Date(at);
+  return `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
+export function calendarDateAt(value: unknown) {
+  const match = typeof value === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(0);
+  date.setHours(12, 0, 0, 0);
+  date.setFullYear(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
+    ? date.getTime()
+    : null;
+}
+
 export const playEventLabel = (event: PlayEvent) =>
   event.kind === 'started' ? 'Empezado'
     : event.kind === 'playing' && event.from === 'paused' ? 'Reanudado'

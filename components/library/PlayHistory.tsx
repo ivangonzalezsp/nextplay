@@ -1,10 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { es } from 'date-fns/locale';
 import { CalendarDays, List, Play, Check, Pause, X, Clock, Ban, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { gameUrl, type PlayEvent, type State } from '@/lib/model';
-import { eventsInYear, playEventLabel, playEventPhase, gameColor, playPeriods, periodSpan } from '@/lib/play-history';
+import { calendarDateAt, dateInputValue, eventsInYear, playEventLabel, playEventPhase, gameColor, playPeriods, periodSpan } from '@/lib/play-history';
 
 const months = Array.from({ length: 12 }, (_, month) =>
   new Date(2024, month).toLocaleDateString('es', { month: 'long' }));
@@ -28,7 +31,60 @@ function EventCover({ src }: { src?: string }) {
   </div>;
 }
 
-export function PlayHistory({ state }: { state: State }) {
+function dateFromInput(value: string) {
+  return new Date(calendarDateAt(value) ?? Date.now());
+}
+
+function EventDateEditor({
+  value,
+  maxDate,
+  label,
+  busy,
+  onChange,
+}: {
+  value: string;
+  maxDate: Date;
+  label: string;
+  busy: boolean;
+  onChange: (date: string) => Promise<void>;
+}) {
+  const selected = dateFromInput(value);
+  const [open, setOpen] = useState(false);
+  const [month, setMonth] = useState(() => new Date(selected.getFullYear(), selected.getMonth(), 1));
+  const dateLabel = selected.toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  return <Popover open={open} onOpenChange={(nextOpen) => {
+    if (nextOpen) setMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+    setOpen(nextOpen);
+  }}>
+    <PopoverTrigger render={
+      <Button type="button" variant="outline" size="sm" disabled={busy} aria-label={label}>
+        <CalendarDays size={14} /> {dateLabel}
+      </Button>
+    } />
+    <PopoverContent align="end" className="w-auto p-0">
+      <Calendar
+        mode="single"
+        locale={es}
+        month={month}
+        selected={selected}
+        onMonthChange={setMonth}
+        onSelect={(date) => {
+          if (!date) return;
+          const nextValue = dateInputValue(date.getTime());
+          if (nextValue === value) return;
+          setOpen(false);
+          void onChange(nextValue);
+        }}
+        disabled={{ after: maxDate }}
+        labels={{ labelPrevious: () => 'Mes anterior', labelNext: () => 'Próximo mes' }}
+        initialFocus
+      />
+    </PopoverContent>
+  </Popover>;
+}
+
+export function PlayHistory({ state, busy, onDateChange }: { state: State; busy: boolean; onDateChange: (index: number, date: string) => Promise<void> }) {
   const events = state.playHistory ?? [];
   const eventUrl = (event: PlayEvent) => gameUrl(state.games.find((game) => game.appId === event.appId) ?? event);
   const covers = new Map([
@@ -47,6 +103,7 @@ export function PlayHistory({ state }: { state: State }) {
   const yearDays = (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86400000;
   const periods = playPeriods(events).filter((period) => periodSpan(period, yearStart, yearEnd, now));
   const dateLabel = (at: number) => new Date(at).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+  const maxDate = new Date(calendarDateAt(dateInputValue(now))!);
   const count = (kind: PlayEvent['kind']) => new Set(selected.filter((event) => event.kind === kind).map((event) => event.appId)).size;
 
   return <section className="space-y-6" aria-label="Mi año de juegos">
@@ -64,7 +121,7 @@ export function PlayHistory({ state }: { state: State }) {
         <Button variant={view === 'calendar' ? 'default' : 'outline'} aria-pressed={view === 'calendar'} onClick={() => setView('calendar')}><CalendarDays size={16} /> Calendario</Button>
       </div>
     </div>
-    <p className="text-sm text-muted-foreground">Cada cambio de estado queda registrado: inicios, pausas, reanudaciones, finales y abandonos, también al volver a Pendiente o marcar No me interesa. Los cambios anteriores que no se registraron no tienen fecha conocida.</p>
+    <p className="text-sm text-muted-foreground">Cada cambio de estado queda registrado: inicios, pausas, reanudaciones, finales y abandonos, también al volver a Pendiente o marcar No me interesa. Puedes corregir la fecha de cada evento desde la lista de cambios.</p>
     <p className="text-sm text-muted-foreground">Un color por juego. Cada línea une Start con End; al reanudar comienza otro tramo del mismo color. Los tramos abiertos llegan hasta hoy. Sin un inicio registrado no se dibuja un tramo.</p>
     {selected.length === 0 && periods.length === 0 && <p className="rounded-xl border border-border p-6">Todavía no hay actividad registrada en {year}.</p>}
     {view === 'timeline' ? <div className="space-y-6">
@@ -96,21 +153,37 @@ export function PlayHistory({ state }: { state: State }) {
       <details>
         <summary className="cursor-pointer text-sm">Todos los cambios de estado ({selected.length})</summary>
         <ol className="ml-2 mt-4 space-y-4 border-l border-border pl-6">
-      {selected.map((event, index) => <li key={`${event.at}-${index}`} className="relative rounded-xl border border-l-4 bg-card p-4" style={{ borderColor: gameColor(event.appId) }}>
+      {selected.map((event, index) => {
+        const eventIndex = events.indexOf(event);
+        const currentDate = dateInputValue(event.at);
+        return <li key={`${event.at}-${index}`} className="relative rounded-xl border border-l-4 bg-card p-4" style={{ borderColor: gameColor(event.appId) }}>
         <span className="absolute -left-8 top-6 h-3 w-3 rounded-full" style={{ backgroundColor: gameColor(event.appId) }} />
         <div className="flex items-start gap-4">
           <a className="w-20 shrink-0 sm:w-24" href={eventUrl(event)} target="_blank" rel="noreferrer" aria-label={`Ver ${event.name}`}>
             <EventCover src={covers.get(event.appId) ?? event.cover} />
           </a>
           <div className="min-w-0 flex-1 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <a className="font-semibold hover:underline" href={eventUrl(event)} target="_blank" rel="noreferrer">{event.name}</a>
-          <time className="text-sm text-muted-foreground" dateTime={new Date(event.at).toISOString()}>{new Date(event.at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}</time>
-        </div>
-        <EventLabel event={event} />
-          </div>
-        </div>
-      </li>)}
+         <div className="flex flex-wrap items-center justify-between gap-2">
+           <a className="font-semibold hover:underline" href={eventUrl(event)} target="_blank" rel="noreferrer">{event.name}</a>
+           <div className="flex flex-wrap items-center gap-2">
+             <time className="text-sm text-muted-foreground" dateTime={new Date(event.at).toISOString()}>{new Date(event.at).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' })}</time>
+             <span className="flex items-center gap-1 text-xs text-muted-foreground">
+               <span>Editar fecha</span>
+               <EventDateEditor
+                 value={currentDate}
+                 maxDate={maxDate}
+                 busy={busy}
+                 label={`Fecha de ${playEventLabel(event)} para ${event.name}`}
+                 onChange={(date) => onDateChange(eventIndex, date)}
+               />
+             </span>
+           </div>
+         </div>
+         <EventLabel event={event} />
+           </div>
+         </div>
+       </li>;
+      })}
     </ol></details></div> : <div className="grid gap-6 xl:grid-cols-2">
       {months.map((monthName, month) => {
         const offset = (new Date(year, month, 1).getDay() + 6) % 7;

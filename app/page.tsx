@@ -405,6 +405,12 @@ export default function Home() {
     });
   }
 
+  async function playHistoryDate(index: number, date: string) {
+    await action('play-date-' + index, async () => {
+      accept(await api('play-history', { index, date }, 'PATCH'));
+    });
+  }
+
   async function addGame(input: AddGameInput) {
     setBusy('add-game');
     try {
@@ -1184,7 +1190,7 @@ export default function Home() {
             </div>
           </TabsContent>
           <TabsContent value="year">
-            {state && <PlayHistory state={state} />}
+            {state && <PlayHistory state={state} busy={!!busy} onDateChange={playHistoryDate} />}
           </TabsContent>
         </Tabs>
       </main>

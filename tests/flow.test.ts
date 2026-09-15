@@ -31,6 +31,7 @@ import {
 import { parseCodexSettings } from '../server/selection.ts';
 import { verifyRequest, handle } from '../server/api.ts';
 import { buildPrompt } from '../server/codex.ts';
+import { dateInputValue } from '../lib/play-history.ts';
 
 const game = (appId: number, more: Partial<Game> = {}): Game => ({
   appId,
@@ -411,13 +412,21 @@ void test('conversation corrections and selected filters reach the next prompt',
   assert.ok(prompt.includes('"gameMode":"single"'));
   assert.ok(!prompt.includes('test-key'));
 });
-void test('localhost endpoint rejects cross-origin, DNS rebinding, form posts and oversized bodies', async () => {
+void test('local endpoint trusts private LAN hosts but rejects cross-origin, DNS rebinding, form posts and oversized bodies', async () => {
   const request = (url: string, headers: Record<string, string>) =>
     new Request(url, { method: 'POST', headers, body: '{}' });
   assert.doesNotThrow(() =>
     verifyRequest(
       request('http://127.0.0.1:3000/api/state', {
         origin: 'http://127.0.0.1:3000',
+        'content-type': 'application/json',
+      }),
+    ),
+  );
+  assert.doesNotThrow(() =>
+    verifyRequest(
+      request('http://192.168.1.208:3001/api/state', {
+        origin: 'http://192.168.1.208:3001',
         'content-type': 'application/json',
       }),
     ),
@@ -623,6 +632,24 @@ void test('local API works without Codex or network and preserves every search a
       assert.equal(response.status, 200);
       return response.json();
     };
+    const started = await call(
+      'state',
+      { appId: 1, preference: { favorite: true, status: 'playing' } },
+      'PATCH',
+    );
+    assert.equal(started.playHistory.length, 1);
+    const edited = await call(
+      'play-history',
+      { index: 0, date: '2026-05-15' },
+      'PATCH',
+    );
+    assert.equal(dateInputValue(edited.playHistory[0].at), '2026-05-15');
+    for (const date of ['2026-02-30', '2099-01-01'])
+      assert.equal(
+        (await request('play-history', { index: 0, date }, 'PATCH')).status,
+        400,
+      );
+    assert.equal(dateInputValue((await readState()).playHistory![0].at), '2026-05-15');
     const today = await call('recommendations', {
       engine: 'local',
       filters: DEFAULT_FILTERS,

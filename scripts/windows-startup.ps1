@@ -33,4 +33,4 @@ shell.Run "cmd.exe /d /c npm.cmd run start:production", 0, False
 "@ | Set-Content -LiteralPath $launcher -Encoding ASCII
 
 Write-Output "Arranque automatico instalado: $launcher"
-Write-Output 'La app arrancara en http://127.0.0.1:3001 al iniciar sesion en Windows.'
+Write-Output 'La app arrancara en la red local en http://<IP-del-PC>:3001 al iniciar sesion en Windows.'

@@ -28,7 +28,7 @@ import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import { DEFAULT_CODEX_SETTINGS } from '../lib/model.ts';
 import type { Game, Snapshot, State, Turn } from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
-import { recordPreference } from '../lib/play-history.ts';
+import { calendarDateAt, dateInputValue, recordPreference } from '../lib/play-history.ts';
 import { inLibrary } from '../lib/model.ts';
 import { log, logError } from '../lib/log.ts';
 import {
@@ -45,11 +45,18 @@ import {
 } from './family.ts';
 
 const localHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+function isPrivateIpv4(hostname: string) {
+  const parts = hostname.split('.');
+  if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part))) return false;
+  const [a, b, c, d] = parts.map(Number);
+  if ([a, b, c, d].some((part) => part > 255)) return false;
+  return a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
+}
 export function verifyRequest(request: Request) {
   const url = new URL(request.url);
   const host = request.headers.get('host');
-  if (!localHosts.has(url.hostname) || (host && host !== url.host))
-    throw new AppError('Acceso permitido únicamente desde este PC.', 403);
+  if ((!localHosts.has(url.hostname) && !isPrivateIpv4(url.hostname)) || (host && host !== url.host))
+    throw new AppError('Acceso permitido únicamente desde la red local.', 403);
   const origin = request.headers.get('origin');
   if (origin && origin !== url.origin)
     throw new AppError('Origen de solicitud no permitido.', 403);
@@ -225,6 +232,22 @@ export async function handle(request: Request): Promise<Response> {
         const next = await snapshot(state);
         phase('preference:update:complete', { appId: payload.appId });
         return next;
+      }
+      if (path === '/api/play-history' && request.method === 'PATCH') {
+        const events = state.playHistory ?? [];
+        const at = calendarDateAt(payload.date);
+        if (
+          typeof payload.index !== 'number' ||
+          !Number.isSafeInteger(payload.index) ||
+          payload.index < 0 ||
+          !events[payload.index] ||
+          at === null ||
+          dateInputValue(at) > dateInputValue(Date.now())
+        )
+          throw new AppError('La fecha del cambio de estado no es válida.');
+        events[payload.index].at = at;
+        await saveState(state);
+        return snapshot(state);
       }
       if (path === '/api/shortlist' && request.method === 'PATCH') {
         updateShortlist(state, payload.appId, payload.saved);

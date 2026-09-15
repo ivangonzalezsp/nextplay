@@ -73,7 +73,7 @@ npm run build
 npm run start:production
 ```
 
-Este servidor utiliza `127.0.0.1:3001`; `npm start` sigue disponible en el puerto 3000. Tras cambiar o actualizar el código, vuelve a ejecutar `npm run build` antes de arrancar la compilación.
+Este servidor escucha en la red local en `0.0.0.0:3001`; en el PC usa `http://127.0.0.1:3001` y desde el móvil la IP del PC, por ejemplo `http://192.168.1.208:3001`. La API confía en dispositivos de redes privadas, así que no expongas este puerto a Internet. `npm start` sigue disponible en el puerto 3000. Tras cambiar o actualizar el código, vuelve a ejecutar `npm run build` antes de arrancar la compilación.
 
 ### Arranque automático en Windows
 
@@ -84,7 +84,7 @@ npm run build
 npm run startup:install
 ```
 
-Se instala un lanzador oculto en la carpeta de inicio de sesión y la app queda disponible en [http://127.0.0.1:3001](http://127.0.0.1:3001). Para quitarlo:
+Se instala un lanzador oculto en la carpeta de inicio de sesión y la app queda disponible en el PC y en la red local mediante `http://<IP-del-PC>:3001`. Para quitarlo:
 
 ```powershell
 npm run startup:uninstall
