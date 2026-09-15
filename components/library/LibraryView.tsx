@@ -23,6 +23,14 @@ import {
     SelectContent,
     SelectItem,
 } from '@/components/ui/select';
+import {
+    Combobox,
+    ComboboxContent,
+    ComboboxEmpty,
+    ComboboxInput,
+    ComboboxItem,
+    ComboboxList,
+} from '@/components/ui/combobox';
 import GameOpinion from '@/app/opinion';
 import { AddGameDialog, type AddGameInput } from './AddGameDialog';
 import {
@@ -93,6 +101,8 @@ export function LibraryView({
     const [quickFilter, setQuickFilter] = useState<
         'all' | 'favorites' | 'playing' | 'pending' | 'shared' | 'short'
     >('all');
+    const selectedLibraryTag =
+        steamTags.find((tag) => tag.value === libraryTag) ?? null;
 
     // Filter based on quick chip selection
     const visibleGames = orderedGames.filter((g) => {
@@ -253,31 +263,37 @@ export function LibraryView({
                     </Select>
 
                     {/* Tags selector */}
-                    <Select
-                        value={libraryTag}
-                        onValueChange={(val) => {
-                            setLibraryTag(val ?? '');
+                    <Combobox<(typeof steamTags)[number]>
+                        value={selectedLibraryTag}
+                        items={steamTags}
+                        autoHighlight
+                        itemToStringLabel={(tag) => tag.label}
+                        isItemEqualToValue={(a, b) => a.value === b.value}
+                        onValueChange={(tag) => {
+                            setLibraryTag(tag?.value ?? '');
                             setLimit(36);
                         }}
-                        items={[
-                            { value: '', label: 'Todas las etiquetas' },
-                            ...steamTags,
-                        ]}
                     >
-                        <SelectTrigger className="h-8 text-xs bg-black/40 min-w-[140px]">
-                            <SelectValue placeholder="Etiqueta" />
-                        </SelectTrigger>
-                        <SelectContent className="max-h-72">
-                            <SelectItem value="">
-                                Todas las etiquetas
-                            </SelectItem>
-                            {steamTags.map((tag) => (
-                                <SelectItem key={tag.value} value={tag.value}>
-                                    {tag.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                        <ComboboxInput
+                            id="library-tag-filter"
+                            className="min-w-[140px] bg-black/40 text-xs"
+                            placeholder="Etiqueta"
+                            autoComplete="off"
+                            showClear
+                        />
+                        <ComboboxContent>
+                            <ComboboxEmpty>
+                                No se encontraron etiquetas.
+                            </ComboboxEmpty>
+                            <ComboboxList>
+                                {(tag: (typeof steamTags)[number]) => (
+                                    <ComboboxItem key={tag.value} value={tag}>
+                                        {tag.label}
+                                    </ComboboxItem>
+                                )}
+                            </ComboboxList>
+                        </ComboboxContent>
+                    </Combobox>
 
                     {/* Order by selector */}
                     <Select
