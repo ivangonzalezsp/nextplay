@@ -126,7 +126,6 @@ export function clearFilters(mode: Filters['mode']): Filters {
         minutes: null,
         hours: null,
         tags: [],
-        replay: true,
     };
 }
 

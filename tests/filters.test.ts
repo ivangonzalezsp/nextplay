@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { clearFilters, filterSummary } from '../lib/filters.ts';
 import { EMPTY_STATE, DEFAULT_FILTERS, inLibrary } from '../lib/model.ts';
 import type { Game, State } from '../lib/model.ts';
-import { selectCandidates } from '../server/selection.ts';
+import { recommendLocally, selectCandidates } from '../server/selection.ts';
 
 const game = (appId: number, extra: Partial<Game> = {}): Game => ({
     appId,
@@ -131,7 +131,7 @@ void test('missing-data count excludes known mismatches and distinguishes story 
     assert.equal(filterSummary(state, filters).eligible, 0);
 });
 
-void test('clear filters retains the selected mode and removes optional constraints without restoring 60 minutes', () => {
+void test('clear filters retains the selected mode and removes optional constraints without restoring 60 minutes or replays', () => {
     for (const mode of ['today', 'next'] as const) {
         assert.deepEqual(clearFilters(mode), {
             ...DEFAULT_FILTERS,
@@ -139,9 +139,19 @@ void test('clear filters retains the selected mode and removes optional constrai
             minutes: null,
             hours: null,
             tags: [],
-            replay: true,
         });
     }
+    const state: State = {
+        ...structuredClone(EMPTY_STATE),
+        games: [game(1), game(2)],
+        preferences: { 1: { status: 'completed', favorite: false } },
+    };
+    assert.deepEqual(
+        recommendLocally(state, clearFilters('today')).owned.map(
+            (pick) => pick.appId,
+        ),
+        [2],
+    );
 });
 
 void test('combined shortlist, continue and reference filters keep the displayed count accurate', () => {
