@@ -11,109 +11,115 @@ import { handle } from '../server/api.ts';
 const root = resolve(tmpdir());
 const dir = await mkdtemp(join(root, 'nextplay-live-'));
 const oldDir = process.env.NEXTPLAY_DATA_DIR,
-  oldPython = process.env.NEXTPLAY_PYTHON,
-  originalFetch = globalThis.fetch;
+    oldPython = process.env.NEXTPLAY_PYTHON,
+    originalFetch = globalThis.fetch;
 process.env.NEXTPLAY_DATA_DIR = dir;
 process.env.NEXTPLAY_PYTHON = join(dir, 'python-disabled');
 const game = (appId: number, durationHours: number): Game => ({
-  appId,
-  name: 'Juego de prueba ' + appId,
-  owned: true,
-  playtimeMinutes: 0,
-  recentMinutes: 0,
-  genres: [{ id: 1, name: 'Aventura' }],
-  gameModes: [1],
-  durationHours,
-  summary:
-    'Datos ficticios de prueba: exploración y puzles, sin modo competitivo.',
+    appId,
+    name: 'Juego de prueba ' + appId,
+    owned: true,
+    playtimeMinutes: 0,
+    recentMinutes: 0,
+    genres: [{ id: 1, name: 'Aventura' }],
+    gameModes: [1],
+    durationHours,
+    summary:
+        'Datos ficticios de prueba: exploración y puzles, sin modo competitivo.',
 });
 try {
-  await saveState({
-    ...structuredClone(EMPTY_STATE),
-    profile: {
-      name: 'Prueba aislada',
-      steamId: '76561198000000001',
-      url: 'https://steamcommunity.com/profiles/76561198000000001/',
-    },
-    syncedAt: Date.now(),
-    games: [
-      game(1001, 2),
-      game(1002, 8),
-      game(1003, 30),
-      ...Array.from({ length: 120 }, (_, i) => game(1004 + i, 10)),
-      {
-        ...game(2000, 2),
-        owned: false,
-        shared: true,
-        summary:
-          'Puzles de constelaciones: conecta estrellas para reconstruir el cielo. Datos ficticios de prueba.',
-      },
-    ],
-    preferences: {
-      '1001': { favorite: true, status: 'pending' },
-      '1003': { favorite: false, status: 'ignored' },
-    },
-  });
-  // Only the data sources use Node fetch; Codex uses its official executable separately.
-  globalThis.fetch = async (input) =>
-    (input instanceof Request ? input.url : input.toString()).includes(
-      '/appreviews/',
-    )
-      ? Response.json({
-          success: 1,
-          query_summary: { total_positive: 90, total_reviews: 100 },
-        })
-      : new Response('External data disabled for this test', { status: 503 });
-  for (const mode of ['today', 'next'] as const) {
-    const response = await handle(
-      new Request('http://127.0.0.1:3000/api/recommendations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Origin: 'http://127.0.0.1:3000',
+    await saveState({
+        ...structuredClone(EMPTY_STATE),
+        profile: {
+            name: 'Prueba aislada',
+            steamId: '76561198000000001',
+            url: 'https://steamcommunity.com/profiles/76561198000000001/',
         },
-        body: JSON.stringify({
-          filters: {
-            ...DEFAULT_FILTERS,
-            mode,
-            hours: mode === 'next' ? 3 : null,
-          },
-          text:
-            mode === 'today'
-              ? 'Busco puzles de constelaciones. Busca en la base de datos el juego que encaje y recomiéndamelo.'
-              : 'Mantén lo de puzles de constelaciones; ahora quiero una historia de hasta 3 horas.',
-        }),
-      }),
+        syncedAt: Date.now(),
+        games: [
+            game(1001, 2),
+            game(1002, 8),
+            game(1003, 30),
+            ...Array.from({ length: 120 }, (_, i) => game(1004 + i, 10)),
+            {
+                ...game(2000, 2),
+                owned: false,
+                shared: true,
+                summary:
+                    'Puzles de constelaciones: conecta estrellas para reconstruir el cielo. Datos ficticios de prueba.',
+            },
+        ],
+        preferences: {
+            '1001': { favorite: true, status: 'pending' },
+            '1003': { favorite: false, status: 'ignored' },
+        },
+    });
+    // Only the data sources use Node fetch; Codex uses its official executable separately.
+    globalThis.fetch = async (input) =>
+        (input instanceof Request ? input.url : input.toString()).includes(
+            '/appreviews/',
+        )
+            ? Response.json({
+                  success: 1,
+                  query_summary: { total_positive: 90, total_reviews: 100 },
+              })
+            : new Response('External data disabled for this test', {
+                  status: 503,
+              });
+    for (const mode of ['today', 'next'] as const) {
+        const response = await handle(
+            new Request('http://127.0.0.1:3000/api/recommendations', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Origin: 'http://127.0.0.1:3000',
+                },
+                body: JSON.stringify({
+                    filters: {
+                        ...DEFAULT_FILTERS,
+                        mode,
+                        hours: mode === 'next' ? 3 : null,
+                    },
+                    text:
+                        mode === 'today'
+                            ? 'Busco puzles de constelaciones. Busca en la base de datos el juego que encaje y recomiéndamelo.'
+                            : 'Mantén lo de puzles de constelaciones; ahora quiero una historia de hasta 3 horas.',
+                }),
+            }),
+        );
+        const next = (await response.json()) as Snapshot & { error?: string };
+        assert.equal(response.status, 200, next.error);
+        const result = next.conversation.at(-1)!.result;
+        assert.ok(
+            result.owned.length > 0,
+            'Expected an eligible owned recommendation',
+        );
+        assert.ok(result.owned.every((p) => p.appId !== 1003));
+        assert.ok(
+            result.owned.some((p) => p.appId === 2000),
+            'Expected retrieval of the shared game beyond the first 60',
+        );
+        if (mode === 'next')
+            assert.ok(
+                result.owned.every((p) => [1001, 2000].includes(p.appId)),
+            );
+        console.log(
+            mode + ': propuesta válida, exclusiones y límites respetados.',
+        );
+    }
+    const restarted = await readState();
+    assert.equal(restarted.conversation.length, 2);
+    assert.equal(restarted.preferences['1001'].favorite, true);
+    assert.equal(restarted.filters.mode, 'next');
+    console.log(
+        'Conversación y preferencias conservadas después de releer el estado.',
     );
-    const next = (await response.json()) as Snapshot & { error?: string };
-    assert.equal(response.status, 200, next.error);
-    const result = next.conversation.at(-1)!.result;
-    assert.ok(
-      result.owned.length > 0,
-      'Expected an eligible owned recommendation',
-    );
-    assert.ok(result.owned.every((p) => p.appId !== 1003));
-    assert.ok(
-      result.owned.some((p) => p.appId === 2000),
-      'Expected retrieval of the shared game beyond the first 60',
-    );
-    if (mode === 'next')
-      assert.ok(result.owned.every((p) => [1001, 2000].includes(p.appId)));
-    console.log(mode + ': propuesta válida, exclusiones y límites respetados.');
-  }
-  const restarted = await readState();
-  assert.equal(restarted.conversation.length, 2);
-  assert.equal(restarted.preferences['1001'].favorite, true);
-  assert.equal(restarted.filters.mode, 'next');
-  console.log(
-    'Conversación y preferencias conservadas después de releer el estado.',
-  );
 } finally {
-  if (oldPython === undefined) delete process.env.NEXTPLAY_PYTHON;
-  else process.env.NEXTPLAY_PYTHON = oldPython;
-  globalThis.fetch = originalFetch;
-  if (oldDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
-  else process.env.NEXTPLAY_DATA_DIR = oldDir;
-  if (dir.startsWith(join(root, 'nextplay-live-')))
-    await rm(dir, { recursive: true, force: true });
+    if (oldPython === undefined) delete process.env.NEXTPLAY_PYTHON;
+    else process.env.NEXTPLAY_PYTHON = oldPython;
+    globalThis.fetch = originalFetch;
+    if (oldDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+    else process.env.NEXTPLAY_DATA_DIR = oldDir;
+    if (dir.startsWith(join(root, 'nextplay-live-')))
+        await rm(dir, { recursive: true, force: true });
 }

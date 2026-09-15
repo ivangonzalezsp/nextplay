@@ -2,442 +2,594 @@
 
 import { useState } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
 } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
+    Select,
+    SelectTrigger,
+    SelectValue,
+    SelectContent,
+    SelectItem,
 } from '@/components/ui/select';
 import {
-  Library,
-  Users,
-  Sparkles,
-  RefreshCw,
-  CheckCircle2,
-  AlertCircle,
-  ExternalLink,
-  ShieldCheck,
+    Library,
+    Users,
+    Sparkles,
+    RefreshCw,
+    CheckCircle2,
+    AlertCircle,
+    ExternalLink,
+    ShieldCheck,
 } from 'lucide-react';
 import {
-  CODEX_MODELS,
-  codexEffortsForModel,
-  type CodexSettings,
-  type RecommendationEngine,
-  type Snapshot,
+    CODEX_MODELS,
+    codexEffortsForModel,
+    type CodexSettings,
+    type RecommendationEngine,
+    type Snapshot,
 } from '@/lib/model';
 
 export function SettingsModal({
-  open,
-  onOpenChange,
-  state,
-  profileUrl,
-  setProfileUrl,
-  onSync,
-  onFamilySync,
-  onReload,
-  engine,
-  setEngine,
-  codex,
-  setCodex,
-  busy,
+    open,
+    onOpenChange,
+    state,
+    profileUrl,
+    setProfileUrl,
+    onSync,
+    onFamilySync,
+    onReload,
+    engine,
+    setEngine,
+    codex,
+    setCodex,
+    busy,
 }: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  state: Snapshot | null;
-  profileUrl: string;
-  setProfileUrl: (url: string) => void;
-  onSync: () => Promise<void>;
-  onFamilySync: () => Promise<void>;
-  onReload: () => Promise<void>;
-  engine: RecommendationEngine;
-  setEngine: (engine: RecommendationEngine) => void;
-  codex: CodexSettings;
-  setCodex: (settings: CodexSettings) => void;
-  busy: string;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    state: Snapshot | null;
+    profileUrl: string;
+    setProfileUrl: (url: string) => void;
+    onSync: () => Promise<void>;
+    onFamilySync: () => Promise<void>;
+    onReload: () => Promise<void>;
+    engine: RecommendationEngine;
+    setEngine: (engine: RecommendationEngine) => void;
+    codex: CodexSettings;
+    setCodex: (settings: CodexSettings) => void;
+    busy: string;
 }) {
-  const [activeTab, setActiveTab] = useState('steam');
+    const [activeTab, setActiveTab] = useState('steam');
 
-  const modelOptions = [
-    ...CODEX_MODELS,
-    ...(CODEX_MODELS.some((m) => m.value === codex.model)
-      ? []
-      : [{ value: codex.model, label: codex.model + ' · configurado' }]),
-  ];
+    const modelOptions = [
+        ...CODEX_MODELS,
+        ...(CODEX_MODELS.some((m) => m.value === codex.model)
+            ? []
+            : [{ value: codex.model, label: codex.model + ' · configurado' }]),
+    ];
 
-  const effortOptions = codexEffortsForModel(codex.model).map((value) => ({
-    value,
-    label:
-      value === 'low'
-        ? 'Bajo · más rápido'
-        : value === 'medium'
-          ? 'Medio · equilibrado'
-          : value === 'high'
-            ? 'Alto · más razonado'
-            : value === 'xhigh'
-              ? 'Muy alto'
-              : value === 'max'
-                ? 'Máximo'
-                : 'Ultra',
-  }));
+    const effortOptions = codexEffortsForModel(codex.model).map((value) => ({
+        value,
+        label:
+            value === 'low'
+                ? 'Bajo · más rápido'
+                : value === 'medium'
+                  ? 'Medio · equilibrado'
+                  : value === 'high'
+                    ? 'Alto · más razonado'
+                    : value === 'xhigh'
+                      ? 'Muy alto'
+                      : value === 'max'
+                        ? 'Máximo'
+                        : 'Ultra',
+    }));
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="hud-settings-modal sm:max-w-2xl">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <div className="hud-settings-badge-icon">
-              <ShieldCheck size={20} />
-            </div>
-            <div>
-              <DialogTitle className="text-xl font-bold tracking-tight">
-                Ajustes y Conexiones
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Configuración local de Steam, grupos familiares e inteligencia artificial.
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="hud-settings-modal sm:max-w-2xl">
+                <DialogHeader>
+                    <div className="flex items-center gap-2">
+                        <div className="hud-settings-badge-icon">
+                            <ShieldCheck size={20} />
+                        </div>
+                        <div>
+                            <DialogTitle className="text-xl font-bold tracking-tight">
+                                Ajustes y Conexiones
+                            </DialogTitle>
+                            <DialogDescription className="text-xs text-muted-foreground">
+                                Configuración local de Steam, grupos familiares
+                                e inteligencia artificial.
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
-          <TabsList className="hud-settings-tabs grid grid-cols-3">
-            <TabsTrigger value="steam" className="gap-2">
-              <Library size={15} />
-              <span>Steam & Familias</span>
-            </TabsTrigger>
-            <TabsTrigger value="ai" className="gap-2">
-              <Sparkles size={15} />
-              <span>Motor & IA</span>
-            </TabsTrigger>
-            <TabsTrigger value="status" className="gap-2">
-              <CheckCircle2 size={15} />
-              <span>Diagnóstico</span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* TAB 1: STEAM & FAMILIES */}
-          <TabsContent value="steam" className="hud-tab-pane space-y-4 pt-4">
-            <div className="hud-card-subpanel">
-              <div className="flex items-center justify-between mb-2">
-                <label htmlFor="settings-steam-profile" className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Library size={16} className="text-emerald-400" />
-                  Perfil de Steam
-                </label>
-                {state?.syncedAt && (
-                  <span className="text-xs text-muted-foreground">
-                    Sincronizado: {new Date(state.syncedAt).toLocaleDateString('es')}{' '}
-                    {new Date(state.syncedAt).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id="settings-steam-profile"
-                  value={profileUrl}
-                  onChange={(e) => setProfileUrl(e.target.value)}
-                  placeholder="https://steamcommunity.com/id/tu_usuario/"
-                  className="bg-black/30 border-border/70"
-                />
-                <Button
-                  variant="default"
-                  onClick={onSync}
-                  disabled={!!busy}
-                  className="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold"
+                <Tabs
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    className="mt-2"
                 >
-                  <RefreshCw size={14} className={busy === 'sync' ? 'spin mr-1' : 'mr-1'} />
-                  {busy === 'sync' ? 'Sincronizando…' : 'Sincronizar'}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                El perfil y los detalles de juegos deben ser públicos en la privacidad de Steam.
-              </p>
-            </div>
+                    <TabsList className="hud-settings-tabs grid grid-cols-3">
+                        <TabsTrigger value="steam" className="gap-2">
+                            <Library size={15} />
+                            <span>Steam & Familias</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="ai" className="gap-2">
+                            <Sparkles size={15} />
+                            <span>Motor & IA</span>
+                        </TabsTrigger>
+                        <TabsTrigger value="status" className="gap-2">
+                            <CheckCircle2 size={15} />
+                            <span>Diagnóstico</span>
+                        </TabsTrigger>
+                    </TabsList>
 
-            <div className="hud-card-subpanel">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <Users size={16} className="text-cyan-400" />
-                  Steam Families (Préstamo Familiar)
-                </h4>
-                {state?.family?.syncedAt && (
-                  <span className="text-xs text-muted-foreground">
-                    Última lectura: {new Date(state.family.syncedAt).toLocaleDateString('es')}
-                  </span>
-                )}
-              </div>
-              {state?.family ? (
-                <div className="space-y-2">
-                  <div className="hud-family-info-grid">
-                    <div>
-                      <span className="text-xs text-muted-foreground">Grupo:</span>{' '}
-                      <strong className="text-sm text-foreground">{state.family.name}</strong>
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground">Miembros:</span>{' '}
-                      <strong className="text-sm text-foreground">{state.family.members.length}</strong>
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground">Compartidos:</span>{' '}
-                      <strong className="text-sm text-cyan-400">
-                        {state.games.filter((g) => g.shared).length} juegos
-                      </strong>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onFamilySync}
-                    disabled={!!busy}
-                    className="w-full mt-2"
-                  >
-                    <RefreshCw size={13} className={busy === 'family' ? 'spin mr-2' : 'mr-2'} />
-                    {busy === 'family' ? 'Actualizando familias…' : 'Actualizar Steam Families'}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Añade las bibliotecas compartidas por tu grupo familiar de Steam, incluso con perfiles privados.
-                  </p>
-                  {!state?.setup.family && (
-                    <div className="bg-amber-950/30 border border-amber-800/40 p-2.5 rounded-lg text-xs text-amber-200/90">
-                      Requiere <code>STEAM_FAMILY_TOKEN</code> en tu archivo <code>.env.local</code>.{' '}
-                      <a
-                        href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline text-amber-300 inline-flex items-center gap-1"
-                      >
-                        Obtener token oficial <ExternalLink size={11} />
-                      </a>
-                    </div>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={!!busy || !state?.profile || !state?.setup.family}
-                    onClick={onFamilySync}
-                    className="w-full"
-                  >
-                    Conectar Steam Families
-                  </Button>
-                </div>
-              )}
-            </div>
-          </TabsContent>
-
-          {/* TAB 2: MOTOR & IA */}
-          <TabsContent value="ai" className="hud-tab-pane space-y-4 pt-4">
-            <div className="hud-card-subpanel space-y-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                  Motor de Recomendación
-                </label>
-                <Select
-                  value={engine}
-                  onValueChange={(val) => setEngine(val as RecommendationEngine)}
-                  items={[
-                    { value: 'codex', label: 'Codex · Inteligencia Artificial (ChatGPT)' },
-                    { value: 'local', label: 'Algoritmo Local · Sin tokens (Offline)' },
-                  ]}
-                >
-                  <SelectTrigger className="w-full bg-black/30">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="codex">Codex · Inteligencia Artificial (ChatGPT)</SelectItem>
-                    <SelectItem value="local">Algoritmo Local · Sin tokens (Offline)</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground mt-1.5">
-                  {engine === 'codex'
-                    ? 'Usa tu sesión de Codex para razonamiento profundo y sugerencias en lenguaje natural.'
-                    : 'Calcula afinidades matemáticas directamente con tu SQLite local sin llamadas a OpenAI.'}
-                </p>
-              </div>
-
-              {engine === 'codex' && (
-                <>
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Modelo de Codex
-                    </label>
-                    <Select
-                      value={codex.model}
-                      onValueChange={(model) => {
-                        if (!model) return;
-                        const efforts = codexEffortsForModel(model);
-                        setCodex({
-                          model,
-                          effort: efforts.includes(codex.effort)
-                            ? codex.effort
-                            : 'medium',
-                        });
-                      }}
-                      items={modelOptions}
+                    {/* TAB 1: STEAM & FAMILIES */}
+                    <TabsContent
+                        value="steam"
+                        className="hud-tab-pane space-y-4 pt-4"
                     >
-                      <SelectTrigger className="w-full bg-black/30">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {modelOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                        <div className="hud-card-subpanel">
+                            <div className="flex items-center justify-between mb-2">
+                                <label
+                                    htmlFor="settings-steam-profile"
+                                    className="text-sm font-semibold text-foreground flex items-center gap-2"
+                                >
+                                    <Library
+                                        size={16}
+                                        className="text-emerald-400"
+                                    />
+                                    Perfil de Steam
+                                </label>
+                                {state?.syncedAt && (
+                                    <span className="text-xs text-muted-foreground">
+                                        Sincronizado:{' '}
+                                        {new Date(
+                                            state.syncedAt,
+                                        ).toLocaleDateString('es')}{' '}
+                                        {new Date(
+                                            state.syncedAt,
+                                        ).toLocaleTimeString('es', {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                        })}
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <Input
+                                    id="settings-steam-profile"
+                                    value={profileUrl}
+                                    onChange={(e) =>
+                                        setProfileUrl(e.target.value)
+                                    }
+                                    placeholder="https://steamcommunity.com/id/tu_usuario/"
+                                    className="bg-black/30 border-border/70"
+                                />
+                                <Button
+                                    variant="default"
+                                    onClick={onSync}
+                                    disabled={!!busy}
+                                    className="shrink-0 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold"
+                                >
+                                    <RefreshCw
+                                        size={14}
+                                        className={
+                                            busy === 'sync'
+                                                ? 'spin mr-1'
+                                                : 'mr-1'
+                                        }
+                                    />
+                                    {busy === 'sync'
+                                        ? 'Sincronizando…'
+                                        : 'Sincronizar'}
+                                </Button>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                El perfil y los detalles de juegos deben ser
+                                públicos en la privacidad de Steam.
+                            </p>
+                        </div>
 
-                  <div>
-                    <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                      Esfuerzo de Razonamiento
-                    </label>
-                    <Select
-                      value={codex.effort}
-                      onValueChange={(effort) => {
-                        if (!effort) return;
-                        setCodex({
-                          ...codex,
-                          effort: effort as CodexSettings['effort'],
-                        });
-                      }}
-                      items={effortOptions}
+                        <div className="hud-card-subpanel">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                    <Users
+                                        size={16}
+                                        className="text-cyan-400"
+                                    />
+                                    Steam Families (Préstamo Familiar)
+                                </h4>
+                                {state?.family?.syncedAt && (
+                                    <span className="text-xs text-muted-foreground">
+                                        Última lectura:{' '}
+                                        {new Date(
+                                            state.family.syncedAt,
+                                        ).toLocaleDateString('es')}
+                                    </span>
+                                )}
+                            </div>
+                            {state?.family ? (
+                                <div className="space-y-2">
+                                    <div className="hud-family-info-grid">
+                                        <div>
+                                            <span className="text-xs text-muted-foreground">
+                                                Grupo:
+                                            </span>{' '}
+                                            <strong className="text-sm text-foreground">
+                                                {state.family.name}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs text-muted-foreground">
+                                                Miembros:
+                                            </span>{' '}
+                                            <strong className="text-sm text-foreground">
+                                                {state.family.members.length}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <span className="text-xs text-muted-foreground">
+                                                Compartidos:
+                                            </span>{' '}
+                                            <strong className="text-sm text-cyan-400">
+                                                {
+                                                    state.games.filter(
+                                                        (g) => g.shared,
+                                                    ).length
+                                                }{' '}
+                                                juegos
+                                            </strong>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={onFamilySync}
+                                        disabled={!!busy}
+                                        className="w-full mt-2"
+                                    >
+                                        <RefreshCw
+                                            size={13}
+                                            className={
+                                                busy === 'family'
+                                                    ? 'spin mr-2'
+                                                    : 'mr-2'
+                                            }
+                                        />
+                                        {busy === 'family'
+                                            ? 'Actualizando familias…'
+                                            : 'Actualizar Steam Families'}
+                                    </Button>
+                                </div>
+                            ) : (
+                                <div className="space-y-2">
+                                    <p className="text-xs text-muted-foreground">
+                                        Añade las bibliotecas compartidas por tu
+                                        grupo familiar de Steam, incluso con
+                                        perfiles privados.
+                                    </p>
+                                    {!state?.setup.family && (
+                                        <div className="bg-amber-950/30 border border-amber-800/40 p-2.5 rounded-lg text-xs text-amber-200/90">
+                                            Requiere{' '}
+                                            <code>STEAM_FAMILY_TOKEN</code> en
+                                            tu archivo <code>.env.local</code>.{' '}
+                                            <a
+                                                href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="underline text-amber-300 inline-flex items-center gap-1"
+                                            >
+                                                Obtener token oficial{' '}
+                                                <ExternalLink size={11} />
+                                            </a>
+                                        </div>
+                                    )}
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={
+                                            !!busy ||
+                                            !state?.profile ||
+                                            !state?.setup.family
+                                        }
+                                        onClick={onFamilySync}
+                                        className="w-full"
+                                    >
+                                        Conectar Steam Families
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </TabsContent>
+
+                    {/* TAB 2: MOTOR & IA */}
+                    <TabsContent
+                        value="ai"
+                        className="hud-tab-pane space-y-4 pt-4"
                     >
-                      <SelectTrigger className="w-full bg-black/30">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {effortOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
-            </div>
-          </TabsContent>
+                        <div className="hud-card-subpanel space-y-3">
+                            <div>
+                                <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                                    Motor de Recomendación
+                                </label>
+                                <Select
+                                    value={engine}
+                                    onValueChange={(val) =>
+                                        setEngine(val as RecommendationEngine)
+                                    }
+                                    items={[
+                                        {
+                                            value: 'codex',
+                                            label: 'Codex · Inteligencia Artificial (ChatGPT)',
+                                        },
+                                        {
+                                            value: 'local',
+                                            label: 'Algoritmo Local · Sin tokens (Offline)',
+                                        },
+                                    ]}
+                                >
+                                    <SelectTrigger className="w-full bg-black/30">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="codex">
+                                            Codex · Inteligencia Artificial
+                                            (ChatGPT)
+                                        </SelectItem>
+                                        <SelectItem value="local">
+                                            Algoritmo Local · Sin tokens
+                                            (Offline)
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground mt-1.5">
+                                    {engine === 'codex'
+                                        ? 'Usa tu sesión de Codex para razonamiento profundo y sugerencias en lenguaje natural.'
+                                        : 'Calcula afinidades matemáticas directamente con tu SQLite local sin llamadas a OpenAI.'}
+                                </p>
+                            </div>
 
-          {/* TAB 3: DIAGNOSTIC / STATUS */}
-          <TabsContent value="status" className="hud-tab-pane space-y-4 pt-4">
-            <div className="hud-card-subpanel space-y-3">
-              <h4 className="text-sm font-semibold text-foreground">
-                Estado de las Integraciones
-              </h4>
+                            {engine === 'codex' && (
+                                <>
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                                            Modelo de Codex
+                                        </label>
+                                        <Select
+                                            value={codex.model}
+                                            onValueChange={(model) => {
+                                                if (!model) return;
+                                                const efforts =
+                                                    codexEffortsForModel(model);
+                                                setCodex({
+                                                    model,
+                                                    effort: efforts.includes(
+                                                        codex.effort,
+                                                    )
+                                                        ? codex.effort
+                                                        : 'medium',
+                                                });
+                                            }}
+                                            items={modelOptions}
+                                        >
+                                            <SelectTrigger className="w-full bg-black/30">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {modelOptions.map((opt) => (
+                                                    <SelectItem
+                                                        key={opt.value}
+                                                        value={opt.value}
+                                                    >
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
 
-              <div className="hud-status-checklist space-y-2">
-                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
-                  <div className="flex items-center gap-2.5">
-                    {state?.setup.steam ? (
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                    ) : (
-                      <AlertCircle size={16} className="text-amber-400" />
-                    )}
-                    <div>
-                      <div className="text-xs font-semibold text-foreground">Steam Web API</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {state?.setup.steam ? 'Clave activa y verificada' : 'Falta STEAM_API_KEY'}
-                      </div>
-                    </div>
-                  </div>
-                  {!state?.setup.steam && (
-                    <a
-                      href="https://steamcommunity.com/dev/apikey"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary underline inline-flex items-center gap-1"
+                                    <div>
+                                        <label className="text-xs font-medium text-muted-foreground mb-1 block">
+                                            Esfuerzo de Razonamiento
+                                        </label>
+                                        <Select
+                                            value={codex.effort}
+                                            onValueChange={(effort) => {
+                                                if (!effort) return;
+                                                setCodex({
+                                                    ...codex,
+                                                    effort: effort as CodexSettings['effort'],
+                                                });
+                                            }}
+                                            items={effortOptions}
+                                        >
+                                            <SelectTrigger className="w-full bg-black/30">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {effortOptions.map((opt) => (
+                                                    <SelectItem
+                                                        key={opt.value}
+                                                        value={opt.value}
+                                                    >
+                                                        {opt.label}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </TabsContent>
+
+                    {/* TAB 3: DIAGNOSTIC / STATUS */}
+                    <TabsContent
+                        value="status"
+                        className="hud-tab-pane space-y-4 pt-4"
                     >
-                      Obtener <ExternalLink size={10} />
-                    </a>
-                  )}
-                </div>
+                        <div className="hud-card-subpanel space-y-3">
+                            <h4 className="text-sm font-semibold text-foreground">
+                                Estado de las Integraciones
+                            </h4>
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
-                  <div className="flex items-center gap-2.5">
-                    {state?.setup.igdb ? (
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                    ) : (
-                      <AlertCircle size={16} className="text-amber-400" />
-                    )}
-                    <div>
-                      <div className="text-xs font-semibold text-foreground">IGDB / Twitch</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {state?.setup.igdb ? 'Credenciales activas' : 'Falta TWITCH_CLIENT_ID / SECRET'}
-                      </div>
-                    </div>
-                  </div>
-                  {!state?.setup.igdb && (
-                    <a
-                      href="https://dev.twitch.tv/console/apps"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary underline inline-flex items-center gap-1"
-                    >
-                      Registrar <ExternalLink size={10} />
-                    </a>
-                  )}
-                </div>
+                            <div className="hud-status-checklist space-y-2">
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
+                                    <div className="flex items-center gap-2.5">
+                                        {state?.setup.steam ? (
+                                            <CheckCircle2
+                                                size={16}
+                                                className="text-emerald-400"
+                                            />
+                                        ) : (
+                                            <AlertCircle
+                                                size={16}
+                                                className="text-amber-400"
+                                            />
+                                        )}
+                                        <div>
+                                            <div className="text-xs font-semibold text-foreground">
+                                                Steam Web API
+                                            </div>
+                                            <div className="text-[11px] text-muted-foreground">
+                                                {state?.setup.steam
+                                                    ? 'Clave activa y verificada'
+                                                    : 'Falta STEAM_API_KEY'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {!state?.setup.steam && (
+                                        <a
+                                            href="https://steamcommunity.com/dev/apikey"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs text-primary underline inline-flex items-center gap-1"
+                                        >
+                                            Obtener <ExternalLink size={10} />
+                                        </a>
+                                    )}
+                                </div>
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
-                  <div className="flex items-center gap-2.5">
-                    {state?.setup.codex ? (
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                    ) : (
-                      <AlertCircle size={16} className="text-amber-400" />
-                    )}
-                    <div>
-                      <div className="text-xs font-semibold text-foreground">Codex CLI / ChatGPT</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        {state?.setup.codex ? 'Conectado con ChatGPT' : state?.setup.codexMessage ?? 'Desconectado'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
+                                    <div className="flex items-center gap-2.5">
+                                        {state?.setup.igdb ? (
+                                            <CheckCircle2
+                                                size={16}
+                                                className="text-emerald-400"
+                                            />
+                                        ) : (
+                                            <AlertCircle
+                                                size={16}
+                                                className="text-amber-400"
+                                            />
+                                        )}
+                                        <div>
+                                            <div className="text-xs font-semibold text-foreground">
+                                                IGDB / Twitch
+                                            </div>
+                                            <div className="text-[11px] text-muted-foreground">
+                                                {state?.setup.igdb
+                                                    ? 'Credenciales activas'
+                                                    : 'Falta TWITCH_CLIENT_ID / SECRET'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {!state?.setup.igdb && (
+                                        <a
+                                            href="https://dev.twitch.tv/console/apps"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-xs text-primary underline inline-flex items-center gap-1"
+                                        >
+                                            Registrar <ExternalLink size={10} />
+                                        </a>
+                                    )}
+                                </div>
 
-                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
-                  <div className="flex items-center gap-2.5">
-                    {state?.setup.hltb ? (
-                      <CheckCircle2 size={16} className="text-emerald-400" />
-                    ) : (
-                      <CheckCircle2 size={16} className="text-muted-foreground" />
-                    )}
-                    <div>
-                      <div className="text-xs font-semibold text-foreground">HowLongToBeat</div>
-                      <div className="text-[11px] text-muted-foreground">
-                        Python {state?.setup.hltb ? 'activo con howlongtobeatpy' : 'opcional'}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
+                                    <div className="flex items-center gap-2.5">
+                                        {state?.setup.codex ? (
+                                            <CheckCircle2
+                                                size={16}
+                                                className="text-emerald-400"
+                                            />
+                                        ) : (
+                                            <AlertCircle
+                                                size={16}
+                                                className="text-amber-400"
+                                            />
+                                        )}
+                                        <div>
+                                            <div className="text-xs font-semibold text-foreground">
+                                                Codex CLI / ChatGPT
+                                            </div>
+                                            <div className="text-[11px] text-muted-foreground">
+                                                {state?.setup.codex
+                                                    ? 'Conectado con ChatGPT'
+                                                    : (state?.setup
+                                                          .codexMessage ??
+                                                      'Desconectado')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onReload}
-                disabled={!!busy}
-                className="w-full mt-2"
-              >
-                <RefreshCw size={13} className={busy === 'reload' ? 'spin mr-2' : 'mr-2'} />
-                {busy === 'reload' ? 'Comprobando…' : 'Comprobar conexiones'}
-              </Button>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </DialogContent>
-    </Dialog>
-  );
+                                <div className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-border/40">
+                                    <div className="flex items-center gap-2.5">
+                                        {state?.setup.hltb ? (
+                                            <CheckCircle2
+                                                size={16}
+                                                className="text-emerald-400"
+                                            />
+                                        ) : (
+                                            <CheckCircle2
+                                                size={16}
+                                                className="text-muted-foreground"
+                                            />
+                                        )}
+                                        <div>
+                                            <div className="text-xs font-semibold text-foreground">
+                                                HowLongToBeat
+                                            </div>
+                                            <div className="text-[11px] text-muted-foreground">
+                                                Python{' '}
+                                                {state?.setup.hltb
+                                                    ? 'activo con howlongtobeatpy'
+                                                    : 'opcional'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onReload}
+                                disabled={!!busy}
+                                className="w-full mt-2"
+                            >
+                                <RefreshCw
+                                    size={13}
+                                    className={
+                                        busy === 'reload' ? 'spin mr-2' : 'mr-2'
+                                    }
+                                />
+                                {busy === 'reload'
+                                    ? 'Comprobando…'
+                                    : 'Comprobar conexiones'}
+                            </Button>
+                        </div>
+                    </TabsContent>
+                </Tabs>
+            </DialogContent>
+        </Dialog>
+    );
 }

@@ -1,27 +1,27 @@
 html[data-theme='switch2'] {
-  --background: #18191c;
-  --foreground: #f7f7f8;
-  --muted-foreground: #bfc0c7;
-  --border: #45464e;
-  --theme-accent: #ff777f;
-  --theme-accent-rgb: 255, 119, 127;
-  --theme-accent-hover: #ffabb0;
-  --theme-accent-end: #ff5965;
-  --theme-on-accent: #36080d;
-  --theme-surface: #27282d;
-  --theme-inset: #151619;
-  --theme-selected: #4b292f;
-  --theme-backdrop: linear-gradient(135deg, #2e2025, #191a1e 45%, #202932);
-  --theme-panel: #25262b;
-  --theme-radius: 10px;
-  --theme-button-radius: 999px;
+    --background: #18191c;
+    --foreground: #f7f7f8;
+    --muted-foreground: #bfc0c7;
+    --border: #45464e;
+    --theme-accent: #ff777f;
+    --theme-accent-rgb: 255, 119, 127;
+    --theme-accent-hover: #ffabb0;
+    --theme-accent-end: #ff5965;
+    --theme-on-accent: #36080d;
+    --theme-surface: #27282d;
+    --theme-inset: #151619;
+    --theme-selected: #4b292f;
+    --theme-backdrop: linear-gradient(135deg, #2e2025, #191a1e 45%, #202932);
+    --theme-panel: #25262b;
+    --theme-radius: 10px;
+    --theme-button-radius: 999px;
 }
 html[data-theme='switch2'] .hud-topbar {
-  border-top: 4px solid #ff4856;
-  border-bottom: 2px solid #55bfff;
+    border-top: 4px solid #ff4856;
+    border-bottom: 2px solid #55bfff;
 }
 html[data-theme='switch2'] .hud-brand-icon {
-  border-left: 4px solid #55bfff;
-  border-right: 4px solid #ff4856;
-  background: #17181b;
+    border-left: 4px solid #55bfff;
+    border-right: 4px solid #ff4856;
+    background: #17181b;
 }

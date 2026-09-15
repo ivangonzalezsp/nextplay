@@ -1,34 +1,34 @@
 html[data-theme='ps5'] {
-  --background: #080d20;
-  --foreground: #f4f6ff;
-  --muted-foreground: #b0bad4;
-  --border: #394569;
-  --theme-accent: #a8c7ff;
-  --theme-accent-rgb: 168, 199, 255;
-  --theme-accent-hover: #e4edff;
-  --theme-accent-end: #83a9f5;
-  --theme-on-accent: #101e43;
-  --theme-surface: #151d35;
-  --theme-inset: #090f24;
-  --theme-selected: #293c68;
-  --theme-backdrop: radial-gradient(
-    ellipse at 75% 0%,
-    #284884,
-    #0c1632 45%,
-    #070b18 85%
-  );
-  --theme-panel: linear-gradient(120deg, #1b2a49e8, #10172be8);
-  --theme-radius: 24px;
-  --theme-button-radius: 999px;
+    --background: #080d20;
+    --foreground: #f4f6ff;
+    --muted-foreground: #b0bad4;
+    --border: #394569;
+    --theme-accent: #a8c7ff;
+    --theme-accent-rgb: 168, 199, 255;
+    --theme-accent-hover: #e4edff;
+    --theme-accent-end: #83a9f5;
+    --theme-on-accent: #101e43;
+    --theme-surface: #151d35;
+    --theme-inset: #090f24;
+    --theme-selected: #293c68;
+    --theme-backdrop: radial-gradient(
+        ellipse at 75% 0%,
+        #284884,
+        #0c1632 45%,
+        #070b18 85%
+    );
+    --theme-panel: linear-gradient(120deg, #1b2a49e8, #10172be8);
+    --theme-radius: 24px;
+    --theme-button-radius: 999px;
 }
 html[data-theme='ps5'] .hud-brand-icon {
-  background: #edf2ff;
-  border-color: #fff;
+    background: #edf2ff;
+    border-color: #fff;
 }
 html[data-theme='ps5'] .hud-controller-icon {
-  color: #24468b;
+    color: #24468b;
 }
 html[data-theme='ps5'] :is(.hud-game-card, .hud-library-card):hover {
-  outline: 2px solid #e4edff;
-  outline-offset: 3px;
+    outline: 2px solid #e4edff;
+    outline-offset: 3px;
 }

@@ -206,14 +206,14 @@ El ZIP contiene solo los archivos versionados de ese commit, sin cambios pendien
 
 ## Problemas frecuentes
 
-| Problema | Qué comprobar |
-| --- | --- |
-| `node` o `npm` no se reconoce, o falla `node:sqlite` | Instala Node.js 24 o posterior y abre una terminal nueva; comprueba `node --version`. |
-| PowerShell bloquea `npm.ps1` o `codex.ps1` | Utiliza `npm.cmd` o `codex.cmd` en los comandos correspondientes, o una terminal CMD. |
-| El puerto 3000 está ocupado | Detén la otra instancia de Next Play con `Ctrl+C` en su terminal antes de iniciar otra. |
-| Steam no importa juegos | Revisa tu clave, el enlace de tu perfil y la visibilidad pública de los detalles de juegos. |
+| Problema                                                      | Qué comprobar                                                                                                                                                                    |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node` o `npm` no se reconoce, o falla `node:sqlite`          | Instala Node.js 24 o posterior y abre una terminal nueva; comprueba `node --version`.                                                                                            |
+| PowerShell bloquea `npm.ps1` o `codex.ps1`                    | Utiliza `npm.cmd` o `codex.cmd` en los comandos correspondientes, o una terminal CMD.                                                                                            |
+| El puerto 3000 está ocupado                                   | Detén la otra instancia de Next Play con `Ctrl+C` en su terminal antes de iniciar otra.                                                                                          |
+| Steam no importa juegos                                       | Revisa tu clave, el enlace de tu perfil y la visibilidad pública de los detalles de juegos.                                                                                      |
 | No encuentra Codex o el modelo requiere una versión más nueva | Ejecuta `npm install -g @openai/codex@latest`, revisa `codex login status` y repite `npm run check:codex`. Consulta también la configuración de `NEXTPLAY_CODEX_BIN` más arriba. |
-| Faltan duraciones, géneros o resultados | Configura las fuentes opcionales, comprueba las conexiones y prueba con menos filtros. El modo local no descarga metadatos nuevos. |
+| Faltan duraciones, géneros o resultados                       | Configura las fuentes opcionales, comprueba las conexiones y prueba con menos filtros. El modo local no descarga metadatos nuevos.                                               |
 
 ## Comprobaciones
 

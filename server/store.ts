@@ -5,135 +5,140 @@ import { parseEnv } from 'node:util';
 import { EMPTY_STATE } from '../lib/model.ts';
 import type { State } from '../lib/model.ts';
 import {
-  backupDatabase,
-  loadState,
-  needsManualGameMigration,
-  openDatabase,
-  storeState,
+    backupDatabase,
+    loadState,
+    needsManualGameMigration,
+    openDatabase,
+    storeState,
 } from './database.ts';
 
 export const dataDir = () => resolve(process.env.NEXTPLAY_DATA_DIR || 'data');
 export class AppError extends Error {
-  status: number;
-  constructor(message: string, status = 400) {
-    super(message);
-    this.status = status;
-  }
+    status: number;
+    constructor(message: string, status = 400) {
+        super(message);
+        this.status = status;
+    }
 }
 export async function config() {
-  let local: Record<string, string | undefined> = {};
-  try {
-    local = parseEnv(await readFile(resolve('.env.local'), 'utf8'));
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== 'ENOENT')
-      throw new AppError('No se puede leer .env.local.', 500);
-  }
-  const get = (key: string) => (local[key] || process.env[key] || '').trim();
-  return {
-    steam: get('STEAM_API_KEY'),
-    familyToken: get('STEAM_FAMILY_TOKEN'),
-    python: get('NEXTPLAY_PYTHON'),
-    clientId: get('TWITCH_CLIENT_ID'),
-    clientSecret: get('TWITCH_CLIENT_SECRET'),
-    model: get('NEXTPLAY_CODEX_MODEL') || 'gpt-5.6-luna',
-  };
+    let local: Record<string, string | undefined> = {};
+    try {
+        local = parseEnv(await readFile(resolve('.env.local'), 'utf8'));
+    } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'ENOENT')
+            throw new AppError('No se puede leer .env.local.', 500);
+    }
+    const get = (key: string) => (local[key] || process.env[key] || '').trim();
+    return {
+        steam: get('STEAM_API_KEY'),
+        familyToken: get('STEAM_FAMILY_TOKEN'),
+        python: get('NEXTPLAY_PYTHON'),
+        clientId: get('TWITCH_CLIENT_ID'),
+        clientSecret: get('TWITCH_CLIENT_SECRET'),
+        model: get('NEXTPLAY_CODEX_MODEL') || 'gpt-5.6-luna',
+    };
 }
 export async function readJson<T>(path: string, fallback: T): Promise<T> {
-  try {
-    return JSON.parse(await readFile(path, 'utf8'));
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT')
-      return structuredClone(fallback);
-    throw new AppError(
-      'No se pueden leer los datos locales. Se han conservado los archivos originales; revisa data antes de continuar.',
-      500,
-    );
-  }
+    try {
+        return JSON.parse(await readFile(path, 'utf8'));
+    } catch (e) {
+        if ((e as NodeJS.ErrnoException).code === 'ENOENT')
+            return structuredClone(fallback);
+        throw new AppError(
+            'No se pueden leer los datos locales. Se han conservado los archivos originales; revisa data antes de continuar.',
+            500,
+        );
+    }
 }
 export async function atomicJson(path: string, value: unknown) {
-  await mkdir(resolve(path, '..'), { recursive: true });
-  const temp = path + '.' + randomUUID() + '.tmp';
-  try {
-    await writeFile(temp, JSON.stringify(value), {
-      encoding: 'utf8',
-      mode: 0o600,
-      flag: 'wx',
-    });
-    await rename(temp, path);
-  } finally {
-    await unlink(temp).catch(() => {});
-  }
+    await mkdir(resolve(path, '..'), { recursive: true });
+    const temp = path + '.' + randomUUID() + '.tmp';
+    try {
+        await writeFile(temp, JSON.stringify(value), {
+            encoding: 'utf8',
+            mode: 0o600,
+            flag: 'wx',
+        });
+        await rename(temp, path);
+    } finally {
+        await unlink(temp).catch(() => {});
+    }
 }
 export async function readState(): Promise<State> {
-  await mkdir(dataDir(), { recursive: true });
-  const db = openDatabase(join(dataDir(), 'library.sqlite'));
-  try {
-    const saved = loadState(db);
-    if (saved) return validState(saved);
-    // One-time migration. Keep the original JSON as a recovery copy.
-    const legacy = validState(
-      await readJson(join(dataDir(), 'state.json'), EMPTY_STATE),
-    );
-    storeState(db, legacy, true);
-    return validState(loadState(db)!);
-  } finally {
-    db.close();
-  }
+    await mkdir(dataDir(), { recursive: true });
+    const db = openDatabase(join(dataDir(), 'library.sqlite'));
+    try {
+        const saved = loadState(db);
+        if (saved) return validState(saved);
+        // One-time migration. Keep the original JSON as a recovery copy.
+        const legacy = validState(
+            await readJson(join(dataDir(), 'state.json'), EMPTY_STATE),
+        );
+        storeState(db, legacy, true);
+        return validState(loadState(db)!);
+    } finally {
+        db.close();
+    }
 }
 function validState(state: State): State {
-  if (
-    state?.version !== 1 ||
-    !Array.isArray(state.games) ||
-    !Array.isArray(state.conversation) ||
-    (state.shortlist !== undefined &&
-      (!Array.isArray(state.shortlist) ||
-        !state.shortlist.every(
-          (game) =>
-            game && Number.isSafeInteger(game.appId) && game.appId !== 0,
-        ))) ||
-    (state.history !== undefined && !Array.isArray(state.history)) ||
-    !state.preferences ||
-    !state.filters
-  )
-    throw new AppError(
-      'El formato de los datos locales no es compatible. Los originales se han conservado.',
-      500,
-    );
-  // Preserve the existing conversation on upgrade, before any action can reset it.
-  state.history ??= state.conversation.map((turn, i) => ({
-    ...turn,
-    id: `legacy-${turn.result.at}-${i}`,
-  }));
-  return state;
+    if (
+        state?.version !== 1 ||
+        !Array.isArray(state.games) ||
+        !Array.isArray(state.conversation) ||
+        (state.shortlist !== undefined &&
+            (!Array.isArray(state.shortlist) ||
+                !state.shortlist.every(
+                    (game) =>
+                        game &&
+                        Number.isSafeInteger(game.appId) &&
+                        game.appId !== 0,
+                ))) ||
+        (state.history !== undefined && !Array.isArray(state.history)) ||
+        !state.preferences ||
+        !state.filters
+    )
+        throw new AppError(
+            'El formato de los datos locales no es compatible. Los originales se han conservado.',
+            500,
+        );
+    // Preserve the existing conversation on upgrade, before any action can reset it.
+    state.history ??= state.conversation.map((turn, i) => ({
+        ...turn,
+        id: `legacy-${turn.result.at}-${i}`,
+    }));
+    return state;
 }
 export async function saveState(state: State) {
-  validState(state);
-  await mkdir(dataDir(), { recursive: true });
-  const db = openDatabase(join(dataDir(), 'library.sqlite'));
-  try {
-    if (needsManualGameMigration(db, state.games))
-      backupDatabase(
-        db,
-        join(dataDir(), `library.before-manual-games.${randomUUID()}.sqlite`),
-      );
-    storeState(db, state);
-  } finally {
-    db.close();
-  }
+    validState(state);
+    await mkdir(dataDir(), { recursive: true });
+    const db = openDatabase(join(dataDir(), 'library.sqlite'));
+    try {
+        if (needsManualGameMigration(db, state.games))
+            backupDatabase(
+                db,
+                join(
+                    dataDir(),
+                    `library.before-manual-games.${randomUUID()}.sqlite`,
+                ),
+            );
+        storeState(db, state);
+    } finally {
+        db.close();
+    }
 }
 
 // ponytail: one local user; reject concurrent mutations instead of adding a job queue.
 let busy = false;
 export async function exclusive<T>(fn: () => Promise<T>): Promise<T> {
-  if (busy)
-    throw new AppError(
-      'Hay una operación en curso. Espera a que termine e inténtalo de nuevo.',
-      409,
-    );
-  busy = true;
-  try {
-    return await fn();
-  } finally {
-    busy = false;
-  }
+    if (busy)
+        throw new AppError(
+            'Hay una operación en curso. Espera a que termine e inténtalo de nuevo.',
+            409,
+        );
+    busy = true;
+    try {
+        return await fn();
+    } finally {
+        busy = false;
+    }
 }

@@ -3,84 +3,84 @@
 @import './switch2.css';
 
 .theme-selector {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
 }
 .theme-selector select {
-  max-width: 145px;
-  min-height: 36px;
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--card);
-  color: var(--foreground);
-  font: inherit;
+    max-width: 145px;
+    min-height: 36px;
+    padding: 5px 8px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--card);
+    color: var(--foreground);
+    font: inherit;
 }
 .theme-selector select:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 3px;
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
 }
 
 /* Shared theme contract. No overrides are applied to the original HUD. */
 html[data-theme]:not([data-theme='default']) {
-  --primary: var(--theme-accent);
-  --card: var(--theme-surface);
-  --secondary: var(--theme-selected);
+    --primary: var(--theme-accent);
+    --card: var(--theme-surface);
+    --secondary: var(--theme-selected);
 }
 html[data-theme]:not([data-theme='default']) body {
-  background: var(--theme-backdrop);
-  background-attachment: fixed;
+    background: var(--theme-backdrop);
+    background-attachment: fixed;
 }
 html[data-theme]:not([data-theme='default'])
-  :is(
-    .hud-topbar,
-    .hud-quick-vibe-container,
-    .hud-hero-spotlight,
-    .hud-copilot-dock,
-    .empty-state
-  ) {
-  background: var(--theme-panel);
-  border-color: var(--border);
+    :is(
+        .hud-topbar,
+        .hud-quick-vibe-container,
+        .hud-hero-spotlight,
+        .hud-copilot-dock,
+        .empty-state
+    ) {
+    background: var(--theme-panel);
+    border-color: var(--border);
 }
 html[data-theme]:not([data-theme='default'])
-  :is(
-    .hud-game-card,
-    .hud-library-card,
-    .hud-hero-spotlight,
-    .hud-quick-vibe-container,
-    .hud-copilot-dock,
-    .panel,
-    .hud-library-table-container,
-    .empty-state
-  ) {
-  border-radius: var(--theme-radius);
+    :is(
+        .hud-game-card,
+        .hud-library-card,
+        .hud-hero-spotlight,
+        .hud-quick-vibe-container,
+        .hud-copilot-dock,
+        .panel,
+        .hud-library-table-container,
+        .empty-state
+    ) {
+    border-radius: var(--theme-radius);
 }
 html[data-theme]:not([data-theme='default']) .hud-main-recommend-btn {
-  border-radius: var(--theme-button-radius);
+    border-radius: var(--theme-button-radius);
 }
 html[data-theme]:not([data-theme='default']) .hud-chip.vibe.active {
-  border-color: var(--primary);
+    border-color: var(--primary);
 }
 html[data-theme]:not([data-theme='default'])
-  .hud-copilot-send-btn:hover:not(:disabled) {
-  background: var(--theme-accent-hover);
+    .hud-copilot-send-btn:hover:not(:disabled) {
+    background: var(--theme-accent-hover);
 }
 @media (max-width: 600px) {
-  .hud-topbar {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-  .hud-actions-group {
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-  .theme-selector {
-    flex-wrap: wrap;
-  }
-  .hud-user-name {
-    display: none;
-  }
+    .hud-topbar {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .hud-actions-group {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .theme-selector {
+        flex-wrap: wrap;
+    }
+    .hud-user-name {
+        display: none;
+    }
 }
