@@ -537,6 +537,14 @@ export default function Home() {
                 ]),
         ).values(),
     ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+    const libraryTagKeys = new Set(
+        games
+            .flatMap((g) => (g.steamTags ?? []).slice(0, 4))
+            .map(steamTagKey),
+    );
+    const librarySteamTags = steamTags.filter((tag) =>
+        libraryTagKeys.has(tag.value),
+    );
 
     const tagLabels = new Map(steamTags.map((tag) => [tag.value, tag.label]));
 
@@ -545,11 +553,12 @@ export default function Home() {
         : null;
 
     const searchText = search.toLocaleLowerCase();
-    const filtered = games.filter(
-        (g) =>
+    const filtered = games.filter((g) => {
+        const visibleTags = (g.steamTags ?? []).slice(0, 4);
+        return (
             [
                 g.name,
-                ...(g.steamTags ?? []).flatMap((tag) => [
+                ...visibleTags.flatMap((tag) => [
                     tag.name,
                     ...(tag.englishName ? [tag.englishName] : []),
                 ]),
@@ -558,16 +567,15 @@ export default function Home() {
                 .toLocaleLowerCase()
                 .includes(searchText) &&
             (!libraryTag ||
-                (g.steamTags ?? []).some(
-                    (tag) => steamTagKey(tag) === libraryTag,
-                )) &&
+                visibleTags.some((tag) => steamTagKey(tag) === libraryTag)) &&
             (!libraryOwner ||
                 (libraryOwner === 'own'
                     ? g.owned
                     : libraryOwner === 'shared'
                       ? g.shared
-                      : g.ownerSteamIds?.includes(libraryOwner))),
-    );
+                      : g.ownerSteamIds?.includes(libraryOwner)))
+        );
+    });
 
     const ordered = sortLibraryGames(
         filtered,
@@ -1189,7 +1197,7 @@ export default function Home() {
                             setLibraryTag={setLibraryTag}
                             libraryOrderBy={libraryOrderBy}
                             setLibraryOrderBy={setLibraryOrderBy}
-                            steamTags={steamTags}
+                            steamTags={librarySteamTags}
                             savedIds={savedIds}
                             onShortlist={shortlist}
                             onPreference={preference}
