@@ -454,18 +454,41 @@ export function LibraryView({
                                         </button>
                                     </div>
 
-                                    {/* Bottom Duration Badge */}
-                                    {game.hltb?.mainHours && (
-                                        <div className="hud-lib-duration-pill">
-                                            <Clock
-                                                size={10}
-                                                className="mr-1 text-emerald-400"
-                                            />
-                                            <span>
-                                                {formatHours(
-                                                    game.hltb.mainHours,
-                                                )}
-                                            </span>
+                                    {(game.hltb?.mainHours ||
+                                        game.steamTags?.length) && (
+                                        <div className="hud-cover-bottom">
+                                            {game.hltb?.mainHours && (
+                                                <div className="hud-lib-duration-pill">
+                                                    <Clock
+                                                        size={10}
+                                                        className="mr-1 text-emerald-400"
+                                                    />
+                                                    <span>
+                                                        {formatHours(
+                                                            game.hltb.mainHours,
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {!!game.steamTags?.length && (
+                                                <div
+                                                    className="hud-cover-tags"
+                                                    aria-label="Etiquetas"
+                                                >
+                                                    {game.steamTags
+                                                        .slice(0, 4)
+                                                        .map((tag) => (
+                                                            <span
+                                                                key={steamTagKey(
+                                                                    tag,
+                                                                )}
+                                                                className="hud-tag-pill small"
+                                                            >
+                                                                {tag.name}
+                                                            </span>
+                                                        ))}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -66,32 +66,53 @@ export function SettingsModal({
     busy: string;
 }) {
     const [activeTab, setActiveTab] = useState('steam');
+    const [draftEngine, setDraftEngine] = useState<RecommendationEngine | null>(
+        null,
+    );
+    const [draftCodex, setDraftCodex] = useState<CodexSettings | null>(null);
+    const selectedEngine = draftEngine ?? engine;
+    const selectedCodex = draftCodex ?? codex;
+
+    function handleOpenChange(nextOpen: boolean) {
+        if (!nextOpen) {
+            setDraftEngine(null);
+            setDraftCodex(null);
+        }
+        onOpenChange(nextOpen);
+    }
 
     const modelOptions = [
         ...CODEX_MODELS,
-        ...(CODEX_MODELS.some((m) => m.value === codex.model)
+        ...(CODEX_MODELS.some((m) => m.value === selectedCodex.model)
             ? []
-            : [{ value: codex.model, label: codex.model + ' · configurado' }]),
+            : [
+                  {
+                      value: selectedCodex.model,
+                      label: selectedCodex.model + ' · configurado',
+                  },
+              ]),
     ];
 
-    const effortOptions = codexEffortsForModel(codex.model).map((value) => ({
-        value,
-        label:
-            value === 'low'
-                ? 'Bajo · más rápido'
-                : value === 'medium'
-                  ? 'Medio · equilibrado'
-                  : value === 'high'
-                    ? 'Alto · más razonado'
-                    : value === 'xhigh'
-                      ? 'Muy alto'
-                      : value === 'max'
-                        ? 'Máximo'
-                        : 'Ultra',
-    }));
+    const effortOptions = codexEffortsForModel(selectedCodex.model).map(
+        (value) => ({
+            value,
+            label:
+                value === 'low'
+                    ? 'Bajo · más rápido'
+                    : value === 'medium'
+                      ? 'Medio · equilibrado'
+                      : value === 'high'
+                        ? 'Alto · más razonado'
+                        : value === 'xhigh'
+                          ? 'Muy alto'
+                          : value === 'max'
+                            ? 'Máximo'
+                            : 'Ultra',
+        }),
+    );
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogContent className="hud-settings-modal sm:max-w-2xl">
                 <DialogHeader>
                     <div className="flex items-center gap-2">
@@ -320,9 +341,11 @@ export function SettingsModal({
                                     Motor de Recomendación
                                 </label>
                                 <Select
-                                    value={engine}
+                                    value={selectedEngine}
                                     onValueChange={(val) =>
-                                        setEngine(val as RecommendationEngine)
+                                        setDraftEngine(
+                                            val as RecommendationEngine,
+                                        )
                                     }
                                     items={[
                                         {
@@ -350,30 +373,30 @@ export function SettingsModal({
                                     </SelectContent>
                                 </Select>
                                 <p className="text-xs text-muted-foreground mt-1.5">
-                                    {engine === 'codex'
+                                    {selectedEngine === 'codex'
                                         ? 'Usa tu sesión de Codex para razonamiento profundo y sugerencias en lenguaje natural.'
                                         : 'Calcula afinidades matemáticas directamente con tu SQLite local sin llamadas a OpenAI.'}
                                 </p>
                             </div>
 
-                            {engine === 'codex' && (
+                            {selectedEngine === 'codex' && (
                                 <>
                                     <div>
                                         <label className="text-xs font-medium text-muted-foreground mb-1 block">
                                             Modelo de Codex
                                         </label>
                                         <Select
-                                            value={codex.model}
+                                            value={selectedCodex.model}
                                             onValueChange={(model) => {
                                                 if (!model) return;
                                                 const efforts =
                                                     codexEffortsForModel(model);
-                                                setCodex({
+                                                setDraftCodex({
                                                     model,
                                                     effort: efforts.includes(
-                                                        codex.effort,
+                                                        selectedCodex.effort,
                                                     )
-                                                        ? codex.effort
+                                                        ? selectedCodex.effort
                                                         : 'medium',
                                                 });
                                             }}
@@ -400,11 +423,11 @@ export function SettingsModal({
                                             Esfuerzo de Razonamiento
                                         </label>
                                         <Select
-                                            value={codex.effort}
+                                            value={selectedCodex.effort}
                                             onValueChange={(effort) => {
                                                 if (!effort) return;
-                                                setCodex({
-                                                    ...codex,
+                                                setDraftCodex({
+                                                    ...selectedCodex,
                                                     effort: effort as CodexSettings['effort'],
                                                 });
                                             }}
@@ -428,6 +451,17 @@ export function SettingsModal({
                                 </>
                             )}
                         </div>
+                        <Button
+                            type="button"
+                            onClick={() => {
+                                setEngine(selectedEngine);
+                                setCodex(selectedCodex);
+                                handleOpenChange(false);
+                            }}
+                            className="w-full sm:w-auto sm:ml-auto"
+                        >
+                            Guardar
+                        </Button>
                     </TabsContent>
 
                     {/* TAB 3: DIAGNOSTIC / STATUS */}

@@ -791,6 +791,28 @@ export default function Home() {
                                                         }
                                                     </span>
                                                 </div>
+                                                {game.steamTags &&
+                                                    game.steamTags.length > 0 && (
+                                                        <div className="hud-cover-bottom">
+                                                            <div
+                                                                className="hud-cover-tags"
+                                                                aria-label="Etiquetas"
+                                                            >
+                                                                {game.steamTags
+                                                                    .slice(0, 4)
+                                                                    .map((tag) => (
+                                                                        <span
+                                                                            key={steamTagKey(
+                                                                                tag,
+                                                                            )}
+                                                                            className="hud-tag-pill small"
+                                                                        >
+                                                                            {tag.name}
+                                                                        </span>
+                                                                    ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                             </div>
                                             <div className="hud-card-body">
                                                 <h4 className="hud-card-title">
