@@ -111,6 +111,19 @@ export type Game = {
     genres?: { id: number; name: string }[];
     steamTags?: { id?: number; name: string; englishName?: string }[];
     steamTagsCheckedAt?: number;
+    steamAchievements?: {
+        unlocked: number;
+        total: number;
+        at: number;
+        achievements: {
+            apiName: string;
+            name: string;
+            description?: string;
+            hidden: boolean;
+            achieved: boolean;
+            unlockTime?: number;
+        }[];
+    };
     gameModes?: number[];
     durationHours?: number | null;
     durationSamples?: number;

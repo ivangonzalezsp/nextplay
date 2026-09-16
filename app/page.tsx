@@ -418,6 +418,43 @@ export default function Home() {
         });
     }
 
+    async function refreshAchievements(game: Game) {
+        await action('achievements-' + game.appId, async () => {
+            accept(
+                await api('steam/achievements/sync', {
+                    appId: game.appId,
+                    force: true,
+                }),
+            );
+        });
+    }
+
+    const activeAchievementGames = (state?.games ?? [])
+        .filter((game) =>
+            ['playing', 'paused'].includes(
+                state?.preferences[game.appId]?.status ?? '',
+            ),
+        )
+        .map((game) => game.appId)
+        .join(',');
+    const achievementSyncKey = useRef('');
+    useEffect(() => {
+        if (!state?.profile || !activeAchievementGames) return;
+        const sync = () => {
+            void api('steam/achievements/sync', {})
+                .then((next: Snapshot) => accept(next))
+                .catch((e) =>
+                    logError('browser', 'achievements:sync-failed', e),
+                );
+        };
+        if (achievementSyncKey.current !== activeAchievementGames) {
+            achievementSyncKey.current = activeAchievementGames;
+            sync();
+        }
+        const timer = window.setInterval(sync, 6 * 60 * 60 * 1000);
+        return () => window.clearInterval(timer);
+    }, [activeAchievementGames, state?.profile?.steamId]);
+
     async function playHistoryDate(index: number, date: string) {
         await action('play-date-' + index, async () => {
             accept(await api('play-history', { index, date }, 'PATCH'));
@@ -1220,6 +1257,7 @@ export default function Home() {
                             onPreference={preference}
                             onSimilar={similar}
                             onAdd={addGame}
+                            onRefreshAchievements={refreshAchievements}
                             busy={busy}
                         />
                     </TabsContent>

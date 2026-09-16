@@ -13,6 +13,8 @@ import {
     Check,
     X,
     Gamepad2,
+    Trophy,
+    RefreshCw,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -52,6 +54,78 @@ function formatHours(value: number | null | undefined) {
         : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
 }
 
+function AchievementProgress({
+    game,
+    busy,
+    onRefresh,
+}: {
+    game: Game;
+    busy: boolean;
+    onRefresh?: (game: Game) => Promise<void>;
+}) {
+    const data = game.steamAchievements;
+    const percent = data?.total
+        ? Math.round((data.unlocked / data.total) * 100)
+        : 0;
+    return (
+        <details className="mt-2 border-t border-border/30 pt-2 text-xs">
+            <summary className="flex cursor-pointer items-center gap-1.5 text-amber-300">
+                <Trophy size={13} />
+                {data
+                    ? `${data.unlocked}/${data.total} logros · ${percent}%`
+                    : 'Cargar progreso de logros'}
+            </summary>
+            <div className="mt-2 space-y-2 text-muted-foreground">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-[11px]"
+                    disabled={busy || !onRefresh}
+                    onClick={() => onRefresh && void onRefresh(game)}
+                    title="Actualizar ahora la lista de logros"
+                >
+                    <RefreshCw
+                        size={12}
+                        className={busy ? 'mr-1 animate-spin' : 'mr-1'}
+                    />
+                    Actualizar logros
+                </Button>
+                {data && (
+                    <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
+                        {data.achievements.map((achievement) => (
+                            <div
+                                key={achievement.apiName}
+                                className={
+                                    achievement.achieved
+                                        ? 'text-foreground'
+                                        : ''
+                                }
+                            >
+                                <span className="mr-1">
+                                    {achievement.achieved ? '✓' : '○'}
+                                </span>
+                                {achievement.hidden && !achievement.achieved
+                                    ? 'Logro oculto'
+                                    : achievement.name}
+                                {achievement.description &&
+                                    (achievement.achieved ||
+                                        !achievement.hidden) && (
+                                        <span className="block pl-4 text-[10px] text-muted-foreground">
+                                            {achievement.description}
+                                        </span>
+                                    )}
+                            </div>
+                        ))}
+                        {!data.total && (
+                            <p>Este juego no tiene logros en Steam.</p>
+                        )}
+                    </div>
+                )}
+            </div>
+        </details>
+    );
+}
+
 export function LibraryView({
     state,
     games,
@@ -73,6 +147,7 @@ export function LibraryView({
     onPreference,
     onSimilar,
     onAdd,
+    onRefreshAchievements,
     busy,
 }: {
     state: Snapshot | null;
@@ -95,6 +170,7 @@ export function LibraryView({
     onPreference: (game: Game, change: Partial<Preference>) => void;
     onSimilar: (game: Game) => void;
     onAdd: (input: AddGameInput) => Promise<void>;
+    onRefreshAchievements?: (game: Game) => Promise<void>;
     busy: string;
 }) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -633,6 +709,21 @@ export function LibraryView({
                                             onPreference(game, change)
                                         }
                                     />
+                                    {['playing', 'paused'].includes(
+                                        pref.status,
+                                    ) &&
+                                        game.appId > 0 && (
+                                            <AchievementProgress
+                                                game={game}
+                                                busy={
+                                                    busy ===
+                                                    `achievements-${game.appId}`
+                                                }
+                                                onRefresh={
+                                                    onRefreshAchievements
+                                                }
+                                            />
+                                        )}
                                 </div>
                             </article>
                         );
@@ -702,9 +793,26 @@ export function LibraryView({
                                                         />
                                                     </div>
                                                 )}
-                                                <span className="font-semibold text-foreground text-xs">
-                                                    {game.name}
-                                                </span>
+                                                <div>
+                                                    <span className="font-semibold text-foreground text-xs">
+                                                        {game.name}
+                                                    </span>
+                                                    {[
+                                                        'playing',
+                                                        'paused',
+                                                    ].includes(pref.status) &&
+                                                        game.appId > 0 && (
+                                                            <span className="ml-2 text-[10px] text-amber-300">
+                                                                <Trophy
+                                                                    size={10}
+                                                                    className="mr-0.5 inline"
+                                                                />
+                                                                {game.steamAchievements
+                                                                    ? `${game.steamAchievements.unlocked}/${game.steamAchievements.total}`
+                                                                    : 'logros pendientes'}
+                                                            </span>
+                                                        )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td>
