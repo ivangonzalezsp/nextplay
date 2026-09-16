@@ -13,7 +13,7 @@
 - Importación sobre instalación vacía: juegos manuales, preferencias, historial y claves conservados; originales intactos; claves inválidas e instalación no vacía rechazadas.
 - Revisión del asistente en el navegador: validación de errores, conexiones opcionales, opciones desactivadas inicialmente y finalización persistente.
 - Repositorio de desarrollo privado y repositorio de descargas público. Empaquetado por lista de archivos admitidos y búsqueda de coincidencias con credenciales locales. No se distribuyen `.env`, datos, autenticación ni credenciales de publicación.
-- Compilación completa e instalación de ensayo en [GitHub Actions](https://github.com/ivangonzalezsp/nextplay/actions/runs/35110521908), superadas. `RELEASES_TOKEN` está configurado y la primera Release pública es 0.2.0.
+- Compilación completa, instalación aislada y publicación en [GitHub Actions](https://github.com/ivangonzalezsp/nextplay/actions/runs/35155967948), superadas. `RELEASES_TOKEN` está configurado y la Release pública validada es 0.2.2.
 - Solicitudes HTTP reales por la interfaz privada del mismo equipo: biblioteca accesible y operaciones de credenciales, autenticación, actualización y salida rechazadas; la administración por loopback sigue disponible. Esto no sustituye la prueba con móvil físico.
 
 ## Reducción del paquete en 0.2.2
@@ -23,7 +23,8 @@
 - Se mantienen todas las versiones e integridades del lockfile. Las dependencias que usa la compilación siguen disponibles al desarrollar; el usuario no ejecuta `npm install` ni necesita conexión a npm.
 - Arranque del paquete, recursos HTML/JS/CSS y consulta al catálogo mediante el proceso MCP empaquetado, superados con PATH sin herramientas de desarrollo. La prueba también reinicia el servidor y comprueba que la credencial no se devuelve en la API.
 - Instalación limpia 0.2.2, apertura, segunda apertura, reinicio, salida y desinstalación: superadas en 18,3 segundos en este equipo (frente a 39,5 segundos para 0.2.1; una ejecución por versión, no una garantía para otros equipos).
-- Descarga anónima del EXE público, comprobación SHA-256 y actualización completa desde 0.2.1 se deben registrar después de publicar 0.2.2. El ensayo debe comprobar de nuevo biblioteca, juegos manuales, preferencias, historiales y claves.
+- La Release pública `v0.2.2` se descargó sin autenticación; contiene solo `NextPlay-Setup-0.2.2-x64.exe` (129.212.636 bytes) y `SHA256SUMS.txt`. El SHA-256 público es `7283cf86fe480924f15d181457504c76273a09e7f858c0bfc7c76292355acd34`.
+- Actualización pública completa de `0.2.1` a `0.2.2` mediante la API normal: descarga anónima, comprobación SHA-256, backup, instalación, reapertura y desinstalación superadas. Se conservaron biblioteca, juego manual, preferencias, historial, historial de juego y claves en `work/install-tests/004c1c20c43c40edbd7af911f02aa952`.
 
 ## Pendiente antes de ampliar el piloto
 
