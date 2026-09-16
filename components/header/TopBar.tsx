@@ -143,7 +143,7 @@ export function TopBar({
                         </div>
                     )}
                     <span className="hud-user-name">
-                        {state?.profile?.name ?? 'fineku'}
+                        {state?.profile?.name ?? 'Tu perfil'}
                     </span>
                 </div>
             </div>

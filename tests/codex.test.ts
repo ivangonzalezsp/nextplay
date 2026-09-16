@@ -34,6 +34,7 @@ void test('Codex errors identify the failure without leaking raw output', async 
             ['stream disconnected before completion', /conexión/, 502],
             ['usage limit reached', /límite de uso/, 429],
             ['401 Unauthorized', /iniciar sesión/, 503],
+            ['Not logged in', /iniciar sesión/, 503],
             ['Unknown failure', /no ha podido completar/, 502],
         ] as const) {
             await assert.rejects(

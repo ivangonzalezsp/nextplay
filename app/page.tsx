@@ -7,6 +7,7 @@ import Tastes from './tastes';
 import GameOpinion from './opinion';
 import { TopBar } from '@/components/header/TopBar';
 import { SettingsModal } from '@/components/settings/SettingsModal';
+import { AppSetup } from '@/components/settings/AppSetup';
 import { QuickVibeBar } from '@/components/recommendations/QuickVibeBar';
 import { HeroSpotlight } from '@/components/recommendations/HeroSpotlight';
 import { GameCard } from '@/components/recommendations/GameCard';
@@ -133,10 +134,8 @@ export default function Home() {
     const [state, setState] = useState<Snapshot | null>(null);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [codex, setCodex] = useState<CodexSettings>(DEFAULT_CODEX_SETTINGS);
-    const [engine, setEngine] = useState<RecommendationEngine>('codex');
-    const [profileUrl, setProfileUrl] = useState(
-        'https://steamcommunity.com/id/fineku/',
-    );
+    const [engine, setEngine] = useState<RecommendationEngine>('local');
+    const [profileUrl, setProfileUrl] = useState('');
     const [text, setText] = useState('');
     const [reference, setReference] = useState<Game | null>(null);
     const [search, setSearch] = useState('');
@@ -152,6 +151,7 @@ export default function Home() {
     const [result, setResult] = useState<Recommendation | null>(null);
     const [tab, setTab] = useState('recommend');
     const [settingsOpen, setSettingsOpen] = useState(false);
+    const [setupOpen, setSetupOpen] = useState(false);
 
     const activeFilters = useRef(filters);
     const activeCodex = useRef(codex);
@@ -197,7 +197,7 @@ export default function Home() {
         const next: Snapshot = await api('state');
         accept(next);
         setFilters(next.filters);
-        setEngine(next.engine ?? 'codex');
+        setEngine(next.setup.codex ? (next.engine ?? 'codex') : 'local');
         setCodex(
             next.codex ?? {
                 model: next.setup.codexModel,
@@ -213,7 +213,9 @@ export default function Home() {
             .then((next: Snapshot) => {
                 accept(next);
                 setFilters(next.filters);
-                setEngine(next.engine ?? 'codex');
+                setEngine(
+                    next.setup.codex ? (next.engine ?? 'codex') : 'local',
+                );
                 setCodex(
                     next.codex ?? {
                         model: next.setup.codexModel,
@@ -538,9 +540,7 @@ export default function Home() {
         ).values(),
     ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
     const libraryTagKeys = new Set(
-        games
-            .flatMap((g) => (g.steamTags ?? []).slice(0, 4))
-            .map(steamTagKey),
+        games.flatMap((g) => (g.steamTags ?? []).slice(0, 4)).map(steamTagKey),
     );
     const librarySteamTags = steamTags.filter((tag) =>
         libraryTagKeys.has(tag.value),
@@ -622,6 +622,16 @@ export default function Home() {
                 codex={codex}
                 setCodex={setCodex}
                 busy={busy}
+                onSetup={() => {
+                    setSettingsOpen(false);
+                    setSetupOpen(true);
+                }}
+            />
+            <AppSetup
+                open={setupOpen}
+                onOpenChange={setSetupOpen}
+                state={state}
+                onReload={load}
             />
 
             <main id="main" className="workspace">
@@ -800,7 +810,8 @@ export default function Home() {
                                                     </span>
                                                 </div>
                                                 {game.steamTags &&
-                                                    game.steamTags.length > 0 && (
+                                                    game.steamTags.length >
+                                                        0 && (
                                                         <div className="hud-cover-bottom">
                                                             <div
                                                                 className="hud-cover-tags"
@@ -808,16 +819,22 @@ export default function Home() {
                                                             >
                                                                 {game.steamTags
                                                                     .slice(0, 4)
-                                                                    .map((tag) => (
-                                                                        <span
-                                                                            key={steamTagKey(
-                                                                                tag,
-                                                                            )}
-                                                                            className="hud-tag-pill small"
-                                                                        >
-                                                                            {tag.name}
-                                                                        </span>
-                                                                    ))}
+                                                                    .map(
+                                                                        (
+                                                                            tag,
+                                                                        ) => (
+                                                                            <span
+                                                                                key={steamTagKey(
+                                                                                    tag,
+                                                                                )}
+                                                                                className="hud-tag-pill small"
+                                                                            >
+                                                                                {
+                                                                                    tag.name
+                                                                                }
+                                                                            </span>
+                                                                        ),
+                                                                    )}
                                                             </div>
                                                         </div>
                                                     )}

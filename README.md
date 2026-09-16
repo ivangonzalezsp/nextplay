@@ -2,7 +2,35 @@
 
 Web personal en español para elegir qué jugar de tu biblioteca de Steam. Puedes usar el algoritmo local sin IA o tu sesión de **Codex con ChatGPT**, sin configurar la API de OpenAI. Cada persona instala la app en su ordenador y utiliza sus propias cuentas y claves.
 
-## Requisitos
+## Instalar en Windows
+
+[**Descargar Next Play para Windows x64**](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest)
+
+1. Descarga **NextPlay-Setup-…-x64.exe**, ejecútalo y abre el acceso directo **Next Play**.
+2. El asistente permite añadir tu perfil y clave de Steam e importar tus juegos. Steam Families, IGDB y ChatGPT son opcionales. Puedes usar el algoritmo local sin IA.
+3. Si tienes una instalación anterior, ciérrala y selecciona **Importar instalación anterior** antes de configurar la nueva. Los datos originales se conservan; conecta ChatGPT de nuevo desde el asistente.
+
+El instalador incluye Node, Codex y Python con HowLongToBeat: no necesitas Git, terminal ni instalar herramientas aparte. Cada persona conecta sus propias cuentas. Requiere Windows 10/11 de 64 bits. Esta primera distribución no tiene firma de código y Windows puede mostrar avisos o bloquearla.
+
+### Abrir, cerrar y actualizar
+
+El acceso directo inicia Next Play y abre el navegador. Una segunda apertura reutiliza la instancia. Cerrar la pestaña mantiene la aplicación activa; **Salir**, en su icono de bandeja, la cierra por completo.
+
+En **Ajustes → Configurar cuentas y aplicación** puedes guardar conexiones, conectar o cancelar el inicio de sesión oficial de ChatGPT, buscar actualizaciones y activar opcionalmente el inicio con Windows. **Actualizar y reiniciar** descarga la versión pública, verifica SHA-256 y guarda una copia antes de instalar. Termina cualquier operación en curso primero. La búsqueda automática se limita a una vez al día.
+
+El acceso empieza limitado al PC. **Permitir acceso desde mi red local** solicita permiso de Windows, reinicia Next Play y muestra la dirección para el móvil. La regla de firewall se limita al programa, a redes privadas y a la subred local. La gestión de credenciales, autenticación, actualizaciones y procesos sigue restringida al PC por conexión real y origen HTTP.
+
+### Datos y privacidad
+
+El programa está en `%LOCALAPPDATA%\Programs\NextPlay`; la biblioteca, configuración, sesión de Codex y copias están en `%LOCALAPPDATA%\NextPlay`. Las credenciales se guardan localmente; la API solo devuelve si están configuradas. Omitir una clave conserva su valor y eliminarla requiere una acción explícita. La desinstalación conserva tus datos. Para una copia manual, sal de Next Play y copia la carpeta completa.
+
+El código y el historial permanecen en **ivangonzalezsp/nextplay**, privado. Los instaladores y notas se publican en **ivangonzalezsp/nextplay-releases**, público. Parte del código distribuido se puede inspeccionar. Consulta [compilación y publicación](docs/windows-release.md) para mantener este reparto.
+
+## Desarrollo desde el código fuente
+
+Las siguientes instrucciones son para quienes tienen acceso al repositorio privado. Para uso normal, utiliza el instalador de Windows.
+
+### Requisitos de desarrollo
 
 - **Node.js 24 o posterior**, con npm. SQLite viene integrado en Node; no necesitas instalar un servidor de base de datos.
 - **Una cuenta de Steam y una clave de Steam Web API** para importar tu biblioteca. El perfil y los detalles de juegos deben ser públicos.
@@ -43,7 +71,7 @@ npm run dev
 ```
 
 1. Abre [Next Play](http://127.0.0.1:3000).
-2. Abre la configuración desde la cabecera. En **Steam & Familias**, sustituye el perfil que aparece inicialmente por **tu enlace de Steam** (`https://steamcommunity.com/id/tu_usuario/` o `https://steamcommunity.com/profiles/TU_STEAMID64/`).
+2. Abre la configuración desde la cabecera. En **Configurar cuentas y aplicación**, añade **tu enlace de Steam** (`https://steamcommunity.com/id/tu_usuario/` o `https://steamcommunity.com/profiles/TU_STEAMID64/`) y tu clave.
 3. En **Diagnóstico**, pulsa **Comprobar conexiones**; vuelve a **Steam & Familias** y pulsa **Sincronizar**.
 4. Comprueba que tus juegos aparecen en **Tu biblioteca**. Para empezar sin Codex, selecciona el **Algoritmo local** en **Motor & IA**, ajusta los filtros y pide una recomendación. Al principio conviene usar pocos filtros: faltarán metadatos si no has configurado las fuentes opcionales.
 
@@ -104,7 +132,7 @@ Configura tus propias claves en `.env.local`. `.env.example` contiene el formato
 
 Las dos variables de Twitch son opcionales y se configuran juntas. No pegues claves en el chat ni las incluyas en Git. **No necesitas `OPENAI_API_KEY`.** La app relee `.env.local`; pulsa **Comprobar conexiones** y luego **Sincronizar**. La presencia de una clave se indica en la interfaz; la sincronización verifica si la fuente la acepta.
 
-Sustituye el enlace inicial por el de tu propio perfil antes de sincronizar. El perfil y los **detalles de juegos** deben ser públicos. Si la API no permite verlos, se conserva la última biblioteca y se muestra un error; esto se distingue de una biblioteca accesible con cero juegos. No se importan contraseñas ni cookies de Steam.
+Añade el enlace de tu propio perfil antes de sincronizar. El perfil y los **detalles de juegos** deben ser públicos. Si la API no permite verlos, se conserva la última biblioteca y se muestra un error; esto se distingue de una biblioteca accesible con cero juegos. No se importan contraseñas ni cookies de Steam.
 
 IGDB es opcional para leer la biblioteca, pero necesario para géneros, modos y descubrimientos. Si faltan metadatos, los filtros estrictos que los requieren excluyen esos juegos. La duración principal prioriza HowLongToBeat; cuando falta, utiliza la media hasta los créditos de IGDB si hay aportaciones. Nunca se interpreta como duración de una sesión. Las horas de Steam no determinan si te gustó o terminaste un juego.
 
@@ -190,19 +218,9 @@ El modelo inicial es `gpt-5.6-luna`; puedes elegir el modelo y el esfuerzo de ra
 
 Si aparece «no puede localizar tu carpeta de usuario», ejecuta la aplicación desde una terminal normal de tu sesión de Windows. No copies archivos de autenticación ni uses otra cuenta. `codex login status` debe indicar **Logged in using ChatGPT**.
 
-## Compartir el proyecto
+## Compartir Next Play
 
-Comparte el código fuente, `package.json`, `package-lock.json`, `.env.example` y `requirements-hltb.txt`. Cada amigo debe crear su propio `.env.local`, iniciar su sesión de Codex si la utiliza y sincronizar su perfil.
-
-No incluyas `.env.local`, `data/`, credenciales de Codex, `node_modules/`, `.venv-hltb/` ni las carpetas generadas (`.next/`, `.vinext/`, `dist/`, `outputs/` o `work/`). `.gitignore` excluye los archivos locales del proyecto, pero no evita que se incluyan al comprimir toda la carpeta manualmente.
-
-Para preparar un ZIP con los archivos del último commit, después de guardar en Git los cambios que quieras compartir:
-
-```powershell
-git archive --format=zip --output=next-play.zip HEAD
-```
-
-El ZIP contiene solo los archivos versionados de ese commit, sin cambios pendientes ni archivos ignorados. Revisa su contenido antes de enviarlo. Este comando no publica nada ni envía el archivo.
+Comparte el [enlace público de descargas](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest). Tus conocidos no necesitan acceso al repositorio privado ni autenticarse en GitHub para descargar o actualizar. Cada persona usa sus propias cuentas desde el asistente. No envíes la carpeta de desarrollo ni tu carpeta de datos personales.
 
 ## Problemas frecuentes
 

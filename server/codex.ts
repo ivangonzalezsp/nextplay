@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import {
     access,
     mkdir,
@@ -18,6 +18,16 @@ import { openDatabase, replaceGames } from './database.ts';
 import { catalogGame } from './library.ts';
 import { recentRecommendationPenalties } from './selection.ts';
 import { comfortSelection } from './selection.ts';
+
+const children = new Set<ChildProcess>();
+process.once('exit', () => {
+    for (const child of children) child.kill();
+});
+export function trackCodexProcess<T extends ChildProcess>(child: T): T {
+    children.add(child);
+    child.once('close', () => children.delete(child));
+    return child;
+}
 
 export async function codexBinary() {
     if (process.env.NEXTPLAY_CODEX_BIN) {
@@ -61,7 +71,7 @@ export async function codexBinary() {
         503,
     );
 }
-function codexEnv() {
+export function codexEnv() {
     // Pass OS/session configuration only. Steam, Twitch and API keys never reach the agent.
     const env: NodeJS.ProcessEnv = { NODE_ENV: 'production' };
     const allowed = new Set([
@@ -101,13 +111,15 @@ export async function runProcess(
     });
     const binary = await codexBinary();
     return new Promise<string>((resolveRun, reject) => {
-        const child = spawn(binary, args, {
-            cwd,
-            env: codexEnv(),
-            shell: false,
-            windowsHide: true,
-            stdio: ['pipe', 'pipe', 'pipe'],
-        });
+        const child = trackCodexProcess(
+            spawn(binary, args, {
+                cwd,
+                env: codexEnv(),
+                shell: false,
+                windowsHide: true,
+                stdio: ['pipe', 'pipe', 'pipe'],
+            }),
+        );
         let stdout = '',
             stderr = '',
             done = false;
@@ -248,14 +260,18 @@ export async function runProcess(
             if (/home directory/i.test(msg))
                 return finish(
                     new AppError(
-                        'Codex no puede localizar tu carpeta de usuario. Abre la app desde una terminal normal de Windows y comprueba codex login status.',
+                        process.env.NEXTPLAY_INSTALLED
+                            ? 'No se puede abrir la sesión de ChatGPT. Cierra Next Play y vuelve a abrirla desde su acceso directo.'
+                            : 'Codex no puede localizar tu carpeta de usuario. Abre la app desde una terminal normal de Windows y comprueba codex login status.',
                         503,
                     ),
                 );
-            if (/log.?in|auth|401|unauthorized/i.test(msg))
+            if (/log(?:ged)?[\s_-]?in|auth|401|unauthorized/i.test(msg))
                 return finish(
                     new AppError(
-                        'Codex necesita iniciar sesión. Ejecuta codex login y elige tu cuenta de ChatGPT.',
+                        process.env.NEXTPLAY_INSTALLED
+                            ? 'Conecta ChatGPT desde Configurar cuentas y aplicación. Mientras tanto puedes usar el algoritmo local.'
+                            : 'Codex necesita iniciar sesión. Ejecuta codex login y elige tu cuenta de ChatGPT.',
                         503,
                     ),
                 );
@@ -277,7 +293,9 @@ export async function codexStatus() {
             ? { codex: true, codexMessage: 'Conectado con ChatGPT' }
             : {
                   codex: false,
-                  codexMessage: 'Ejecuta codex login y selecciona ChatGPT.',
+                  codexMessage: process.env.NEXTPLAY_INSTALLED
+                      ? 'Conecta ChatGPT desde Configurar cuentas y aplicación.'
+                      : 'Ejecuta codex login y selecciona ChatGPT.',
               };
     } catch (e) {
         return { codex: false, codexMessage: (e as Error).message };

@@ -1,4 +1,7 @@
 import { AppError, config, exclusive, readState, saveState } from './store.ts';
+import { isMaintenance } from './store.ts';
+import { appStatus, manageApp } from './desktop.ts';
+import { appVersion } from './updates.ts';
 import { randomUUID } from 'node:crypto';
 import {
     DAY,
@@ -165,6 +168,32 @@ export async function handle(request: Request): Promise<Response> {
     try {
         phase('request:validate');
         verifyRequest(request);
+        if (path === '/api/health' && request.method === 'GET')
+            return complete(
+                Response.json(
+                    {
+                        application: 'nextplay',
+                        version: appVersion(),
+                        instance: process.env.NEXTPLAY_INSTANCE,
+                    },
+                    { headers },
+                ),
+            );
+        if (isMaintenance())
+            throw new AppError(
+                'Next Play se está reiniciando. Espera un momento.',
+                503,
+            );
+        if (path === '/api/app' && request.method === 'GET')
+            return complete(
+                Response.json(await appStatus(request), { headers }),
+            );
+        if (path === '/api/connections' || path.startsWith('/api/app/'))
+            return complete(
+                Response.json(await manageApp(request, await body(request)), {
+                    headers,
+                }),
+            );
         if (path === '/api/igdb/search' && request.method === 'GET') {
             const query =
                 new URL(request.url).searchParams.get('q')?.trim() ?? '';

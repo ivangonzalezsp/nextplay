@@ -50,6 +50,7 @@ export function SettingsModal({
     codex,
     setCodex,
     busy,
+    onSetup,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -64,6 +65,7 @@ export function SettingsModal({
     codex: CodexSettings;
     setCodex: (settings: CodexSettings) => void;
     busy: string;
+    onSetup: () => void;
 }) {
     const [activeTab, setActiveTab] = useState('steam');
     const [draftEngine, setDraftEngine] = useState<RecommendationEngine | null>(
@@ -130,6 +132,9 @@ export function SettingsModal({
                         </div>
                     </div>
                 </DialogHeader>
+                <Button variant="outline" onClick={onSetup}>
+                    Configurar cuentas y aplicación
+                </Button>
 
                 <Tabs
                     value={activeTab}
@@ -298,9 +303,8 @@ export function SettingsModal({
                                     </p>
                                     {!state?.setup.family && (
                                         <div className="bg-amber-950/30 border border-amber-800/40 p-2.5 rounded-lg text-xs text-amber-200/90">
-                                            Requiere{' '}
-                                            <code>STEAM_FAMILY_TOKEN</code> en
-                                            tu archivo <code>.env.local</code>.{' '}
+                                            Guarda tu token en Configurar
+                                            cuentas y aplicación.{' '}
                                             <a
                                                 href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
                                                 target="_blank"
@@ -494,8 +498,8 @@ export function SettingsModal({
                                             </div>
                                             <div className="text-[11px] text-muted-foreground">
                                                 {state?.setup.steam
-                                                    ? 'Clave activa y verificada'
-                                                    : 'Falta STEAM_API_KEY'}
+                                                    ? 'Clave guardada; sincroniza para comprobarla'
+                                                    : 'Añade tu clave de Steam'}
                                             </div>
                                         </div>
                                     </div>
@@ -531,7 +535,7 @@ export function SettingsModal({
                                             <div className="text-[11px] text-muted-foreground">
                                                 {state?.setup.igdb
                                                     ? 'Credenciales activas'
-                                                    : 'Falta TWITCH_CLIENT_ID / SECRET'}
+                                                    : 'Añade las credenciales de IGDB'}
                                             </div>
                                         </div>
                                     </div>
@@ -593,10 +597,9 @@ export function SettingsModal({
                                                 HowLongToBeat
                                             </div>
                                             <div className="text-[11px] text-muted-foreground">
-                                                Python{' '}
                                                 {state?.setup.hltb
-                                                    ? 'activo con howlongtobeatpy'
-                                                    : 'opcional'}
+                                                    ? 'Preparado para consultar duraciones'
+                                                    : 'No disponible en este entorno'}
                                             </div>
                                         </div>
                                     </div>

@@ -1,0 +1,54 @@
+name: Windows installer
+
+on:
+    push:
+        tags: ['v*']
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: windows-release-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    windows:
+        if: github.repository == 'ivangonzalezsp/nextplay' && github.event.repository.private
+        runs-on: windows-latest
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+              with:
+                  node-version: '24.21.0'
+            - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+              with:
+                  python-version: '3.13.15'
+            - name: Validate release version
+              run: node -e "const v=require('./package.json').version; if(!/^\d+\.\d+\.\d+$/.test(v) || (process.env.GITHUB_REF_TYPE==='tag' && process.env.GITHUB_REF_NAME!=='v'+v)) process.exit(1)"
+            - run: npm.cmd ci
+            - run: npm.cmd test
+            - run: npm.cmd run typecheck
+            - run: npm.cmd run build
+            - name: Build and verify bundled runtimes
+              run: |
+                  $env:NEXTPLAY_BUILD_PYTHON = (Get-Command python).Source
+                  npm.cmd run package:windows
+            - name: Install and verify in an isolated directory
+              run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-installer.ps1
+            - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+              with:
+                  name: nextplay-windows
+                  path: |
+                      outputs/windows/NextPlay-Setup-*-x64.exe
+                      outputs/windows/SHA256SUMS.txt
+                  if-no-files-found: error
+                  retention-days: 14
+            - name: Publish public installer
+              if: startsWith(github.ref, 'refs/tags/v')
+              env:
+                  RELEASES_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+              run: node scripts/publish-release.mjs
