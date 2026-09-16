@@ -1,5 +1,6 @@
-param([switch] $SkipUpgrade, [string] $PreviousInstaller)
+param([switch] $SkipUpgrade, [string] $PreviousInstaller, [switch] $PublicUpdate)
 $ErrorActionPreference = 'Stop'
+if ($PublicUpdate -and ($SkipUpgrade -or -not $PreviousInstaller)) { throw 'PublicUpdate requires a PreviousInstaller and an upgrade test.' }
 $repoRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $testRoot = Join-Path $repoRoot ('work\install-tests\' + [guid]::NewGuid().ToString('N'))
 $installed = Join-Path $testRoot 'app'
@@ -32,10 +33,28 @@ function Read-Ready($PreviousInstance = '', [int] $TimeoutSeconds = 90) {
 function Start-App {
     return Start-Process -FilePath 'powershell.exe' -ArgumentList ('-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $installed 'scripts\windows-launcher.ps1') + '" -Background -UserDir "' + $profile + '" -Port ' + $port) -WindowStyle Hidden -PassThru
 }
-function Post($Path) { Invoke-RestMethod -Uri ($record.url + '/api/app/' + $Path) -Method Post -ContentType 'application/json' -Body '{}' -TimeoutSec 20 }
+function Post($Path) { Invoke-RestMethod -Uri ($record.url + '/api/app/' + $Path) -Method Post -ContentType 'application/json' -Body '{}' -TimeoutSec 600 }
 function Install($Exe) {
+    $timer = [Diagnostics.Stopwatch]::StartNew()
     $result = Start-Process -FilePath $Exe -ArgumentList ('/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP- /SMOKETEST=1 /DIR="' + $installed + '" /LOG="' + (Join-Path $testRoot 'install.log') + '"') -WindowStyle Hidden -Wait -PassThru
     Assert ($result.ExitCode -eq 0) 'Installer failed.'
+    Write-Output ('Installed ' + [IO.Path]::GetFileName($Exe) + ' in ' + [Math]::Round($timer.Elapsed.TotalSeconds, 1) + ' seconds.')
+}
+function Saved-Hash($Name) {
+    $path = Join-Path $profile $Name
+    if ($Name -ne 'data/library.sqlite') { return (Get-FileHash -LiteralPath $path).Hash }
+    # Schema migrations may change the SQLite file while preserving every saved row.
+    $snapshot = @'
+import { DatabaseSync } from 'node:sqlite';
+import { createHash } from 'node:crypto';
+const db = new DatabaseSync(process.argv[1], { readOnly: true });
+const rows = ['app_state', 'games', 'steam_tags'].map(table => db.prepare('SELECT * FROM ' + table + ' ORDER BY 1').all());
+db.close();
+console.log(createHash('sha256').update(JSON.stringify(rows)).digest('hex'));
+'@
+    $hash = & node --input-type=module -e $snapshot $path
+    Assert ($LASTEXITCODE -eq 0) 'Could not verify saved database rows.'
+    return $hash
 }
 try {
     if (-not $SkipUpgrade -and $PreviousInstaller) {
@@ -53,6 +72,8 @@ try {
         } finally { [IO.File]::WriteAllText($manifestPath, $originalManifest, $utf8) }
         Install (Join-Path $testRoot 'NextPlay-Setup-0.1.9-x64.exe')
     } else { Install $installer }
+    $previousVersion = (Get-Content -LiteralPath (Join-Path $installed 'package.json') -Raw | ConvertFrom-Json).version
+    if (-not $SkipUpgrade) { Assert ($previousVersion -ne $version) 'The upgrade needs an earlier version.' }
     & node (Join-Path $repoRoot 'scripts\test-package.mjs') $installed
     Assert ($LASTEXITCODE -eq 0) 'Installed runtime check failed.'
     # Choose an unused loopback port without changing the user's running copy.
@@ -94,24 +115,28 @@ writeFileSync(join(profile,'codex/preservation-test.txt'),'Account data sentinel
         & (Join-Path $installed 'runtime\node.exe') --input-type=module -e $seed $installed $profile
         Assert ($LASTEXITCODE -eq 0) 'Could not seed isolated personal data.'
         $hashes = @{}
-        foreach ($name in @('data/library.sqlite', 'settings.json', 'codex/preservation-test.txt')) { $hashes[$name] = (Get-FileHash -LiteralPath (Join-Path $profile $name)).Hash }
+        foreach ($name in @('data/library.sqlite', 'settings.json', 'codex/preservation-test.txt')) { $hashes[$name] = Saved-Hash $name }
         $launcher = Start-App
         $record = Read-Ready $record.instance
-        Assert ($record.version -eq '0.1.9') 'Expected the earlier test version.'
-        $updates = Join-Path $profile 'updates'
-        New-Item -ItemType Directory -Path $updates -Force | Out-Null
-        $download = Join-Path $updates ([IO.Path]::GetFileName($installer))
-        Copy-Item -LiteralPath $installer -Destination $download
-        Copy-Item -LiteralPath (Join-Path $installed 'scripts/windows-update.ps1') -Destination $updates
-        $downloadDigest = (Get-FileHash -LiteralPath $download).Hash.ToLower()
-        # Download validation is covered in desktop.test.ts; drive the same supervisor handoff with that verified artifact.
-        Post 'exit' | Out-Null
-        Write-Json (Join-Path $profile 'control.json') @{ action = 'update'; token = $record.token; version = $version; installer = $download; digest = $downloadDigest }
+        Assert ($record.version -eq $previousVersion) 'Expected the earlier version.'
+        if ($PublicUpdate) {
+            Post 'update' | Out-Null
+        } else {
+            $updates = Join-Path $profile 'updates'
+            New-Item -ItemType Directory -Path $updates -Force | Out-Null
+            $download = Join-Path $updates ([IO.Path]::GetFileName($installer))
+            Copy-Item -LiteralPath $installer -Destination $download
+            Copy-Item -LiteralPath (Join-Path $installed 'scripts/windows-update.ps1') -Destination $updates
+            $downloadDigest = (Get-FileHash -LiteralPath $download).Hash.ToLower()
+            # Offline handoff; PublicUpdate exercises the anonymous download through the application API.
+            Post 'exit' | Out-Null
+            Write-Json (Join-Path $profile 'control.json') @{ action = 'update'; token = $record.token; version = $version; installer = $download; digest = $downloadDigest }
+        }
         $record = Read-Ready $record.instance 600
         Assert ($record.version -eq $version) 'The update did not reopen the new version.'
         Post 'exit' | Out-Null
         Start-Sleep -Seconds 3
-        foreach ($name in $hashes.Keys) { Assert ((Get-FileHash -LiteralPath (Join-Path $profile $name)).Hash -eq $hashes[$name]) ('Update changed personal data: ' + $name) }
+        foreach ($name in $hashes.Keys) { Assert ((Saved-Hash $name) -eq $hashes[$name]) ('Update changed personal data: ' + $name) }
         Assert ((Get-ChildItem -LiteralPath (Join-Path $profile 'backups') -Directory).Count -ge 1) 'Update backup missing.'
     }
     $uninstaller = Join-Path $installed 'unins000.exe'
@@ -119,9 +144,9 @@ writeFileSync(join(profile,'codex/preservation-test.txt'),'Account data sentinel
     Assert ($removed.ExitCode -eq 0) 'Uninstall failed.'
     Assert (-not (Test-Path -LiteralPath (Join-Path $installed 'runtime/node.exe'))) 'Uninstall left the application installed.'
     if (-not $SkipUpgrade) {
-        foreach ($name in $hashes.Keys) { Assert ((Get-FileHash -LiteralPath (Join-Path $profile $name)).Hash -eq $hashes[$name]) ('Uninstall changed personal data: ' + $name) }
+        foreach ($name in $hashes.Keys) { Assert ((Saved-Hash $name) -eq $hashes[$name]) ('Uninstall changed personal data: ' + $name) }
     }
-    Write-Output ('Installer, tray supervisor, double opening, restart, exit, upgrade and data-preserving uninstall checks passed: ' + $testRoot)
+    Write-Output ('Windows installer checks passed (upgrade: ' + (-not $SkipUpgrade) + '; public download: ' + [bool]$PublicUpdate + '): ' + $testRoot)
 } finally {
     if ($record) {
         try { Post 'exit' | Out-Null } catch { }

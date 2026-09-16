@@ -3,6 +3,8 @@ import { spawn, spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 import { parseEnv } from 'node:util';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const app = resolve(process.argv[2] || 'work/windows/app');
 const tests = resolve('work/package-tests');
@@ -192,6 +194,33 @@ try {
     await start();
     assert.equal((await api('app')).connections.STEAM_API_KEY, true);
     await stop();
+    // Exercise the separate process Codex uses, with the installed SDK and Zod.
+    const client = new Client({
+        name: 'nextplay-package-test',
+        version: '1.0.0',
+    });
+    try {
+        await client.connect(
+            new StdioClientTransport({
+                command: node,
+                args: [
+                    join(app, 'scripts/library-mcp.ts'),
+                    join(profile, 'data/library.sqlite'),
+                ],
+                cwd: app,
+                env,
+                stderr: 'pipe',
+            }),
+        );
+        const result = await client.callTool({
+            name: 'query_games',
+            arguments: {},
+        });
+        assert.ok(!result.isError, 'Packaged library MCP query failed');
+        assert.equal(JSON.parse(result.content[0].text).total, 0);
+    } finally {
+        await client.close();
+    }
     console.log(
         `Package verified without developer tools on PATH. Isolated data: ${profile}`,
     );

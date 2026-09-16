@@ -113,10 +113,32 @@ if (!process.argv.includes('--reuse-stage')) {
             '/d',
             '/s',
             '/c',
-            'npm.cmd ci --omit=dev --ignore-scripts --no-audit --no-fund',
+            'npm.cmd ci --omit=dev --omit=peer --ignore-scripts --no-audit --no-fund',
         ],
         stage,
         { ...process.env, npm_config_cache: join(work, 'npm-cache') },
+    );
+    // UI dependencies are compiled into dist; keep their notices in one file.
+    const modules = join(root, 'node_modules');
+    const notices = [];
+    for (const file of await readdir(modules, {
+        recursive: true,
+        withFileTypes: true,
+    })) {
+        if (
+            !file.isFile() ||
+            !/^(?:licen[cs]e|notice|copying)(?:[.-].*)?$/i.test(file.name)
+        )
+            continue;
+        const path = join(file.parentPath, file.name);
+        notices.push(
+            `${relative(modules, path).replaceAll('\\', '/')}\n\n${await readFile(path, 'utf8')}`,
+        );
+    }
+    await mkdir(join(stage, 'licenses'), { recursive: true });
+    await writeFile(
+        join(stage, 'licenses/JavaScript-NOTICES.txt'),
+        notices.sort().join('\n\n---\n\n'),
     );
     const unpack = join(work, 'unpack');
     await removeBuildDirectory(unpack);
@@ -188,7 +210,7 @@ if (!process.argv.includes('--reuse-stage')) {
     }
     await writeFile(
         join(stage, 'licenses/README.txt'),
-        'Next Play includes Node.js, Codex CLI and Python. Their licenses are in this directory and runtime/python/LICENSE.txt. JavaScript dependencies retain their original licenses under node_modules. Python wheel metadata, licenses and notices are preserved under runtime/python/Lib/site-packages.\n',
+        'Next Play includes Node.js, Codex CLI and Python. Their licenses are in this directory and runtime/python/LICENSE.txt. JavaScript-NOTICES.txt includes notices for compiled dependencies; runtime dependencies also retain their original licenses under node_modules. Python wheel metadata, licenses and notices are preserved under runtime/python/Lib/site-packages.\n',
     );
     await writeFile(
         join(stage, 'runtime-versions.json'),
