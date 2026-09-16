@@ -19,10 +19,12 @@
 ## Reducción del paquete en 0.2.1
 
 - `node_modules`: de 36.578 archivos y 267.113.162 bytes a 7.944 archivos y 96.282.616 bytes (78 % menos archivos, 64 % menos tamaño).
-- EXE de aproximadamente 210 MB a 182 MB. La instalación limpia de ensayo de 0.2.1 midió 39,5 segundos en este equipo (una ejecución; no una garantía para otros equipos). Apertura, segunda apertura, reinicio, salida y desinstalación, superados.
+- EXE de aproximadamente 210 MB a 182 MB. Instalaciones limpias de ensayo en el mismo equipo: 132,3 segundos para el EXE público 0.2.0 y 39,5 segundos para 0.2.1, aproximadamente un 70 % menos (una ejecución de cada versión; no una garantía para otros equipos). Apertura, segunda apertura, reinicio, salida y desinstalación, superados.
 - Se mantienen todas las versiones e integridades del lockfile. Las dependencias que usa la compilación siguen disponibles al desarrollar.
 - Arranque del paquete, recursos HTML/JS/CSS y consulta al catálogo mediante el proceso MCP empaquetado, superados. La instalación sigue sin necesitar descargas de npm.
 - Descarga anónima del EXE público 0.2.0 mediante el mismo código del actualizador y comprobación SHA-256, superadas.
+- [Actions de la etiqueta 0.2.1](https://github.com/ivangonzalezsp/nextplay/actions/runs/35150569033): pruebas, tipos, compilación, paquete, instalación de ensayo y publicación con `RELEASES_TOKEN`, superados. La Release pública contiene únicamente el EXE (182.106.161 bytes), `SHA256SUMS.txt` y sus notas.
+- Actualización pública completa de 0.2.0 a 0.2.1 mediante `-PublicUpdate`: llamada a la API normal, descarga anónima, SHA-256, copia de seguridad, instalación y reapertura, superadas. La API de la nueva versión vuelve a leer el juego manual, las preferencias y ambos historiales; las filas guardadas de SQLite y las huellas de configuración y datos de cuenta se conservan. La desinstalación posterior también los conserva. Ensayo registrado en `work/installer-public-update.log`.
 
 ## Pendiente antes de ampliar el piloto
 

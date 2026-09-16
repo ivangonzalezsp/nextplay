@@ -134,6 +134,9 @@ writeFileSync(join(profile,'codex/preservation-test.txt'),'Account data sentinel
         }
         $record = Read-Ready $record.instance 600
         Assert ($record.version -eq $version) 'The update did not reopen the new version.'
+        $restored = Invoke-RestMethod -Uri ($record.url + '/api/state') -TimeoutSec 30
+        Assert ($restored.games[0].appId -eq -1 -and $restored.preferences.'-1'.favorite) 'The updated application cannot read its saved manual game.'
+        Assert ($restored.history[0].id -eq 'saved' -and $restored.playHistory[0].kind -eq 'completed') 'The updated application cannot read its saved history.'
         Post 'exit' | Out-Null
         Start-Sleep -Seconds 3
         foreach ($name in $hashes.Keys) { Assert ((Saved-Hash $name) -eq $hashes[$name]) ('Update changed personal data: ' + $name) }
