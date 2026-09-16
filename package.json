@@ -14,6 +14,8 @@
         "test:package": "node scripts/test-package.mjs",
         "startup:install": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/windows-startup.ps1 -Action Install",
         "startup:uninstall": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/windows-startup.ps1 -Action Uninstall",
+        "startup:linux:install": "bash scripts/linux-startup.sh install",
+        "startup:linux:uninstall": "bash scripts/linux-startup.sh uninstall",
         "test": "node --test tests/*.test.ts",
         "typecheck": "tsc --noEmit",
         "check:codex": "node scripts/check-codex.ts",
