@@ -38,6 +38,8 @@ import {
 import { askCodex, buildPrompt, codexStatus } from './codex.ts';
 import { DEFAULT_CODEX_SETTINGS } from '../lib/model.ts';
 import { openDatabase, writeSteamAchievements } from './database.ts';
+import { syncSteamTags } from './steam-tags-sync.ts';
+import { SteamTagsError } from './steam-tags.ts';
 import {
   ACHIEVEMENTS_INTERVAL,
   fetchSteamAchievements,
@@ -376,6 +378,38 @@ export async function handle(request: Request): Promise<Response> {
         } finally {
           db.close();
         }
+        return snapshot(await readState());
+      }
+      if (path === '/api/steam/tags/sync' && request.method === 'POST') {
+        phase('steam:tags:sync:start', { force: payload.force });
+        if (payload.force !== undefined && typeof payload.force !== 'boolean')
+          throw new AppError(
+            'La opción de actualización de etiquetas no es válida.',
+          );
+        if (!state.games.some((game) => game.appId > 0))
+          throw new AppError(
+            'Sincroniza primero una biblioteca de Steam con juegos.',
+            422,
+          );
+        let result;
+        try {
+          result = await syncSteamTags({
+            force: payload.force === true,
+            onLog: (message) => phase('steam:tags:sync:log', { message }),
+          });
+        } catch (error) {
+          if (error instanceof SteamTagsError)
+            throw new AppError(error.message, 502);
+          throw error;
+        }
+        if (result.stopReason === 'rate-limit')
+          throw new AppError(
+            'Steam ha limitado la carga de etiquetas. Se han conservado los avances; inténtalo más tarde.',
+            429,
+          );
+        if (result.stopReason === 'interrumpido')
+          throw new AppError('La carga de etiquetas se ha interrumpido.', 409);
+        phase('steam:tags:sync:complete', result);
         return snapshot(await readState());
       }
       if (path === '/api/play-history' && request.method === 'PATCH') {

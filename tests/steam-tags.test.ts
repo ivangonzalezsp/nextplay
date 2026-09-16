@@ -19,6 +19,7 @@ import {
     retryAfterMilliseconds,
     SteamTagsError,
 } from '../server/steam-tags.ts';
+import { syncSteamTags } from '../server/steam-tags-sync.ts';
 
 void test('parsea todos los app_tag del hover real, entidades y diccionarios por ID', () => {
     const dictionaries = createTagDictionaries(
@@ -172,6 +173,88 @@ void test('conserva tags al fallar, deja el AppID pendiente y respalda la copia 
         }
     } finally {
         db.close();
+        await rm(directory, { recursive: true, force: true });
+    }
+});
+
+void test('sincroniza las etiquetas pendientes y conserva el recuento de cobertura', async () => {
+    const directory = await mkdtemp(
+        join(tmpdir(), 'nextplay-steam-tags-sync-'),
+    );
+    const previous = process.env.NEXTPLAY_DATA_DIR;
+    process.env.NEXTPLAY_DATA_DIR = directory;
+    try {
+        const path = join(directory, 'library.sqlite');
+        const db = openDatabase(path);
+        try {
+            storeState(db, {
+                ...structuredClone(EMPTY_STATE),
+                games: [
+                    {
+                        appId: 400,
+                        name: 'Portal',
+                        owned: true,
+                        playtimeMinutes: 0,
+                        recentMinutes: 0,
+                    },
+                    {
+                        appId: 401,
+                        name: 'Sin etiquetas',
+                        owned: true,
+                        playtimeMinutes: 0,
+                        recentMinutes: 0,
+                    },
+                ],
+            });
+        } finally {
+            db.close();
+        }
+        const result = await syncSteamTags({
+            client: {
+                loadDictionaries: async () =>
+                    createTagDictionaries(
+                        [{ tagid: 1664, name: 'Puzzle' }],
+                        [{ tagid: 1664, name: 'Puzles' }],
+                    ),
+                fetchGameTags: async (appId) =>
+                    appId === 400
+                        ? [
+                              {
+                                  id: 1664,
+                                  name: 'Puzles',
+                                  englishName: 'Puzzle',
+                              },
+                          ]
+                        : [],
+            },
+        });
+        assert.deepEqual(
+            {
+                total: result.total,
+                checked: result.checked,
+                withTags: result.withTags,
+                withoutTags: result.withoutTags,
+                pending: result.pending,
+            },
+            {
+                total: 2,
+                checked: 2,
+                withTags: 1,
+                withoutTags: 1,
+                pending: 0,
+            },
+        );
+        const saved = openDatabase(path, true);
+        try {
+            assert.deepEqual(loadState(saved)?.games[0].steamTags, [
+                { id: 1664, name: 'Puzles', englishName: 'Puzzle' },
+            ]);
+        } finally {
+            saved.close();
+        }
+    } finally {
+        if (previous === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+        else process.env.NEXTPLAY_DATA_DIR = previous;
         await rm(directory, { recursive: true, force: true });
     }
 });

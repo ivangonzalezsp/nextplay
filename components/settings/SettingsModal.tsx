@@ -27,6 +27,7 @@ import {
     AlertCircle,
     ExternalLink,
     ShieldCheck,
+    Tags,
 } from 'lucide-react';
 import {
     CODEX_MODELS,
@@ -43,6 +44,7 @@ export function SettingsModal({
     profileUrl,
     setProfileUrl,
     onSync,
+    onTagsSync,
     onFamilySync,
     onReload,
     engine,
@@ -58,6 +60,7 @@ export function SettingsModal({
     profileUrl: string;
     setProfileUrl: (url: string) => void;
     onSync: () => Promise<void>;
+    onTagsSync: () => Promise<void>;
     onFamilySync: () => Promise<void>;
     onReload: () => Promise<void>;
     engine: RecommendationEngine;
@@ -112,6 +115,10 @@ export function SettingsModal({
                             : 'Ultra',
         }),
     );
+    const steamGames = state?.games.filter((game) => game.appId > 0) ?? [];
+    const checkedSteamGames = steamGames.filter(
+        (game) => game.steamTagsCheckedAt != null,
+    ).length;
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -221,6 +228,45 @@ export function SettingsModal({
                                 El perfil y los detalles de juegos deben ser
                                 públicos en la privacidad de Steam.
                             </p>
+                        </div>
+
+                        <div className="hud-card-subpanel">
+                            <div className="flex items-center justify-between mb-2">
+                                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                    <Tags
+                                        size={16}
+                                        className="text-violet-400"
+                                    />
+                                    Etiquetas de Steam
+                                </h4>
+                                {steamGames.length ? (
+                                    <span className="text-xs text-muted-foreground">
+                                        {checkedSteamGames} de{' '}
+                                        {steamGames.length} revisados
+                                    </span>
+                                ) : null}
+                            </div>
+                            <p className="text-xs text-muted-foreground mb-2">
+                                Carga las etiquetas públicas de Steam para
+                                mejorar los filtros y las recomendaciones.
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onTagsSync}
+                                disabled={!!busy || !steamGames.length}
+                                className="w-full"
+                            >
+                                <RefreshCw
+                                    size={13}
+                                    className={
+                                        busy === 'tags' ? 'spin mr-2' : 'mr-2'
+                                    }
+                                />
+                                {busy === 'tags'
+                                    ? 'Cargando etiquetas…'
+                                    : 'Cargar etiquetas de Steam'}
+                            </Button>
                         </div>
 
                         <div className="hud-card-subpanel">

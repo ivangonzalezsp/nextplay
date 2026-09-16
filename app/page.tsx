@@ -379,6 +379,12 @@ export default function Home() {
         });
     }
 
+    async function syncTags() {
+        await action('tags', async () => {
+            accept(await api('steam/tags/sync', { force: false }));
+        });
+    }
+
     async function recommend(message = text, selectionFilters = filters) {
         if (reference && engine !== 'codex') return;
         await action('recommend', async () => {
@@ -646,6 +652,7 @@ export default function Home() {
                 profileUrl={profileUrl}
                 setProfileUrl={setProfileUrl}
                 onSync={sync}
+                onTagsSync={syncTags}
                 onFamilySync={async () => {
                     await action('family', async () => {
                         accept(await api('steam/family/sync', {}));
