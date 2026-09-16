@@ -1,5 +1,5 @@
 #ifndef AppVersion
-  #define AppVersion "0.2.1"
+  #define AppVersion "0.2.2"
 #endif
 #ifndef SourceDir
   #error SourceDir must point to the validated application bundle
@@ -21,7 +21,7 @@ MinVersion=10.0.17763
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputBaseFilename=NextPlay-Setup-{#AppVersion}-x64
-Compression=lzma2/fast
+Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
 CloseApplications=no

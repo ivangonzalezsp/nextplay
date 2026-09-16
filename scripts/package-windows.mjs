@@ -68,6 +68,125 @@ async function download(runtime) {
     }
     return file;
 }
+async function pruneRuntimeModules(modules) {
+    // Runtime imports are JavaScript/JSON/WASM/native files. TypeScript sources,
+    // declarations, source maps and package documentation are build-time/legal
+    // material and otherwise make every install copy thousands of dead files.
+    const removable = /\.(?:map|ts|tsx|mts|cts|flow|cpp|h|md|markdown|yml|yaml)$/i;
+    const legal = /^(?:licen[cs]e|notice|copying)(?:[._-].*)?$/i;
+    for (const file of await readdir(modules, {
+        recursive: true,
+        withFileTypes: true,
+    })) {
+        if (
+            file.isFile() &&
+            removable.test(file.name) &&
+            !legal.test(file.name)
+        )
+            await rm(join(file.parentPath, file.name), { force: true });
+    }
+    // Vinext declares this package for TypeScript users only; it has no runtime files.
+    await rm(join(modules, '@vinext/types'), { recursive: true, force: true });
+    // No production code invokes npm-installed command shims.
+    await rm(join(modules, '.bin'), { recursive: true, force: true });
+    await rm(join(modules, '.package-lock.json'), { force: true });
+    await rm(join(stage, 'package-lock.json'), { force: true });
+}
+async function pruneVinext(modules) {
+    const dist = join(modules, 'vinext', 'dist');
+    const entry = join(dist, 'server/prod-server.js');
+    const keep = new Set([entry]);
+    const queue = [entry];
+    const imports = /(?:from\s*|import\s*(?:\(\s*)?)["']([^"']+)["']/g;
+    while (queue.length) {
+        const file = queue.pop();
+        const source = await readFile(file, 'utf8');
+        for (const match of source.matchAll(imports)) {
+            const specifier = match[1];
+            if (!specifier.startsWith('.')) continue;
+            const base = resolve(dirname(file), specifier);
+            let resolved;
+            for (const candidate of [
+                base,
+                `${base}.js`,
+                join(base, 'index.js'),
+            ]) {
+                try {
+                    await access(candidate);
+                    resolved = candidate;
+                    break;
+                } catch {
+                    /* Try the next Node ESM resolution shape. */
+                }
+            }
+            if (resolved && !keep.has(resolved)) {
+                keep.add(resolved);
+                queue.push(resolved);
+            }
+        }
+    }
+    for (const file of await readdir(dist, {
+        recursive: true,
+        withFileTypes: true,
+    })) {
+        if (file.isFile()) {
+            const path = join(file.parentPath, file.name);
+            if (!keep.has(path)) await rm(path, { force: true });
+        }
+    }
+}
+async function keepOnlyFiles(root, names) {
+    for (const file of await readdir(root, {
+        recursive: true,
+        withFileTypes: true,
+    })) {
+        if (!file.isFile()) continue;
+        const path = join(file.parentPath, file.name);
+        if (!names.has(relative(root, path).replaceAll('\\', '/')))
+            await rm(path, { force: true });
+    }
+}
+async function pruneReactRuntime(modules) {
+    await keepOnlyFiles(
+        join(modules, 'react'),
+        new Set([
+            'LICENSE',
+            'package.json',
+            'compiler-runtime.js',
+            'index.js',
+            'jsx-runtime.js',
+            'react.react-server.js',
+            'jsx-runtime.react-server.js',
+            'cjs/react-compiler-runtime.production.js',
+            'cjs/react.development.js',
+            'cjs/react-jsx-runtime.production.js',
+            'cjs/react-jsx-runtime.development.js',
+            'cjs/react-jsx-runtime.react-server.production.js',
+            'cjs/react-jsx-runtime.react-server.development.js',
+            'cjs/react.production.js',
+            'cjs/react.react-server.production.js',
+        ]),
+    );
+    await keepOnlyFiles(
+        join(modules, 'react-dom'),
+        new Set([
+            'LICENSE',
+            'package.json',
+            'index.js',
+            'server.edge.js',
+            'static.edge.js',
+            'react-dom.react-server.js',
+            'cjs/react-dom.development.js',
+            'cjs/react-dom.production.js',
+            'cjs/react-dom-server.edge.development.js',
+            'cjs/react-dom-server.edge.production.js',
+            'cjs/react-dom-server-legacy.browser.development.js',
+            'cjs/react-dom-server-legacy.browser.production.js',
+            'cjs/react-dom.react-server.development.js',
+            'cjs/react-dom.react-server.production.js',
+        ]),
+    );
+}
 await mkdir(downloads, { recursive: true });
 await mkdir(output, { recursive: true });
 await mkdir(work, { recursive: true });
@@ -113,11 +232,14 @@ if (!process.argv.includes('--reuse-stage')) {
             '/d',
             '/s',
             '/c',
-            'npm.cmd ci --omit=dev --omit=peer --ignore-scripts --no-audit --no-fund',
+            'npm.cmd ci --omit=dev --omit=peer --legacy-peer-deps --ignore-scripts --no-audit --no-fund',
         ],
         stage,
         { ...process.env, npm_config_cache: join(work, 'npm-cache') },
     );
+    await pruneRuntimeModules(join(stage, 'node_modules'));
+    await pruneVinext(join(stage, 'node_modules'));
+    await pruneReactRuntime(join(stage, 'node_modules'));
     // UI dependencies are compiled into dist; keep their notices in one file.
     const modules = join(root, 'node_modules');
     const notices = [];
