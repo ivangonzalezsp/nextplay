@@ -35,4 +35,8 @@ Los primeros instaladores se distribuyen **sin firma de código**. Windows puede
 
 Cada versión incluye `SHA256SUMS.txt` y sus notas. Esta comprobación detecta descargas incompletas o alteradas, pero no sustituye una firma digital. Si una actualización falla, tus datos y copias se conservan: vuelve a abrir la app o ejecuta de nuevo el instalador oficial. Los registros están en `%LOCALAPPDATA%\NextPlay\logs`.
 
-Este repositorio contiene únicamente instrucciones y distribuciones. El desarrollo y su historial permanecen en un repositorio privado; el código incluido en el instalador puede inspeccionarse. Las licencias de los componentes están dentro de la instalación.
+## Licencia y código fuente
+
+El código original de Next Play se distribuye bajo la [GNU General Public License, versión 3](https://www.gnu.org/licenses/gpl-3.0.html). Para cada instalador distribuido, el código fuente correspondiente debe estar disponible para quien lo reciba. Las dependencias y componentes de terceros conservan sus propias licencias y condiciones; sus avisos están dentro de la instalación.
+
+El desarrollo y su historial permanecen en `ivangonzalezsp/nextplay`. Mientras ese repositorio sea privado, no debe considerarse el único medio público para obtener el código fuente correspondiente a una descarga.
