@@ -33,6 +33,7 @@ import {
     parseRelease,
     publicDownload,
     releaseRepo,
+    updateStatus,
 } from '../server/updates.ts';
 
 async function isolated(t: TestContext) {
@@ -262,7 +263,14 @@ void test('import preserves manual games, history, preferences and credentials, 
 });
 
 void test('updates accept only the official complete stable release and check at most daily', async (t) => {
-    await isolated(t);
+    const dir = await isolated(t);
+    process.env.NEXTPLAY_VERSION = '0.2.3';
+    await atomicJson(join(dir, 'update-check.json'), {
+        checkedAt: Date.now(),
+        release: parseRelease(release('0.2.3')),
+    });
+    assert.equal((await updateStatus()).release, undefined);
+    assert.equal((await checkUpdates()).release, undefined);
     assert.equal(newerVersion('0.10.0', '0.9.9'), true);
     assert.equal(newerVersion('0.2.0', '0.2.0'), false);
     assert.equal(newerVersion('0.3.0-beta', '0.2.0'), false);

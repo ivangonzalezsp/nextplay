@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { AppError, atomicJson, readJson, userDir } from './store.ts';
 
 export const releaseRepo = 'ivangonzalezsp/nextplay-releases';
-export const appVersion = () => process.env.NEXTPLAY_VERSION || '0.2.2';
+export const appVersion = () => process.env.NEXTPLAY_VERSION || '0.2.3';
 export type Release = {
     version: string;
     installer: string;
@@ -19,6 +19,11 @@ export function newerVersion(candidate: string, current: string) {
         b = current.split('.').map(Number);
     for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
     return false;
+}
+function currentCache(cache: UpdateCache) {
+    return cache.release && !newerVersion(cache.release.version, appVersion())
+        ? { ...cache, release: undefined }
+        : cache;
 }
 export function parseRelease(value: unknown): Release {
     const r = value as {
@@ -117,9 +122,8 @@ async function limitedText(response: Response, maximum: number) {
 }
 let checking: Promise<UpdateCache> | undefined;
 export async function updateStatus() {
-    const cache = await readJson<UpdateCache>(
-        join(userDir(), 'update-check.json'),
-        {},
+    const cache = currentCache(
+        await readJson<UpdateCache>(join(userDir(), 'update-check.json'), {}),
     );
     const due = !cache.checkedAt || Date.now() - cache.checkedAt >= 86_400_000;
     if (due) void checkUpdates().catch(() => {});
@@ -127,7 +131,7 @@ export async function updateStatus() {
 }
 export async function checkUpdates(force = false): Promise<UpdateCache> {
     const path = join(userDir(), 'update-check.json');
-    const cache = await readJson<UpdateCache>(path, {});
+    const cache = currentCache(await readJson<UpdateCache>(path, {}));
     if (!force && cache.checkedAt && Date.now() - cache.checkedAt < 86_400_000)
         return cache;
     if (checking) return checking;
