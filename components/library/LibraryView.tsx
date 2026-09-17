@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Search,
     LayoutGrid,
@@ -177,6 +177,7 @@ export function LibraryView({
     const [quickFilter, setQuickFilter] = useState<
         'all' | 'favorites' | 'playing' | 'pending' | 'shared' | 'short'
     >('all');
+    const loadMoreRef = useRef<HTMLDivElement>(null);
     const selectedLibraryTag =
         steamTags.find((tag) => tag.value === libraryTag) ?? null;
 
@@ -197,6 +198,17 @@ export function LibraryView({
         }
         return true;
     });
+
+    useEffect(() => {
+        const sentinel = loadMoreRef.current;
+        if (!sentinel || visibleGames.length <= limit) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry?.isIntersecting)
+                setLimit(Math.min(limit + 36, visibleGames.length));
+        });
+        observer.observe(sentinel);
+        return () => observer.disconnect();
+    }, [limit, setLimit, visibleGames.length]);
 
     return (
         <div className="hud-library-view">
@@ -899,16 +911,16 @@ export function LibraryView({
                 </div>
             )}
 
-            {/* 4. LOAD MORE BUTTON */}
+            {/* 4. INFINITE SCROLL SENTINEL */}
             {visibleGames.length > limit && (
-                <div className="flex justify-center mt-6">
-                    <Button
-                        variant="outline"
-                        onClick={() => setLimit(limit + 36)}
-                        className="hud-load-more-btn"
-                    >
-                        Mostrar más juegos ({limit} de {visibleGames.length})
-                    </Button>
+                <div
+                    ref={loadMoreRef}
+                    className="flex justify-center mt-6 min-h-8"
+                    aria-live="polite"
+                >
+                    <span className="text-xs text-muted-foreground">
+                        Cargando más juegos…
+                    </span>
                 </div>
             )}
         </div>
