@@ -12,8 +12,8 @@ El token solo se entrega al último paso de publicación. `GITHUB_TOKEN` tiene `
 ## Publicar una versión
 
 1. En cada PR, añade los cambios visibles para el usuario a `CHANGELOG.md` bajo `## [Unreleased]`, en `### Features` o `### Correcciones de errores`.
-2. Ejecuta manualmente **Release version** desde `main` y elige `patch`, `minor` o `major`. El workflow actualiza los manifiestos, promociona `Unreleased` a `## [X.Y.Z] - fecha`, crea el commit/tag y los publica.
-3. Actions ejecuta pruebas, tipos, compilación, HLTB con Python empaquetado, arranque del paquete y prueba del instalador. Después sube únicamente el EXE y `SHA256SUMS.txt` a la Release pública, usando la sección correspondiente de `CHANGELOG.md` como notas.
+2. Ejecuta manualmente **Release version** desde `main` y elige `patch`, `minor` o `major`. El workflow actualiza los manifiestos, promociona `Unreleased` a `## [X.Y.Z] - fecha` y abre un PR de release. Al hacer merge, crea la etiqueta `vX.Y.Z`.
+3. La etiqueta activa Actions, que ejecuta pruebas, tipos, compilación, HLTB con Python empaquetado, arranque del paquete y prueba del instalador. Después sube únicamente el EXE y `SHA256SUMS.txt` a la Release pública, usando la sección correspondiente de `CHANGELOG.md` como notas.
 
 La ejecución manual de **Windows installer** compila y guarda artefactos privados para revisión. Solo una ejecución sobre una etiqueta publica una Release. El README público se mantiene a partir de `packaging/RELEASES-README.md`. Los archivos antiguos de `docs/releases/` se conservan como histórico; las nuevas notas viven en `CHANGELOG.md`.
 

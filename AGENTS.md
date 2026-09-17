@@ -26,7 +26,7 @@ Instrucciones para trabajar en todo este repositorio. Consulta [README.md](READM
 | `server/sources.ts`, `server/family.ts`, `server/steam-*.ts`, `server/hltb.ts`, `scripts/hltb.py` | Steam, IGDB, familias, etiquetas, logros, duraciones y sus cachés.                                              |
 | `server/local-access.ts`, `server/desktop.ts`, `server/updates.ts`                                | Administración local, cuentas, importación, procesos y actualizaciones.                                         |
 | `scripts/start-server.ts`, `scripts/windows-*.ps1`, `packaging/`                                  | Servidor de producción, integración de Windows e instalador.                                                    |
-| `tests/`, `docs/`, `.github/workflows/release-windows.yml`                                        | Pruebas, documentación específica y distribución de Windows.                                                    |
+| `tests/`, `docs/`, `.github/workflows/`                                                           | Pruebas, documentación específica y distribución de Windows.                                                    |
 
 ## Entorno y comandos
 
@@ -110,7 +110,7 @@ En PowerShell puedes usar `npm.cmd run format:prettier`, que ejecuta el mismo sc
 
 - Sigue [docs/windows-release.md](docs/windows-release.md) para compilar/publicar y [docs/windows-validation.md](docs/windows-validation.md) para conocer pruebas y límites documentados. Consulta el código y los resultados actuales antes de reutilizar conclusiones antiguas.
 - Desarrollo y Actions pertenecen a `ivangonzalezsp/nextplay` (**privado**). `ivangonzalezsp/nextplay-releases` es **público** y contiene únicamente material de distribución; nunca publiques allí el checkout ni el historial privado.
-- **Publicar una etiqueta `v*` activa el workflow de publicación pública.** La ejecución manual genera artefactos privados. El workflow **Release version** promociona `CHANGELOG.md` desde `## [Unreleased]` a `## [X.Y.Z] - fecha`, sincroniza `package.json` y `package-lock.json`, crea el commit/tag y publica ambos; el publicador usa esa sección como notas públicas.
+- **Publicar una etiqueta `v*` activa el workflow de publicación pública.** La ejecución manual de **Release version** promociona `CHANGELOG.md` desde `## [Unreleased]` a `## [X.Y.Z] - fecha`, sincroniza `package.json` y `package-lock.json` y abre un PR `codex/release/vX.Y.Z`; después del merge, ese workflow crea la etiqueta y el publicador usa esa sección como notas públicas.
 - En cada versión del changelog, separa siempre los cambios en `### Features` y `### Correcciones de errores`; si una queda vacía, indícalo con `- Ninguno.`. Los archivos de `docs/releases/` anteriores son histórico.
 - Reutiliza `npm.cmd run package:windows`, `npm.cmd run test:package -- RUTA_DEL_PAQUETE` y `scripts/test-installer.ps1` según la guía. Los runtimes y hashes se fijan en `packaging/windows-runtimes.json` y `packaging/requirements-windows.txt`; no eludas la lista de archivos permitidos, las licencias, los checksums ni las pruebas de conservación de datos.
 - Una modificación de empaquetado o dependencias requiere comprobar el paquete arrancado y sus recursos, no solo el build del checkout. Usa instalaciones de ensayo; no instales ni actualices la aplicación personal para validar un cambio ajeno a ella.
