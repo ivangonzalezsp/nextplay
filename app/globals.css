@@ -2011,6 +2011,63 @@ h1 {
     line-height: 1.35;
 }
 
+.hud-ai-activity-list li.has-detail {
+    display: block;
+}
+
+.hud-ai-activity-disclosure {
+    width: 100%;
+}
+
+.hud-ai-activity-disclosure summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    list-style: none;
+}
+
+.hud-ai-activity-disclosure summary::-webkit-details-marker {
+    display: none;
+}
+
+.hud-ai-activity-disclosure summary::before {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: var(--theme-accent, #00f0a8);
+    content: '›';
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 120ms ease;
+}
+
+.hud-ai-activity-disclosure[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.hud-ai-activity-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+}
+
+.hud-ai-activity-hint {
+    margin-left: auto;
+    color: #64748b;
+    font-size: 0.6875rem;
+    white-space: nowrap;
+}
+
+.hud-ai-activity-detail {
+    margin: 6px 0 0 20px;
+    padding: 7px 9px;
+    border-left: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.35);
+    color: #cbd5e1;
+    font-size: 0.75rem;
+    line-height: 1.45;
+}
+
 .hud-ai-activity-list li.is-current {
     color: #e2e8f0;
 }

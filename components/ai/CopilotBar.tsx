@@ -48,9 +48,7 @@ function activityLabel(progress: RecommendationProgress) {
         case 'recommendations:codex:catalog-query':
             return 'La IA está consultando tu biblioteca…';
         case 'recommendations:codex:reasoning':
-            return typeof details.summary === 'string'
-                ? details.summary
-                : 'La IA está afinando la comparación…';
+            return 'La IA está afinando la comparación…';
         case 'recommendations:codex:response':
             return 'Respuesta recibida; comprobando los juegos…';
         case 'recommendations:codex:validated':
@@ -60,6 +58,19 @@ function activityLabel(progress: RecommendationProgress) {
         default:
             return 'Preparando la recomendación…';
     }
+}
+
+function activityDetail(progress: RecommendationProgress) {
+    const summary = progress.details?.summary;
+    if (progress.event === 'recommendations:codex:reasoning')
+        return typeof summary === 'string' && summary.trim()
+            ? summary.trim()
+            : 'Codex ha preparado un resumen de su criterio para esta recomendación.';
+    if (progress.event === 'recommendations:codex:catalog-query')
+        return 'Está buscando y filtrando candidatos en el catálogo local mediante una consulta de solo lectura. Los prompts y argumentos internos no se muestran.';
+    if (progress.event === 'recommendations:codex:thinking')
+        return 'Está comparando tus preferencias, el contexto de la conversación y los candidatos disponibles.';
+    return null;
 }
 
 export function CopilotBar({
@@ -177,14 +188,31 @@ export function CopilotBar({
                         {activity.slice(-6).map((progress, index, visible) => (
                             <li
                                 key={`${progress.event}-${index}`}
-                                className={
-                                    index === visible.length - 1
-                                        ? 'is-current'
-                                        : ''
-                                }
+                                className={`${index === visible.length - 1 ? 'is-current' : ''}${activityDetail(progress) ? ' has-detail' : ''}`}
                             >
-                                <span className="hud-ai-activity-dot" />
-                                <span>{activityLabel(progress)}</span>
+                                {activityDetail(progress) ? (
+                                    <details className="hud-ai-activity-disclosure">
+                                        <summary>
+                                            <span className="hud-ai-activity-summary">
+                                                <span className="hud-ai-activity-dot" />
+                                                <span>
+                                                    {activityLabel(progress)}
+                                                </span>
+                                            </span>
+                                            <span className="hud-ai-activity-hint">
+                                                Ver detalle
+                                            </span>
+                                        </summary>
+                                        <p className="hud-ai-activity-detail">
+                                            {activityDetail(progress)}
+                                        </p>
+                                    </details>
+                                ) : (
+                                    <>
+                                        <span className="hud-ai-activity-dot" />
+                                        <span>{activityLabel(progress)}</span>
+                                    </>
+                                )}
                             </li>
                         ))}
                     </ol>
