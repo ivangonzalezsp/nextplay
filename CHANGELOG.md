@@ -4,7 +4,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
-<!-- Añade cambios visibles para el usuario en la categoría correspondiente y sustituye su '- Ninguno.'. No incluyas secretos ni datos personales. -->
+## [0.5.0] - 2026-09-17
 
 ### Features
 
