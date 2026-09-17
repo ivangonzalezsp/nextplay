@@ -54,7 +54,7 @@ function formatHours(value: number | null | undefined) {
         : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
 }
 
-function AchievementProgress({
+export function AchievementProgress({
     game,
     busy,
     onRefresh,

@@ -1879,11 +1879,13 @@ h1 {
 /* COPILOT DOCK */
 .hud-copilot-dock {
     background: linear-gradient(180deg, #12181d 0%, #0d1215 100%);
-    border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.25);
+    border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.45);
     border-radius: 16px;
     padding: 18px 22px;
-    margin-top: 24px;
-    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    margin-top: 0;
+    box-shadow:
+        0 0 0 1px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.08),
+        0 12px 36px rgba(0, 0, 0, 0.42);
 }
 
 .hud-copilot-header {
@@ -1894,9 +1896,9 @@ h1 {
 }
 
 .hud-copilot-icon {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
     background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.15);
     color: var(--theme-accent, #00f0a8);
     display: grid;

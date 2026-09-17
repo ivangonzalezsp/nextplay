@@ -6,10 +6,10 @@ la clave de Steam al navegador.
 
 ## Dónde aparece
 
-1. Abre **Tu biblioteca** y marca un juego de Steam como **Estoy jugando** o
-   **En pausa**.
-2. En la vista de cuadrícula, al final de la tarjeta del juego aparece una fila
-   con el icono de trofeo, por ejemplo `12/45 logros · 27%`.
+1. Abre **Tu biblioteca** o la pestaña **Para ti**, donde aparece **Tus juegos
+   en curso**, y marca un juego de Steam como **Estoy jugando** o **En pausa**.
+2. En la tarjeta del juego, al final aparece una fila con el icono de trofeo,
+   por ejemplo `12/45 logros · 27%`.
 3. Pulsa la fila para ver la lista de logros conseguidos y pendientes. Los
    logros ocultos que aún no has conseguido no revelan su nombre ni descripción.
 4. El botón **Actualizar logros** dentro de ese panel fuerza una lectura nueva

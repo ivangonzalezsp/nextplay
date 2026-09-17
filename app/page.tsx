@@ -12,7 +12,10 @@ import { QuickVibeBar } from '@/components/recommendations/QuickVibeBar';
 import { HeroSpotlight } from '@/components/recommendations/HeroSpotlight';
 import { GameCard } from '@/components/recommendations/GameCard';
 import { CopilotBar } from '@/components/ai/CopilotBar';
-import { LibraryView } from '@/components/library/LibraryView';
+import {
+    AchievementProgress,
+    LibraryView,
+} from '@/components/library/LibraryView';
 import type { AddGameInput } from '@/components/library/AddGameDialog';
 import { PlayHistory } from '@/components/library/PlayHistory';
 
@@ -782,6 +785,22 @@ export default function Home() {
                             savedGamesCount={savedGames.length}
                         />
 
+                        {/* Copilot Bar for instant refinement */}
+                        <CopilotBar
+                            text={text}
+                            setText={setText}
+                            reference={reference}
+                            setReference={setReference}
+                            engine={engine}
+                            setEngine={setEngine}
+                            codex={codex}
+                            state={state}
+                            busy={busy}
+                            canRecommend={canRecommend}
+                            onRecommend={(msg) => recommend(msg ?? text)}
+                            onReset={reset}
+                        />
+
                         {/* In Progress Shelf (if any) */}
                         {inProgress.length > 0 && (
                             <section
@@ -929,6 +948,18 @@ export default function Home() {
                                                             : 'Reanudar'}
                                                     </Button>
                                                 </div>
+                                                {game.appId > 0 && (
+                                                    <AchievementProgress
+                                                        game={game}
+                                                        busy={
+                                                            busy ===
+                                                            `achievements-${game.appId}`
+                                                        }
+                                                        onRefresh={
+                                                            refreshAchievements
+                                                        }
+                                                    />
+                                                )}
                                             </div>
                                         </article>
                                     ))}
@@ -1218,24 +1249,6 @@ export default function Home() {
                                     </div>
                                 ))}
                             </div>
-                        )}
-
-                        {/* Copilot Bar for instant refinement */}
-                        {(engine === 'codex' || reference) && (
-                            <CopilotBar
-                                text={text}
-                                setText={setText}
-                                reference={reference}
-                                setReference={setReference}
-                                engine={engine}
-                                setEngine={setEngine}
-                                codex={codex}
-                                state={state}
-                                busy={busy}
-                                canRecommend={canRecommend}
-                                onRecommend={(msg) => recommend(msg ?? text)}
-                                onReset={reset}
-                            />
                         )}
                     </TabsContent>
 
