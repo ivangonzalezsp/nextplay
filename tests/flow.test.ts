@@ -4,7 +4,7 @@ import { mkdtemp, readFile, writeFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { DEFAULT_FILTERS, EMPTY_STATE } from '../lib/model.ts';
-import type { Game, State } from '../lib/model.ts';
+import type { Game, Snapshot, State } from '../lib/model.ts';
 import {
     eligible,
     parseFilters,
@@ -424,6 +424,60 @@ void test('conversation corrections and selected filters reach the next prompt',
     assert.ok(prompt.includes('"gameMode":"single"'));
     assert.ok(!prompt.includes('test-key'));
 });
+void test('recommendation streaming keeps the active conversation across filter changes', async () => {
+    const dir = await mkdtemp(join(resolve(tmpdir()), 'nextplay-stream-test-'));
+    const previousDir = process.env.NEXTPLAY_DATA_DIR;
+    const previousBin = process.env.NEXTPLAY_CODEX_BIN;
+    process.env.NEXTPLAY_DATA_DIR = dir;
+    process.env.NEXTPLAY_CODEX_BIN = join(dir, 'missing-codex.exe');
+    const request = (path: string, payload: object) =>
+        handle(
+            new Request('http://127.0.0.1:3000/api/' + path, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(payload),
+            }),
+        );
+    try {
+        await atomicJson(join(dir, 'state.json'), state());
+        const first = await request('recommendations', {
+            engine: 'local',
+            filters: DEFAULT_FILTERS,
+            text: 'Quiero una aventura con personajes carismáticos.',
+        });
+        assert.equal(first.status, 200);
+        const streamed = await request('recommendations/stream', {
+            engine: 'local',
+            filters: { ...DEFAULT_FILTERS, mode: 'next', hours: 40 },
+            text: 'Y que haya salido en los últimos cinco años.',
+        });
+        assert.equal(streamed.status, 200);
+        const frames = (await streamed.text())
+            .trim()
+            .split('\n')
+            .map(
+                (line) => JSON.parse(line) as { type: string; data?: Snapshot },
+            );
+        assert.ok(frames.some((frame) => frame.type === 'progress'));
+        const result = frames.find((frame) => frame.type === 'result')?.data;
+        assert.ok(result);
+        assert.equal(result.conversation.length, 2);
+        assert.equal(
+            result.conversation.at(-1)?.text,
+            'Y que haya salido en los últimos cinco años.',
+        );
+        assert.equal(
+            result.conversation[0].text,
+            'Quiero una aventura con personajes carismáticos.',
+        );
+    } finally {
+        if (previousDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+        else process.env.NEXTPLAY_DATA_DIR = previousDir;
+        if (previousBin === undefined) delete process.env.NEXTPLAY_CODEX_BIN;
+        else process.env.NEXTPLAY_CODEX_BIN = previousBin;
+        await rm(dir, { recursive: true, force: true });
+    }
+});
 void test('local endpoint trusts private LAN hosts but rejects cross-origin, DNS rebinding, form posts and oversized bodies', async () => {
     const request = (url: string, headers: Record<string, string>) =>
         new Request(url, { method: 'POST', headers, body: '{}' });
@@ -769,7 +823,8 @@ void test('local API works without Codex or network and preserves every search a
             text: '',
         });
         assert.equal(more.history.length, 4);
-        assert.equal(more.conversation[0].result.engine, 'local');
+        assert.equal(more.conversation.length, 21);
+        assert.equal(more.conversation.at(-1)?.result.engine, 'local');
         assert.equal(networkCalls, 0);
         assert.equal((await readdir(dir)).includes('codex-runs'), false);
     } finally {

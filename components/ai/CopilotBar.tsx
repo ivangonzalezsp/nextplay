@@ -10,6 +10,7 @@ import {
     History,
     ChevronDown,
     ChevronUp,
+    LoaderCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,8 +18,49 @@ import type {
     Game,
     RecommendationEngine,
     CodexSettings,
+    RecommendationProgress,
     Snapshot,
 } from '@/lib/model';
+
+function activityLabel(progress: RecommendationProgress) {
+    const details = progress.details ?? {};
+    const number = (key: string) =>
+        typeof details[key] === 'number' ? details[key] : undefined;
+    switch (progress.event) {
+        case 'recommendations:start':
+            return 'Preparando tu consulta…';
+        case 'recommendations:library-refresh:start':
+            return 'Actualizando tu biblioteca…';
+        case 'recommendations:enrich:start':
+            return 'Completando los datos de tus juegos…';
+        case 'recommendations:discover:start':
+            return 'Buscando descubrimientos…';
+        case 'recommendations:candidates':
+            return `${number('total') ?? 'Varios'} candidatos cumplen tus filtros.`;
+        case 'recommendations:reviews:batch:start':
+            return 'Consultando valoraciones…';
+        case 'recommendations:database:ready':
+            return 'Catálogo listo para la IA.';
+        case 'recommendations:codex:start':
+            return 'La IA está analizando qué encaja contigo…';
+        case 'recommendations:codex:thinking':
+            return 'La IA está pensando la recomendación…';
+        case 'recommendations:codex:catalog-query':
+            return 'La IA está consultando tu biblioteca…';
+        case 'recommendations:codex:reasoning':
+            return typeof details.summary === 'string'
+                ? details.summary
+                : 'La IA está afinando la comparación…';
+        case 'recommendations:codex:response':
+            return 'Respuesta recibida; comprobando los juegos…';
+        case 'recommendations:codex:validated':
+            return 'Recomendación validada.';
+        case 'recommendations:complete':
+            return 'Consulta completada.';
+        default:
+            return 'Preparando la recomendación…';
+    }
+}
 
 export function CopilotBar({
     text,
@@ -30,6 +72,7 @@ export function CopilotBar({
     codex,
     state,
     busy,
+    activity,
     canRecommend,
     onRecommend,
     onReset,
@@ -43,6 +86,7 @@ export function CopilotBar({
     codex: CodexSettings;
     state: Snapshot | null;
     busy: string;
+    activity: RecommendationProgress[];
     canRecommend: boolean;
     onRecommend: (message?: string) => void;
     onReset: () => void;
@@ -112,6 +156,40 @@ export function CopilotBar({
                     </Button>
                 </div>
             </div>
+
+            {activity.length > 0 && (
+                <div className="hud-ai-activity">
+                    <div className="hud-ai-activity-header">
+                        <span>
+                            {engine === 'codex'
+                                ? 'Actividad de la IA'
+                                : 'Actividad de la recomendación'}
+                        </span>
+                        {busy === 'recommend' && (
+                            <LoaderCircle className="spin" size={13} />
+                        )}
+                    </div>
+                    <ol
+                        className="hud-ai-activity-list"
+                        aria-live="polite"
+                        aria-busy={busy === 'recommend'}
+                    >
+                        {activity.slice(-6).map((progress, index, visible) => (
+                            <li
+                                key={`${progress.event}-${index}`}
+                                className={
+                                    index === visible.length - 1
+                                        ? 'is-current'
+                                        : ''
+                                }
+                            >
+                                <span className="hud-ai-activity-dot" />
+                                <span>{activityLabel(progress)}</span>
+                            </li>
+                        ))}
+                    </ol>
+                </div>
+            )}
 
             {/* Expandable session history */}
             {historyOpen && conversationHistory.length > 0 && (

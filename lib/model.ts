@@ -229,6 +229,14 @@ export type Snapshot = State & {
     warnings: string[];
     tasteProfile?: TasteAffinity[];
 };
+export type RecommendationProgress = {
+    event: string;
+    details?: Record<string, unknown>;
+};
+export type RecommendationStreamFrame =
+    | ({ type: 'progress' } & RecommendationProgress)
+    | { type: 'result'; data: Snapshot }
+    | { type: 'error'; error: string; status?: number };
 export const EMPTY_STATE: State = {
     version: 1,
     profile: null,

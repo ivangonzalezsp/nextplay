@@ -65,6 +65,8 @@ import type {
     Preference,
     Recommendation,
     RecommendationEngine,
+    RecommendationProgress,
+    RecommendationStreamFrame,
     Snapshot,
 } from '@/lib/model';
 
@@ -127,6 +129,75 @@ async function api(path: string, body?: unknown, method = 'POST') {
     return data;
 }
 
+async function streamRecommendations(
+    body: Record<string, unknown>,
+    onProgress: (progress: RecommendationProgress) => void,
+): Promise<Snapshot> {
+    const path = '/api/recommendations/stream';
+    const started = Date.now();
+    log('browser', 'api:stream:start', {
+        method: 'POST',
+        path,
+        fields: Object.keys(body),
+    });
+    let response: Response;
+    try {
+        response = await fetch(path, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        if (!response.body)
+            throw new Error('Next Play no ha devuelto actividad de la IA.');
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let result: Snapshot | null = null;
+        const readFrame = (line: string) => {
+            if (!line.trim()) return;
+            const frame = JSON.parse(line) as RecommendationStreamFrame;
+            if (frame.type === 'progress') {
+                onProgress(frame);
+            } else if (frame.type === 'error') {
+                throw new Error(frame.error);
+            } else if (frame.type === 'result') {
+                result = frame.data;
+            }
+        };
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                buffer += decoder.decode(value, { stream: !done });
+                let newline: number;
+                while ((newline = buffer.indexOf('\n')) >= 0) {
+                    readFrame(buffer.slice(0, newline));
+                    buffer = buffer.slice(newline + 1);
+                }
+                if (done) break;
+            }
+            readFrame(buffer);
+        } finally {
+            reader.releaseLock();
+        }
+        if (!result)
+            throw new Error('La IA no ha devuelto una recomendación válida.');
+        log('browser', 'api:stream:complete', {
+            method: 'POST',
+            path,
+            status: response.status,
+            ms: Date.now() - started,
+        });
+        return result as Snapshot;
+    } catch (e) {
+        logError('browser', 'api:stream:failed', e, {
+            method: 'POST',
+            path,
+            ms: Date.now() - started,
+        });
+        throw e;
+    }
+}
+
 function formatHours(value: number | null | undefined) {
     return value == null
         ? 'sin datos'
@@ -150,6 +221,7 @@ export default function Home() {
     const [limit, setLimit] = useState(36);
     const [busy, setBusy] = useState('');
     const [loading, setLoading] = useState(true);
+    const [activity, setActivity] = useState<RecommendationProgress[]>([]);
     const [error, setError] = useState('');
     const [result, setResult] = useState<Recommendation | null>(null);
     const [tab, setTab] = useState('recommend');
@@ -159,6 +231,19 @@ export default function Home() {
     const activeFilters = useRef(filters);
     const activeCodex = useRef(codex);
     const activeEngine = useRef(engine);
+    const recommendationsRef = useRef<HTMLDivElement>(null);
+
+    function addActivity(progress: RecommendationProgress) {
+        setActivity((current) => {
+            const last = current.at(-1);
+            if (
+                last?.event === progress.event &&
+                progress.event !== 'recommendations:codex:reasoning'
+            )
+                return [...current.slice(0, -1), progress];
+            return [...current, progress].slice(-12);
+        });
+    }
 
     useEffect(() => {
         activeEngine.current = engine;
@@ -178,7 +263,7 @@ export default function Home() {
         log('browser', 'view:changed', { tab });
     }, [tab]);
 
-    function accept(next: Snapshot) {
+    function accept(next: Snapshot, scrollToResults = false) {
         log('browser', 'state:accepted', {
             games: next.games.length,
             conversation: next.conversation.length,
@@ -194,6 +279,13 @@ export default function Home() {
         setState(next);
         setResult(next.conversation.at(-1)?.result ?? null);
         if (next.codex) setCodex(next.codex);
+        if (scrollToResults)
+            requestAnimationFrame(() =>
+                recommendationsRef.current?.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start',
+                }),
+            );
     }
 
     async function load() {
@@ -324,16 +416,20 @@ export default function Home() {
                         'Indica un mensaje de hasta 2000 caracteres.',
                     );
                 setBusy('recommend');
+                setActivity([]);
                 setError('');
                 try {
-                    const next: Snapshot = await api('recommendations', {
-                        filters: activeFilters.current,
-                        codex: activeCodex.current,
-                        engine: activeEngine.current,
-                        text: data.message,
-                    });
+                    const next = await streamRecommendations(
+                        {
+                            filters: activeFilters.current,
+                            codex: activeCodex.current,
+                            engine: activeEngine.current,
+                            text: data.message,
+                        },
+                        addActivity,
+                    );
                     flushSync(() => {
-                        accept(next);
+                        accept(next, true);
                         setText('');
                         setTab('recommend');
                     });
@@ -390,15 +486,22 @@ export default function Home() {
 
     async function recommend(message = text, selectionFilters = filters) {
         if (reference && engine !== 'codex') return;
+        setActivity([]);
         await action('recommend', async () => {
             accept(
-                await api('recommendations', {
-                    filters: selectionFilters,
-                    codex,
-                    engine,
-                    ...(reference ? { referenceAppId: reference.appId } : {}),
-                    text: engine === 'local' ? '' : message,
-                }),
+                await streamRecommendations(
+                    {
+                        filters: selectionFilters,
+                        codex,
+                        engine,
+                        ...(reference
+                            ? { referenceAppId: reference.appId }
+                            : {}),
+                        text: engine === 'local' ? '' : message,
+                    },
+                    addActivity,
+                ),
+                true,
             );
             setText('');
             setReference(null);
@@ -508,6 +611,7 @@ export default function Home() {
     }
 
     async function reset() {
+        setActivity([]);
         await action('reset', async () => {
             accept(await api('conversation/reset', { filters }));
             setText('');
@@ -796,6 +900,7 @@ export default function Home() {
                             codex={codex}
                             state={state}
                             busy={busy}
+                            activity={activity}
                             canRecommend={canRecommend}
                             onRecommend={(msg) => recommend(msg ?? text)}
                             onReset={reset}
@@ -1009,7 +1114,11 @@ export default function Home() {
                                 </div>
                             </section>
                         ) : (
-                            <div className="hud-results-container space-y-6">
+                            <div
+                                id="recommendations-output"
+                                ref={recommendationsRef}
+                                className="hud-results-container space-y-6"
+                            >
                                 {/* Result header banner */}
                                 <div className="hud-card-subpanel flex items-center justify-between flex-wrap gap-3">
                                     <p className="text-sm text-foreground flex-1">

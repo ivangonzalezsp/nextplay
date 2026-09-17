@@ -1099,6 +1099,10 @@ h1 {
     z-index: 40;
 }
 
+#recommendations-output {
+    scroll-margin-top: 84px;
+}
+
 .hud-brand-group {
     display: flex;
     align-items: center;
@@ -1968,6 +1972,61 @@ h1 {
     background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.12);
     border-color: var(--theme-accent, #00f0a8);
     color: var(--theme-accent, #a7f3d0);
+}
+
+.hud-ai-activity {
+    background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.06);
+    border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.16);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.hud-ai-activity-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--theme-accent, #00f0a8);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.hud-ai-activity-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    color: #94a3b8;
+    font-size: 0.75rem;
+}
+
+.hud-ai-activity-list li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.35;
+}
+
+.hud-ai-activity-list li.is-current {
+    color: #e2e8f0;
+}
+
+.hud-ai-activity-dot {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+    margin-top: 4px;
+    border-radius: 999px;
+    background: #475569;
+}
+
+.hud-ai-activity-list li.is-current .hud-ai-activity-dot {
+    background: var(--theme-accent, #00f0a8);
+    box-shadow: 0 0 8px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.7);
 }
 
 .hud-copilot-form {

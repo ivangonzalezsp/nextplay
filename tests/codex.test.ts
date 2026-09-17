@@ -2,6 +2,34 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runProcess } from '../server/codex.ts';
 
+void test('Codex JSON events are available to progress listeners', async () => {
+    const previous = process.env.NEXTPLAY_CODEX_BIN;
+    process.env.NEXTPLAY_CODEX_BIN = process.execPath;
+    const events: Record<string, unknown>[] = [];
+    try {
+        await runProcess(
+            [
+                '-e',
+                "process.stdout.write(JSON.stringify({type:'item.completed',item:{type:'mcp_tool_call',status:'completed'}})+String.fromCharCode(10))",
+                '--',
+                '--json',
+            ],
+            '',
+            10_000,
+            process.cwd(),
+            (event) => events.push(event),
+        );
+        assert.equal(events[0]?.type, 'item.completed');
+        assert.equal(
+            (events[0]?.item as { type?: string })?.type,
+            'mcp_tool_call',
+        );
+    } finally {
+        if (previous === undefined) delete process.env.NEXTPLAY_CODEX_BIN;
+        else process.env.NEXTPLAY_CODEX_BIN = previous;
+    }
+});
+
 void test('Codex errors identify the failure without leaking raw output', async (t) => {
     const previous = process.env.NEXTPLAY_CODEX_BIN;
     process.env.NEXTPLAY_CODEX_BIN = process.execPath;

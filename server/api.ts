@@ -44,7 +44,14 @@ import {
   ACHIEVEMENTS_INTERVAL,
   fetchSteamAchievements,
 } from './steam-achievements.ts';
-import type { Game, Snapshot, State, Turn } from '../lib/model.ts';
+import type {
+  Game,
+  RecommendationProgress,
+  RecommendationStreamFrame,
+  Snapshot,
+  State,
+  Turn,
+} from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
 import {
   calendarDateAt,
@@ -67,6 +74,126 @@ import {
 } from './family.ts';
 
 const localHosts = new Set(['localhost', '127.0.0.1', '[::1]']);
+const responseHeaders = {
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Referrer-Policy': 'no-referrer',
+};
+type ProgressListener = (progress: RecommendationProgress) => void;
+const publicProgressKeys = new Set([
+  'available',
+  'candidates',
+  'count',
+  'discoveries',
+  'eligible',
+  'failed',
+  'games',
+  'kind',
+  'library',
+  'offset',
+  'owned',
+  'status',
+  'summary',
+  'tool',
+  'total',
+  'warnings',
+]);
+function publicProgress(progress: RecommendationProgress) {
+  const details = progress.details
+    ? Object.fromEntries(
+        Object.entries(progress.details).filter(([key]) =>
+          publicProgressKeys.has(key),
+        ),
+      )
+    : undefined;
+  return {
+    event: progress.event,
+    ...(details && Object.keys(details).length ? { details } : {}),
+  } satisfies RecommendationProgress;
+}
+export function streamRecommendations(request: Request): Response {
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      const send = (frame: RecommendationStreamFrame) => {
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(frame) + '\n'));
+        } catch {
+          /* The browser may have closed the stream. */
+        }
+      };
+      const close = () => {
+        try {
+          controller.close();
+        } catch {
+          /* The stream may already be closed. */
+        }
+      };
+      let inner: Request;
+      try {
+        inner = new Request(
+          new URL('/api/recommendations', request.url),
+          request.clone(),
+        );
+      } catch {
+        send({
+          type: 'error',
+          error: 'El contenido de la solicitud no es válido.',
+        });
+        close();
+        return;
+      }
+      void handle(inner, (progress) =>
+        send({ type: 'progress', ...publicProgress(progress) }),
+      )
+        .then(async (response) => {
+          let payload: unknown;
+          try {
+            payload = await response.json();
+          } catch {
+            send({
+              type: 'error',
+              error: 'La respuesta de Next Play no es válida.',
+              status: response.status,
+            });
+            return;
+          }
+          if (response.ok) {
+            send({ type: 'result', data: payload as Snapshot });
+            return;
+          }
+          send({
+            type: 'error',
+            error:
+              payload &&
+              typeof payload === 'object' &&
+              'error' in payload &&
+              typeof payload.error === 'string'
+                ? payload.error
+                : 'No se ha podido completar la recomendación.',
+            status: response.status,
+          });
+        })
+        .catch((error: unknown) =>
+          send({
+            type: 'error',
+            error:
+              error instanceof Error
+                ? error.message
+                : 'No se ha podido completar la recomendación.',
+          }),
+        )
+        .finally(close);
+    },
+  });
+  return new Response(stream, {
+    headers: {
+      ...responseHeaders,
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+    },
+  });
+}
 function isPrivateIpv4(hostname: string) {
   const parts = hostname.split('.');
   if (parts.length !== 4 || parts.some((part) => !/^\d{1,3}$/.test(part)))
@@ -153,12 +280,28 @@ async function saveRecommendation(state: State, turn: Turn) {
   await saveState(next);
   return snapshot(next, turn.result.warnings);
 }
-export async function handle(request: Request): Promise<Response> {
+export async function handle(
+  request: Request,
+  onProgress?: ProgressListener,
+): Promise<Response> {
   const started = Date.now();
   const path = new URL(request.url).pathname;
+  if (path === '/api/recommendations/stream' && request.method === 'POST')
+    return streamRecommendations(request);
   const requestInfo = { method: request.method, path };
-  const phase = (event: string, details?: Record<string, unknown>) =>
+  const publish = (progress: RecommendationProgress) => {
+    try {
+      onProgress?.(progress);
+    } catch {
+      /* Progress reporting must never fail the recommendation. */
+    }
+  };
+  const phase = (event: string, details?: Record<string, unknown>) => {
     log('server', event, { path, ...details });
+    publish({ event, ...(details ? { details } : {}) });
+  };
+  const notify = (event: string, details?: Record<string, unknown>) =>
+    publish({ event, ...(details ? { details } : {}) });
   const complete = (response: Response) => {
     log('server', 'request:complete', {
       ...requestInfo,
@@ -168,12 +311,7 @@ export async function handle(request: Request): Promise<Response> {
     return response;
   };
   log('server', 'request:start', requestInfo);
-  const headers = {
-    'Cache-Control': 'no-store',
-    'X-Content-Type-Options': 'nosniff',
-    'Cross-Origin-Resource-Policy': 'same-origin',
-    'Referrer-Policy': 'no-referrer',
-  };
+  const headers = responseHeaders;
   try {
     phase('request:validate');
     verifyRequest(request);
@@ -287,7 +425,6 @@ export async function handle(request: Request): Promise<Response> {
       if (path === '/api/tastes' && request.method === 'PATCH') {
         phase('tastes:update:start');
         state.tastes = parseTastes(payload, state);
-        state.conversation = [];
         await saveState(state);
         const next = await snapshot(state);
         phase('tastes:update:complete');
@@ -476,7 +613,6 @@ export async function handle(request: Request): Promise<Response> {
             fresh.profile.steamId,
           ),
           syncedAt: Date.now(),
-          conversation: [],
         };
         if (c.familyToken) {
           phase('steam:family:refresh:start');
@@ -544,7 +680,6 @@ export async function handle(request: Request): Promise<Response> {
         const next = {
           ...refreshed.state,
           games: enriched.games,
-          conversation: [],
         };
         await saveCache(cache);
         await saveState(next);
@@ -604,14 +739,6 @@ export async function handle(request: Request): Promise<Response> {
           throw new AppError(
             'Algo como este necesita Codex para interpretar qué conservar o cambiar.',
           );
-        if (
-          engine === 'local' ||
-          (state.engine ?? 'codex') !== engine ||
-          !!state.conversation.at(-1)?.filters.shortlistOnly !==
-            !!filters.shortlistOnly ||
-          state.conversation.at(-1)?.filters.mode !== filters.mode
-        )
-          state.conversation = [];
         if (engine === 'local') {
           phase('recommendations:local:start');
           state.games = withHltb(state.games, await getHltbCache());
@@ -635,11 +762,6 @@ export async function handle(request: Request): Promise<Response> {
           });
           return next;
         }
-        if (state.conversation.length >= 20)
-          throw new AppError(
-            'Esta conversación tiene 20 consultas. Inicia una nueva búsqueda para continuar.',
-            409,
-          );
         const warnings: string[] = [];
         const c = await config();
         const codex = parseCodexSettings(
@@ -837,6 +959,15 @@ export async function handle(request: Request): Promise<Response> {
             buildPrompt(state, candidates, filters, payload.text, reference),
             codex,
             { state, candidates },
+            (progress) => {
+              if (progress.kind === 'reasoning')
+                notify('recommendations:codex:reasoning', {
+                  summary: progress.summary,
+                });
+              else if (progress.kind === 'catalog')
+                notify('recommendations:codex:catalog-query');
+              else notify('recommendations:codex:thinking');
+            },
           );
           phase('recommendations:codex:response');
           out = validatePicks(raw, candidates);
