@@ -13,6 +13,7 @@ import {
     AFFINITIES,
     affinityScore,
     buildTasteProfile,
+    editionKey,
     gameAffinitySignals,
 } from '../lib/tastes.ts';
 import type {
@@ -26,6 +27,8 @@ import type {
 import type { Filters, Game, Preference, State, Pick } from '../lib/model.ts';
 
 const codexModelPattern = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,100}$/;
+const editionMarker =
+    /\b(game of the year|goty|complete|definitive|enhanced|legendary|anniversary|remastered|remaster|classic|prepare to die|edition)\b/i;
 
 export function parseEngine(value: unknown): RecommendationEngine {
     if (value !== 'codex' && value !== 'local')
@@ -287,13 +290,34 @@ export function selectCandidates(
     const profile = buildTasteProfile(state);
     const recent = recentRecommendationPenalties(state);
     const library = new Map(state.games.map((g) => [g.appId, g]));
+    const libraryEditionKeys = new Set(
+        state.games
+            .filter((game) => game.appId > 0 && editionMarker.test(game.name))
+            .map(editionKey)
+            .filter(Boolean),
+    );
+    const libraryTitleKeys = new Set(
+        state.games
+            .filter((game) => game.appId > 0)
+            .map(editionKey)
+            .filter(Boolean),
+    );
     const unique = new Map(
         [
             ...state.games,
             ...[
                 ...(filters.shortlistOnly ? (state.shortlist ?? []) : []),
                 ...discoveries,
-            ].filter((g) => !library.has(g.appId)),
+            ].filter(
+                (g) =>
+                    !library.has(g.appId) &&
+                    !(
+                        g.appId > 0 &&
+                        (libraryEditionKeys.has(editionKey(g)) ||
+                            (editionMarker.test(g.name) &&
+                                libraryTitleKeys.has(editionKey(g))))
+                    ),
+            ),
         ].map((g) => [
             g.appId,
             {

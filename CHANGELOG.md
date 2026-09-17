@@ -13,6 +13,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 ### Correcciones de errores
 
 - Ahora se pueden borrar de la biblioteca los juegos añadidos manualmente.
+- Las ediciones equivalentes, como una edición GOTY y su edición base, ya no aparecen como descubrimientos si una de ellas está en tu biblioteca.
 
 ## [0.4.0] - 2026-09-17
 

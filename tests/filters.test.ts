@@ -154,6 +154,28 @@ void test('clear filters retains the selected mode and removes optional constrai
     );
 });
 
+void test('does not surface a base edition as a discovery when a library edition exists', () => {
+    const state: State = {
+        ...structuredClone(EMPTY_STATE),
+        games: [game(35140, { name: 'Batman: Arkham Asylum GOTY Edition' })],
+    };
+    const candidates = selectCandidates(
+        state,
+        [
+            game(35010, {
+                name: 'Batman: Arkham Asylum',
+                owned: false,
+                shared: false,
+            }),
+        ],
+        DEFAULT_FILTERS,
+    );
+    assert.deepEqual(
+        candidates.map((candidate) => candidate.appId),
+        [35140],
+    );
+});
+
 void test('combined shortlist, continue and reference filters keep the displayed count accurate', () => {
     const games = [
         game(1),
