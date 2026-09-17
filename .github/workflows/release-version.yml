@@ -1,0 +1,46 @@
+name: Release version
+
+on:
+    workflow_dispatch:
+        inputs:
+            bump:
+                description: Version increment
+                required: true
+                default: minor
+                type: choice
+                options:
+                    - patch
+                    - minor
+                    - major
+
+permissions:
+    contents: write
+
+concurrency:
+    group: release-version
+    cancel-in-progress: false
+
+jobs:
+    release:
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+            - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+              with:
+                  node-version: '24.21.0'
+            - name: Configure release commit
+              run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            - name: Bump package and create tag
+              env:
+                  BUMP: ${{ inputs.bump }}
+              run: |
+                  npm version "$BUMP" -m "chore: release v%s"
+            - name: Validate release notes
+              run: |
+                  VERSION="$(node -p "require('./package.json').version")"
+                  test -f "docs/releases/v${VERSION}.md"
+            - name: Push release commit and tag
+              run: git push origin HEAD:main --follow-tags
