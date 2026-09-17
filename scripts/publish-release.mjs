@@ -109,6 +109,21 @@ assert.equal(
     false,
     'The installer repository must be public.',
 );
+if (!destination.default_branch)
+    throw new Error('The installer repository has no default branch.');
+if (!(await api(`/git/ref/tags/${tag}`))) {
+    const branch = await api(
+        `/git/ref/heads/${encodeURIComponent(destination.default_branch)}`,
+    );
+    assert.ok(
+        branch?.object?.sha,
+        'The installer repository branch is invalid.',
+    );
+    await api('/git/refs', 'POST', {
+        ref: `refs/tags/${tag}`,
+        sha: branch.object.sha,
+    });
+}
 // Drafts keep incomplete uploads out of the anonymous update feed.
 let release = await api(`/releases/tags/${tag}`);
 if (!release) {
