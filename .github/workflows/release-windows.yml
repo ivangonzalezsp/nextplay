@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
     windows:
-        if: github.repository == 'ivangonzalezsp/nextplay' && github.event.repository.private
+        if: github.repository == 'ivangonzalezsp/nextplay'
         runs-on: windows-latest
         timeout-minutes: 45
         steps:

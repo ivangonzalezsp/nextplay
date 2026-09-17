@@ -2,12 +2,12 @@
 
 ## Repositorios y credencial
 
-- Desarrollo y Actions: `ivangonzalezsp/nextplay`, **privado**.
+- Desarrollo y Actions: `ivangonzalezsp/nextplay`, **público**.
 - Descargas: `ivangonzalezsp/nextplay-releases`, **público**. Solo README, instalador, SHA-256 y notas. Nunca publiques aquí el checkout del desarrollo.
 - Crea un [personal access token fine-grained](https://github.com/settings/personal-access-tokens/new) cuyo propietario sea `ivangonzalezsp`, con **Only select repositories → nextplay-releases** y **Repository permissions → Contents: Read and write**. Utiliza una caducidad y renuévalo cuando corresponda.
-- Guarda el valor como secreto de Actions **RELEASES_TOKEN** en el repositorio **privado**. No lo guardes en `.env`, en Git, en el repositorio público ni en los artefactos.
+- Guarda el valor como secreto de Actions **RELEASES_TOKEN** en el repositorio de desarrollo. No lo guardes en `.env`, en Git, en el repositorio público de descargas ni en los artefactos.
 
-El token solo se entrega al último paso de publicación. `GITHUB_TOKEN` tiene `contents: read` en el repositorio privado. El publicador usa un borrador hasta completar ambas subidas; un intento fallido se puede reanudar mientras siga en borrador. Una versión ya pública es inmutable para este script.
+El token solo se entrega al último paso de publicación. `GITHUB_TOKEN` tiene `contents: read` en el repositorio de desarrollo. El publicador usa un borrador hasta completar ambas subidas; un intento fallido se puede reanudar mientras siga en borrador. Una versión ya pública es inmutable para este script.
 
 ## Publicar una versión
 
