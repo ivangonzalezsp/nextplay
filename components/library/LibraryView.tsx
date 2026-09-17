@@ -15,6 +15,7 @@ import {
     Gamepad2,
     Trophy,
     RefreshCw,
+    Trash2,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -147,6 +148,7 @@ export function LibraryView({
     onPreference,
     onSimilar,
     onAdd,
+    onRemove,
     onRefreshAchievements,
     busy,
 }: {
@@ -170,6 +172,7 @@ export function LibraryView({
     onPreference: (game: Game, change: Partial<Preference>) => void;
     onSimilar: (game: Game) => void;
     onAdd: (input: AddGameInput) => Promise<void>;
+    onRemove: (game: Game) => Promise<void>;
     onRefreshAchievements?: (game: Game) => Promise<void>;
     busy: string;
 }) {
@@ -180,6 +183,15 @@ export function LibraryView({
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const selectedLibraryTag =
         steamTags.find((tag) => tag.value === libraryTag) ?? null;
+    const confirmRemove = (game: Game) => {
+        if (
+            game.appId < 0 &&
+            window.confirm(
+                `¿Borrar «${game.name}» de tu biblioteca? También se eliminarán su estado, lista corta y actividad.`,
+            )
+        )
+            void onRemove(game);
+    };
 
     // Filter based on quick chip selection
     const visibleGames = orderedGames.filter((g) => {
@@ -674,6 +686,21 @@ export function LibraryView({
                                         >
                                             <ExternalLink size={12} />
                                         </a>
+                                        {game.appId < 0 && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-7 w-7 text-destructive/80 hover:text-destructive"
+                                                disabled={!!busy}
+                                                onClick={() =>
+                                                    confirmRemove(game)
+                                                }
+                                                title="Borrar de mi biblioteca"
+                                                aria-label={`Borrar ${game.name} de mi biblioteca`}
+                                            >
+                                                <Trash2 size={13} />
+                                            </Button>
+                                        )}
                                     </div>
 
                                     {/* Status Dropdown */}
@@ -901,6 +928,21 @@ export function LibraryView({
                                                 >
                                                     <ExternalLink size={12} />
                                                 </a>
+                                                {game.appId < 0 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-destructive/80 hover:text-destructive"
+                                                        disabled={!!busy}
+                                                        onClick={() =>
+                                                            confirmRemove(game)
+                                                        }
+                                                        title="Borrar de mi biblioteca"
+                                                        aria-label={`Borrar ${game.name} de mi biblioteca`}
+                                                    >
+                                                        <Trash2 size={13} />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

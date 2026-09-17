@@ -405,6 +405,28 @@ void test('manual games: IGDB search, migration, persistence, feedback, recommen
         } finally {
             rollback.close();
         }
+
+        const beforeDelete = await readState();
+        assert.equal(
+            (await call('library/games', { appId: -1 }, 'DELETE')).status,
+            200,
+        );
+        const deleted = await readState();
+        assert.ok(!deleted.games.some((game) => game.appId === -1));
+        assert.ok(deleted.games.some((game) => game.appId === -2));
+        assert.equal(deleted.preferences['-1'], undefined);
+        assert.ok(!deleted.shortlist?.some((game) => game.appId === -1));
+        assert.ok(!deleted.playHistory?.some((event) => event.appId === -1));
+        assert.equal(
+            (await call('library/games', { appId: 1 }, 'DELETE')).status,
+            400,
+        );
+        assert.deepEqual(
+            (await readState()).games,
+            deleted.games,
+            'Deleting a manual game must not alter Steam games.',
+        );
+        assert.ok(beforeDelete.games.some((game) => game.appId === -1));
     } finally {
         globalThis.fetch = originalFetch;
         process.chdir(previousCwd);

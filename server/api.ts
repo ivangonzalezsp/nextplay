@@ -422,6 +422,37 @@ export async function handle(
         await saveState(state);
         return snapshot(state);
       }
+      if (path === '/api/library/games' && request.method === 'DELETE') {
+        if (
+          typeof payload.appId !== 'number' ||
+          !Number.isSafeInteger(payload.appId) ||
+          payload.appId >= 0
+        )
+          throw new AppError(
+            'Solo se pueden borrar juegos añadidos manualmente.',
+          );
+        if (!state.games.some((game) => game.appId === payload.appId))
+          throw new AppError(
+            'Ese juego manual ya no está en tu biblioteca.',
+            404,
+          );
+        state.games = state.games.filter(
+          (game) => game.appId !== payload.appId,
+        );
+        state.shortlist = state.shortlist?.filter(
+          (game) => game.appId !== payload.appId,
+        );
+        delete state.preferences[String(payload.appId)];
+        state.playHistory = state.playHistory?.filter(
+          (event) => event.appId !== payload.appId,
+        );
+        if (state.tastes)
+          state.tastes.ignoredHours = state.tastes.ignoredHours.filter(
+            (appId) => appId !== payload.appId,
+          );
+        await saveState(state);
+        return snapshot(state);
+      }
       if (path === '/api/tastes' && request.method === 'PATCH') {
         phase('tastes:update:start');
         state.tastes = parseTastes(payload, state);

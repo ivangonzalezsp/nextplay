@@ -12,7 +12,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
-- Ninguno.
+- Ahora se pueden borrar de la biblioteca los juegos añadidos manualmente.
 
 ## [0.4.0] - 2026-09-17
 

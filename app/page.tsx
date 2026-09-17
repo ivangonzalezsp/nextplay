@@ -593,6 +593,13 @@ export default function Home() {
         }
     }
 
+    async function removeGame(game: Game) {
+        await action('remove-' + game.appId, async () => {
+            accept(await api('library/games', { appId: game.appId }, 'DELETE'));
+            setLimit(36);
+        });
+    }
+
     async function shortlist(game: Game) {
         await action('shortlist-' + game.appId, async () => {
             accept(
@@ -1386,6 +1393,7 @@ export default function Home() {
                             onPreference={preference}
                             onSimilar={similar}
                             onAdd={addGame}
+                            onRemove={removeGame}
                             onRefreshAchievements={refreshAchievements}
                             busy={busy}
                         />
