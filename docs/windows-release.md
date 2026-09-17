@@ -11,12 +11,11 @@ El token solo se entrega al último paso de publicación. `GITHUB_TOKEN` tiene `
 
 ## Publicar una versión
 
-1. Cambia la versión de `package.json` y `package-lock.json` y añade `docs/releases/vX.Y.Z.md`, revisada para publicación pública.
-2. Guarda y publica los cambios en el repositorio privado.
-3. Crea y publica la etiqueta correspondiente, por ejemplo `git tag v0.2.1` y `git push origin v0.2.1`.
-4. Actions ejecuta pruebas, tipos, compilación, HLTB con Python empaquetado, arranque del paquete y prueba del instalador. Después sube únicamente el EXE y `SHA256SUMS.txt` a la Release pública, junto con las notas.
+1. En cada PR, añade los cambios visibles para el usuario a `CHANGELOG.md` bajo `## [Unreleased]`, en `### Features` o `### Correcciones de errores`.
+2. Ejecuta manualmente **Release version** desde `main` y elige `patch`, `minor` o `major`. El workflow actualiza los manifiestos, promociona `Unreleased` a `## [X.Y.Z] - fecha`, crea el commit/tag y los publica.
+3. Actions ejecuta pruebas, tipos, compilación, HLTB con Python empaquetado, arranque del paquete y prueba del instalador. Después sube únicamente el EXE y `SHA256SUMS.txt` a la Release pública, usando la sección correspondiente de `CHANGELOG.md` como notas.
 
-La ejecución manual de **Windows installer** compila y guarda artefactos privados para revisión. Solo una ejecución sobre una etiqueta publica una Release. El README público se mantiene a partir de `packaging/RELEASES-README.md`.
+La ejecución manual de **Windows installer** compila y guarda artefactos privados para revisión. Solo una ejecución sobre una etiqueta publica una Release. El README público se mantiene a partir de `packaging/RELEASES-README.md`. Los archivos antiguos de `docs/releases/` se conservan como histórico; las nuevas notas viven en `CHANGELOG.md`.
 
 ## Compilación local en Windows x64
 

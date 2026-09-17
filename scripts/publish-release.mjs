@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { extractReleaseNotes } from './release-changelog.mjs';
 
 const repo = 'ivangonzalezsp/nextplay-releases';
 const { version } = JSON.parse(await readFile('package.json', 'utf8'));
@@ -24,7 +25,10 @@ assert.equal(
     `${digest}  ${names[0]}`,
     'Installer checksum mismatch.',
 );
-const notes = await readFile(`docs/releases/${tag}.md`, 'utf8');
+const notes = extractReleaseNotes(
+    await readFile('CHANGELOG.md', 'utf8'),
+    version,
+);
 async function api(path, method = 'GET', body, binary = false) {
     const response = await fetch(
         `https://${binary ? 'uploads' : 'api'}.github.com/repos/${repo}${path}`,

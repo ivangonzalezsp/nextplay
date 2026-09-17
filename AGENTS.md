@@ -8,6 +8,7 @@ Instrucciones para trabajar en todo este repositorio. Consulta [README.md](READM
 - Sigue el flujo completo antes de corregir un fallo: interfaz, API, lógica compartida y persistencia. Busca todos los llamadores de la función que vas a cambiar; corrige la causa donde se comparte.
 - Reutiliza funciones, tipos y componentes existentes. Prefiere las APIs nativas y las dependencias instaladas; no añadas abstracciones, dependencias o refactorizaciones para necesidades hipotéticas.
 - Mantén la interfaz y sus mensajes en español, el comportamiento predeterminado y la accesibilidad por teclado. Los cambios visuales deben respetar los demás temas y tamaños de pantalla.
+- Cuando un cambio visible para el usuario entra en un PR o commit, añade una entrada en `CHANGELOG.md` bajo `## [Unreleased]`, dentro de `### Features` o `### Correcciones de errores`, sin borrar entradas de otros agentes. Sustituye `- Ninguno.` solo en la categoría que corresponda; no incluyas secretos ni datos personales. Los cambios internos sin efecto para el usuario no necesitan entrada.
 - Comunica qué cambió, cómo se comprobó y qué quedó pendiente. No presentes resultados históricos como verificaciones de la tarea actual.
 
 ## Mapa del proyecto
@@ -109,7 +110,7 @@ En PowerShell puedes usar `npm.cmd run format:prettier`, que ejecuta el mismo sc
 
 - Sigue [docs/windows-release.md](docs/windows-release.md) para compilar/publicar y [docs/windows-validation.md](docs/windows-validation.md) para conocer pruebas y límites documentados. Consulta el código y los resultados actuales antes de reutilizar conclusiones antiguas.
 - Desarrollo y Actions pertenecen a `ivangonzalezsp/nextplay` (**privado**). `ivangonzalezsp/nextplay-releases` es **público** y contiene únicamente material de distribución; nunca publiques allí el checkout ni el historial privado.
-- **Publicar una etiqueta `v*` activa el workflow de publicación pública.** La ejecución manual genera artefactos privados. Versiones de `package.json`, `package-lock.json`, etiqueta y `docs/releases/vX.Y.Z.md` deben coincidir; revisa las notas como contenido público.
-- En las notas de cada release (`docs/releases/vX.Y.Z.md`), separa siempre los cambios en las secciones `## Features` y `## Correcciones de errores`; si una queda vacía, indícalo con `- Ninguno.`.
+- **Publicar una etiqueta `v*` activa el workflow de publicación pública.** La ejecución manual genera artefactos privados. El workflow **Release version** promociona `CHANGELOG.md` desde `## [Unreleased]` a `## [X.Y.Z] - fecha`, sincroniza `package.json` y `package-lock.json`, crea el commit/tag y publica ambos; el publicador usa esa sección como notas públicas.
+- En cada versión del changelog, separa siempre los cambios en `### Features` y `### Correcciones de errores`; si una queda vacía, indícalo con `- Ninguno.`. Los archivos de `docs/releases/` anteriores son histórico.
 - Reutiliza `npm.cmd run package:windows`, `npm.cmd run test:package -- RUTA_DEL_PAQUETE` y `scripts/test-installer.ps1` según la guía. Los runtimes y hashes se fijan en `packaging/windows-runtimes.json` y `packaging/requirements-windows.txt`; no eludas la lista de archivos permitidos, las licencias, los checksums ni las pruebas de conservación de datos.
 - Una modificación de empaquetado o dependencias requiere comprobar el paquete arrancado y sus recursos, no solo el build del checkout. Usa instalaciones de ensayo; no instales ni actualices la aplicación personal para validar un cambio ajeno a ella.
