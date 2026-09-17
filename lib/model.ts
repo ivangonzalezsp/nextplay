@@ -55,6 +55,7 @@ export type TasteSettings = {
 export type TasteAffinity = {
     id: string;
     label: string;
+    description: string;
     inferred: number;
     choice: TasteChoice;
     evidenceCount: number;

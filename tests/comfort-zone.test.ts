@@ -119,14 +119,15 @@ void test('missing signals and lack of contrast are reported honestly, malformed
     assert.deepEqual(parseFilters(DEFAULT_FILTERS), DEFAULT_FILTERS);
 });
 
-void test('contrast works when all nine inferred affinities are positive and dislikes remain soft', () => {
+void test('contrast works when all fourteen inferred affinities are positive and dislikes remain soft', () => {
     // History represents every trait, with a much stronger narrative preference.
     const history = [
-        game(900, [122, 29482, 9, 255534, 1716, 1695, 1742, 1662, 3859], {
-            playtimeMinutes: 60,
-        }),
+        game(900, [122, 29482, 19, 9], { playtimeMinutes: 60 }),
+        game(901, [255534, 1716, 1664, 1695], { playtimeMinutes: 60 }),
+        game(902, [1742, 4166, 4711, 1667], { playtimeMinutes: 60 }),
+        game(903, [1662, 3859], { playtimeMinutes: 60 }),
         ...Array.from({ length: 5 }, (_, i) =>
-            game(901 + i, [1742], { playtimeMinutes: 6000 }),
+            game(904 + i, [1742], { playtimeMinutes: 6000 }),
         ),
     ];
     const s = state([game(1, [1742]), game(2, [1742, 9, 1662]), ...history]);
@@ -134,7 +135,7 @@ void test('contrast works when all nine inferred affinities are positive and dis
     for (const g of history)
         s.preferences[g.appId] = { favorite: false, status: 'completed' };
     const profile = buildTasteProfile(s);
-    assert.equal(profile.length, 9);
+    assert.equal(profile.length, 14);
     assert(profile.every((a) => a.inferred > 0));
     assert.deepEqual(
         recommendLocally(s, filters).owned.map((p) => p.appId),

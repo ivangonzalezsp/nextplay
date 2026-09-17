@@ -81,6 +81,33 @@ void test('hours diminish, independent games reinforce affinity, editions and ig
             'synergies',
         ),
     );
+    assert.deepEqual(
+        gameAffinities(
+            game(8, 0, '', [
+                { id: 19, name: 'Acción' },
+                { id: 1664, name: 'Puzles' },
+                { id: 4166, name: 'Ambientales' },
+                { id: 4711, name: 'Valor continuo' },
+                { id: 1667, name: 'Terror', englishName: 'Horror' },
+            ]),
+        ),
+        ['action', 'puzzles', 'atmosphere', 'replayability'],
+    );
+    assert(
+        !gameAffinities(
+            game(9, 0, '', [
+                { name: 'Terror psicológico', englishName: 'Psychological' },
+            ]),
+        ).includes('puzzles'),
+    );
+    assert.deepEqual(
+        gameAffinities(
+            game(10, 0, '', [
+                { id: 1667, name: 'Terror', englishName: 'Horror' },
+            ]),
+        ),
+        ['horror'],
+    );
     assert(
         gameAffinities(
             game(7, 50, 'A calm adventure.', [

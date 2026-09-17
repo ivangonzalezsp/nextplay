@@ -1029,7 +1029,28 @@ h1 {
     overflow-wrap: anywhere;
 }
 .taste-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
     margin: 0 0 10px;
+}
+.taste-info {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.15rem;
+    height: 1.15rem;
+    padding: 0;
+    border: 1px solid var(--muted-foreground);
+    border-radius: 999px;
+    color: var(--muted-foreground);
+    background: transparent;
+    cursor: help;
+}
+.taste-info:hover {
+    color: var(--primary);
+    border-color: var(--primary);
 }
 .taste-card label {
     display: block;

@@ -6,6 +6,12 @@ import { buildTasteProfile, EMPTY_TASTES } from '../lib/tastes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { CircleHelp } from 'lucide-react';
 
 export default function Tastes({
     state,
@@ -68,7 +74,24 @@ export default function Tastes({
                 <div className="taste-grid">
                     {profile.map((a) => (
                         <section className="taste-card" key={a.id}>
-                            <h3>{a.label}</h3>
+                            <h3>
+                                <span>{a.label}</span>
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        type="button"
+                                        className="taste-info"
+                                        aria-label={`Qué significa ${a.label}`}
+                                    >
+                                        <CircleHelp
+                                            aria-hidden="true"
+                                            size={16}
+                                        />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top" align="start">
+                                        {a.description}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </h3>
                             <p className="small-note">
                                 Peso histórico: {Math.round(a.inferred * 100)}
                                 /100 · {a.evidenceCount} juegos de referencia
