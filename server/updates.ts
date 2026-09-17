@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { AppError, atomicJson, readJson, userDir } from './store.ts';
 
 export const releaseRepo = 'ivangonzalezsp/nextplay-releases';
-export const appVersion = () => process.env.NEXTPLAY_VERSION || '0.2.3';
+export const appVersion = () => process.env.NEXTPLAY_VERSION || '0.3.0';
 export type Release = {
     version: string;
     installer: string;
