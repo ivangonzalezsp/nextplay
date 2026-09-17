@@ -12,40 +12,79 @@ on:
                     - patch
                     - minor
                     - major
+    pull_request:
+        types: [closed]
+        branches: [main]
 
 permissions:
     contents: write
+    pull-requests: write
 
 concurrency:
     group: release-version
     cancel-in-progress: false
 
 jobs:
-    release:
-        if: github.ref == 'refs/heads/main'
+    prepare:
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
             - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
               with:
                   node-version: '24.21.0'
-            - name: Configure release commit
-              run: |
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            - name: Bump package version
+            - name: Create release PR
               env:
                   BUMP: ${{ inputs.bump }}
+                  GH_TOKEN: ${{ github.token }}
               run: |
                   npm version "$BUMP" --no-git-tag-version
-            - name: Promote changelog
-              run: |
                   node scripts/release-changelog.mjs
-            - name: Commit release and create tag
-              run: |
                   VERSION="$(node -p "require('./package.json').version")"
+                  BRANCH="codex/release/v${VERSION}"
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+                  git switch --create "$BRANCH"
                   git add package.json package-lock.json CHANGELOG.md
                   git commit -m "chore: release v${VERSION}"
+                  git push --set-upstream origin "$BRANCH"
+                  gh pr create --base main --head "$BRANCH" \
+                      --title "chore: release v${VERSION}" \
+                      --body "Promueve CHANGELOG.md y prepara la release v${VERSION}. Al hacer merge, este workflow creará el tag v${VERSION}."
+
+    tag:
+        if: >-
+            github.event_name == 'pull_request' &&
+            github.event.pull_request.merged == true &&
+            github.event.pull_request.head.repo.full_name == github.repository &&
+            startsWith(github.event.pull_request.head.ref, 'codex/release/v')
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+              with:
+                  ref: ${{ github.event.pull_request.merge_commit_sha || github.sha }}
+                  fetch-depth: 0
+            - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+              with:
+                  node-version: '24.21.0'
+            - name: Validate merged release
+              id: version
+              env:
+                  RELEASE_BRANCH: ${{ github.event.pull_request.head.ref }}
+              run: |
+                  VERSION="$(node -p "require('./package.json').version")"
+                  test "$RELEASE_BRANCH" = "codex/release/v${VERSION}"
+                  test -f CHANGELOG.md
+                  echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            - name: Create and push release tag
+              env:
+                  VERSION: ${{ steps.version.outputs.version }}
+              run: |
+                  if git ls-remote --exit-code --refs origin "refs/tags/v${VERSION}" >/dev/null 2>&1; then
+                      echo "El tag v${VERSION} ya existe." >&2
+                      exit 1
+                  fi
+                  git config user.name "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
                   git tag -a "v${VERSION}" -m "Release v${VERSION}"
-            - name: Push release commit and tag
-              run: git push origin HEAD:main --follow-tags
+                  git push origin "v${VERSION}"
