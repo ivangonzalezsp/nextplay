@@ -26,6 +26,12 @@ El programa está en `%LOCALAPPDATA%\Programs\NextPlay`; la biblioteca, configur
 
 El código y el historial permanecen en **ivangonzalezsp/nextplay**, privado. Los instaladores y notas se publican en **ivangonzalezsp/nextplay-releases**, público. Parte del código distribuido se puede inspeccionar. Consulta [compilación y publicación](docs/windows-release.md) para mantener este reparto.
 
+## Licencia
+
+El código original de Next Play se distribuye bajo la [GNU General Public License, versión 3](LICENSE).
+Las dependencias, datos, carátulas, logos y servicios de terceros conservan sus propias licencias y condiciones.
+El nombre y el logotipo **Next Play** no se conceden bajo esta licencia.
+
 ## Desarrollo desde el código fuente
 
 Las siguientes instrucciones son para quienes tienen acceso al repositorio privado. Para uso normal, utiliza el instalador de Windows.
