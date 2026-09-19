@@ -1,0 +1,277 @@
+.history {
+    container-type: inline-size;
+    --calendar-line: color-mix(in srgb, var(--border) 72%, var(--card));
+    --calendar-lanes: color-mix(in srgb, var(--card) 94%, var(--foreground));
+}
+
+.header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.eyebrow {
+    margin-bottom: 5px;
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.title {
+    margin-bottom: 5px;
+    font-size: 34px;
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+}
+
+.subtitle {
+    color: var(--muted-foreground);
+    font-size: 13px;
+}
+
+.controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+}
+
+.controls button,
+.controls select {
+    height: 36px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.hint {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--calendar-line);
+    border-radius: 10px;
+    padding: 11px 14px;
+    background: var(--card);
+    color: var(--muted-foreground);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 18px;
+}
+
+.month {
+    min-width: 0;
+    border: 1px solid var(--calendar-line);
+    border-radius: 14px;
+    padding: 16px;
+    background: var(--card);
+}
+
+.monthHeader {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 17px;
+}
+
+.monthHeader h3 {
+    font-size: 18px;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    text-transform: capitalize;
+}
+
+.monthHeader span {
+    color: var(--muted-foreground);
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: normal;
+    white-space: nowrap;
+}
+
+.monthHeader h3 span {
+    margin-left: 5px;
+}
+
+.weekdays,
+.days,
+.lane {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.weekdays {
+    color: var(--muted-foreground);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-align: center;
+}
+
+.week {
+    margin-top: 6px;
+    overflow: hidden;
+    border: 1px solid var(--calendar-line);
+    border-radius: 9px;
+}
+
+.day,
+.emptyDay {
+    min-width: 0;
+    min-height: 54px;
+    border-right: 1px solid var(--calendar-line);
+    padding: 5px;
+}
+
+.day:last-child,
+.emptyDay:last-child {
+    border-right: 0;
+}
+
+.emptyDay {
+    background: color-mix(in srgb, var(--background) 45%, transparent);
+}
+
+.day time {
+    display: grid;
+    width: 23px;
+    height: 23px;
+    place-items: center;
+    color: var(--muted-foreground);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.day .today {
+    border-radius: 50%;
+    background: var(--primary);
+    color: var(--theme-on-accent, #09271f);
+}
+
+.lanes {
+    display: grid;
+    gap: 4px;
+    border-top: 1px solid var(--calendar-line);
+    padding: 6px 0;
+    background: var(--calendar-lanes);
+}
+
+.lane {
+    row-gap: 4px;
+}
+
+.band {
+    position: relative;
+    min-width: 0;
+    min-height: 22px;
+    margin: 0 3px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    padding: 3px 11px;
+    background: color-mix(
+        in srgb,
+        var(--game-color) 22%,
+        var(--calendar-lanes)
+    );
+    box-shadow: inset 0 2px 0 var(--game-color);
+    color: var(--foreground);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 16px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.band::before,
+.band::after {
+    content: '';
+    position: absolute;
+    top: calc(50% - 2px);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--game-color);
+}
+
+.band::before {
+    left: 3px;
+}
+
+.band::after {
+    right: 3px;
+}
+
+.band:hover,
+.band:focus-visible,
+.band[data-popup-open] {
+    outline: 2px solid var(--game-color);
+    outline-offset: 1px;
+}
+
+.periodDetail {
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0;
+    background: var(--card);
+    color: var(--foreground);
+    box-shadow: 0 12px 36px #0005;
+}
+
+.detailBody {
+    display: grid;
+    gap: 14px;
+    border-left: 3px solid;
+    border-radius: 11px;
+    padding: 16px;
+}
+
+.detailTitle {
+    margin-bottom: 4px;
+    font-size: 14px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.detailStatus {
+    display: inline-block;
+    border-radius: 5px;
+    padding: 3px 7px;
+    background: color-mix(in srgb, var(--card) 90%, var(--foreground));
+    font-size: 11px;
+}
+
+@container (max-width: 760px) {
+    .calendarGrid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@container (max-width: 420px) {
+    .title {
+        font-size: 28px;
+    }
+
+    .month {
+        padding: 11px;
+    }
+
+    .day,
+    .emptyDay {
+        min-height: 44px;
+        padding: 3px;
+    }
+}

@@ -7,6 +7,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 ### Features
 
 - Los juegos terminados de tu biblioteca también muestran y actualizan sus logros de Steam.
+- El Calendario de Mi año integra los tramos de actividad por semana, con bandas legibles, cabeceras más claras y fondos neutros adaptados a cada tema. El estado y las fechas se consultan al hacer clic.
 
 ### Correcciones de errores
 
