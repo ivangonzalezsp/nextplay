@@ -1,13 +1,14 @@
 # Logros de Steam
 
 Next Play puede hacer seguimiento de los logros de Steam de los juegos que
-estás jugando. La integración es de solo lectura: no modifica logros ni envía
-la clave de Steam al navegador.
+estás jugando, tienes en pausa o has terminado. La integración es de solo
+lectura: no modifica logros ni envía la clave de Steam al navegador.
 
 ## Dónde aparece
 
 1. Abre **Tu biblioteca** o la pestaña **Para ti**, donde aparece **Tus juegos
-   en curso**, y marca un juego de Steam como **Estoy jugando** o **En pausa**.
+   en curso**, y marca un juego de Steam como **Estoy jugando**, **En pausa** o
+   **Terminado**.
 2. En la tarjeta del juego, al final aparece una fila con el icono de trofeo,
    por ejemplo `12/45 logros · 27%`.
 3. Pulsa la fila para ver la lista de logros conseguidos y pendientes. Los
@@ -17,15 +18,15 @@ la clave de Steam al navegador.
 
 ## Sincronización y datos guardados
 
-Al pasar un juego a uno de esos dos estados, Next Play solicita su progreso. La
-aplicación vuelve a comprobar los juegos activos cada seis horas mientras está
+Al pasar un juego a uno de esos estados, Next Play solicita su progreso. La
+aplicación vuelve a comprobar los juegos seguidos cada seis horas mientras está
 abierta; al abrirla de nuevo también actualizará cualquier dato con más de seis
 horas. La actualización manual ignora ese plazo.
 
 Los resultados se guardan localmente en la base SQLite de Next Play, en la tabla
 `steam_achievements`. Cada registro incluye el número de logros conseguidos, el
 total, la fecha de consulta y la lista de logros. No se consulta toda la
-biblioteca, únicamente los juegos activos.
+biblioteca, únicamente los juegos que están en curso, en pausa o terminados.
 
 ## Requisitos y límites
 

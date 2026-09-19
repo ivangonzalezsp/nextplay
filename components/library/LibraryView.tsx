@@ -42,6 +42,7 @@ import {
     inLibrary,
     libraryLabel,
     steamTagKey,
+    tracksSteamAchievements,
     type Game,
     type GameStatus,
     type LibraryOrderBy,
@@ -748,9 +749,7 @@ export function LibraryView({
                                             onPreference(game, change)
                                         }
                                     />
-                                    {['playing', 'paused'].includes(
-                                        pref.status,
-                                    ) &&
+                                    {tracksSteamAchievements(pref.status) &&
                                         game.appId > 0 && (
                                             <AchievementProgress
                                                 game={game}
@@ -836,10 +835,9 @@ export function LibraryView({
                                                     <span className="font-semibold text-foreground text-xs">
                                                         {game.name}
                                                     </span>
-                                                    {[
-                                                        'playing',
-                                                        'paused',
-                                                    ].includes(pref.status) &&
+                                                    {tracksSteamAchievements(
+                                                        pref.status,
+                                                    ) &&
                                                         game.appId > 0 && (
                                                             <span className="ml-2 text-[10px] text-amber-300">
                                                                 <Trophy

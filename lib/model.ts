@@ -269,6 +269,8 @@ export const releaseDateAt = (date: string) => {
         : null;
 };
 export const inLibrary = (game: Game) => game.owned || game.shared === true;
+export const tracksSteamAchievements = (status?: GameStatus) =>
+    ['playing', 'paused', 'completed'].includes(status ?? '');
 export const libraryLabel = (game: Game) =>
     game.platform ??
     (game.owned
