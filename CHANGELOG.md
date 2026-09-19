@@ -4,6 +4,22 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Los juegos terminados de tu biblioteca también muestran y actualizan sus logros de Steam.
+
+### Correcciones de errores
+
+- Ninguna.
+
+### Features
+
+- Ninguno.
+
+### Correcciones de errores
+
+- HowLongToBeat prueba variantes simplificadas de los nombres con sufijos de edición, como `Master Collection Version`.
+
 ## [0.5.0] - 2026-09-17
 
 ### Features
@@ -14,6 +30,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 - Ahora se pueden borrar de la biblioteca los juegos añadidos manualmente.
 - Las ediciones equivalentes, como una edición GOTY y su edición base, ya no aparecen como descubrimientos si una de ellas está en tu biblioteca.
+- Se puede detener una búsqueda de recomendaciones en curso sin esperar a que termine.
 
 ## [0.4.0] - 2026-09-17
 

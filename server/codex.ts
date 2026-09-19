@@ -107,6 +107,7 @@ export async function runProcess(
     timeout?: number,
     cwd = process.cwd(),
     onEvent?: (event: Record<string, unknown>) => void,
+    signal?: AbortSignal,
 ) {
     const command = args[0] ?? 'codex';
     const started = Date.now();
@@ -114,7 +115,9 @@ export async function runProcess(
         command,
         ...(timeout === undefined ? {} : { timeout }),
     });
+    if (signal?.aborted) throw new AppError('La búsqueda se ha detenido.', 499);
     const binary = await codexBinary();
+    if (signal?.aborted) throw new AppError('La búsqueda se ha detenido.', 499);
     return new Promise<string>((resolveRun, reject) => {
         const child = trackCodexProcess(
             spawn(binary, args, {
@@ -133,9 +136,11 @@ export async function runProcess(
         let exitCode: number | null = null;
         const jsonEvents = args.includes('--json');
         let timer: ReturnType<typeof setTimeout> | undefined;
+        let removeAbortListener = () => {};
         const finish = (error?: Error) => {
             if (done) return;
             done = true;
+            removeAbortListener();
             if (timer) clearTimeout(timer);
             const details = {
                 command,
@@ -153,6 +158,14 @@ export async function runProcess(
                 resolveRun(stdout || stderr);
             }
         };
+        if (signal) {
+            const abort = () =>
+                finish(new AppError('La búsqueda se ha detenido.', 499));
+            if (signal.aborted) return abort();
+            signal.addEventListener('abort', abort, { once: true });
+            removeAbortListener = () =>
+                signal.removeEventListener('abort', abort);
+        }
         if (timeout !== undefined)
             timer = setTimeout(
                 () =>
@@ -471,6 +484,7 @@ export async function askCodex(
     settings?: CodexSettings,
     catalog?: { state: State; candidates: Game[] },
     onProgress?: (progress: CodexProgress) => void,
+    signal?: AbortSignal,
 ) {
     const c = await config();
     const model = settings?.model ?? c.model;
@@ -556,6 +570,7 @@ export async function askCodex(
             undefined,
             dir,
             (event) => codexProgress(event, onProgress),
+            signal,
         );
         let result: unknown;
         try {

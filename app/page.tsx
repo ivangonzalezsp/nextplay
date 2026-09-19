@@ -53,6 +53,7 @@ import {
     libraryLabel,
     sortLibraryGames,
     steamTagKey,
+    tracksSteamAchievements,
 } from '@/lib/model';
 import { filterSummary } from '@/lib/filters';
 import { log, logError } from '@/lib/log';
@@ -132,6 +133,7 @@ async function api(path: string, body?: unknown, method = 'POST') {
 async function streamRecommendations(
     body: Record<string, unknown>,
     onProgress: (progress: RecommendationProgress) => void,
+    signal?: AbortSignal,
 ): Promise<Snapshot> {
     const path = '/api/recommendations/stream';
     const started = Date.now();
@@ -146,6 +148,7 @@ async function streamRecommendations(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body),
+            signal,
         });
         if (!response.body)
             throw new Error('Next Play no ha devuelto actividad de la IA.');
@@ -189,11 +192,14 @@ async function streamRecommendations(
         });
         return result as Snapshot;
     } catch (e) {
-        logError('browser', 'api:stream:failed', e, {
-            method: 'POST',
+        const details = {
+            method: 'POST' as const,
             path,
             ms: Date.now() - started,
-        });
+        };
+        if (e instanceof Error && e.name === 'AbortError')
+            log('browser', 'api:stream:cancelled', details);
+        else logError('browser', 'api:stream:failed', e, details);
         throw e;
     }
 }
@@ -232,6 +238,7 @@ export default function Home() {
     const activeCodex = useRef(codex);
     const activeEngine = useRef(engine);
     const recommendationsRef = useRef<HTMLDivElement>(null);
+    const recommendationAbort = useRef<AbortController | null>(null);
 
     function addActivity(progress: RecommendationProgress) {
         setActivity((current) => {
@@ -418,6 +425,8 @@ export default function Home() {
                 setBusy('recommend');
                 setActivity([]);
                 setError('');
+                const controller = new AbortController();
+                recommendationAbort.current = controller;
                 try {
                     const next = await streamRecommendations(
                         {
@@ -427,6 +436,7 @@ export default function Home() {
                             text: data.message,
                         },
                         addActivity,
+                        controller.signal,
                     );
                     flushSync(() => {
                         accept(next, true);
@@ -435,9 +445,12 @@ export default function Home() {
                     });
                     return next.conversation.at(-1)?.result;
                 } catch (e) {
-                    setError((e as Error).message);
+                    if (!(e instanceof Error && e.name === 'AbortError'))
+                        setError((e as Error).message);
                     throw e;
                 } finally {
+                    if (recommendationAbort.current === controller)
+                        recommendationAbort.current = null;
                     setBusy('');
                 }
             },
@@ -461,11 +474,12 @@ export default function Home() {
                 name,
                 ms: Date.now() - started,
             });
-            setError(
-                e instanceof Error
-                    ? e.message
-                    : 'No se ha podido completar la solicitud.',
-            );
+            if (!(e instanceof Error && e.name === 'AbortError'))
+                setError(
+                    e instanceof Error
+                        ? e.message
+                        : 'No se ha podido completar la solicitud.',
+                );
         } finally {
             setBusy('');
             log('browser', 'action:end', { name, ms: Date.now() - started });
@@ -487,26 +501,41 @@ export default function Home() {
     async function recommend(message = text, selectionFilters = filters) {
         if (reference && engine !== 'codex') return;
         setActivity([]);
-        await action('recommend', async () => {
-            accept(
-                await streamRecommendations(
-                    {
-                        filters: selectionFilters,
-                        codex,
-                        engine,
-                        ...(reference
-                            ? { referenceAppId: reference.appId }
-                            : {}),
-                        text: engine === 'local' ? '' : message,
-                    },
-                    addActivity,
-                ),
-                true,
-            );
-            setText('');
-            setReference(null);
-            setTab('recommend');
-        });
+        const controller = new AbortController();
+        recommendationAbort.current = controller;
+        try {
+            await action('recommend', async () => {
+                accept(
+                    await streamRecommendations(
+                        {
+                            filters: selectionFilters,
+                            codex,
+                            engine,
+                            ...(reference
+                                ? { referenceAppId: reference.appId }
+                                : {}),
+                            text: engine === 'local' ? '' : message,
+                        },
+                        addActivity,
+                        controller.signal,
+                    ),
+                    true,
+                );
+                setText('');
+                setReference(null);
+                setTab('recommend');
+            });
+        } finally {
+            if (recommendationAbort.current === controller)
+                recommendationAbort.current = null;
+        }
+    }
+
+    function stopRecommendation() {
+        if (!recommendationAbort.current) return;
+        log('browser', 'recommendations:cancel');
+        setActivity([]);
+        recommendationAbort.current.abort();
     }
 
     async function preference(game: Game, change: Partial<Preference>) {
@@ -543,9 +572,7 @@ export default function Home() {
 
     const activeAchievementGames = (state?.games ?? [])
         .filter((game) =>
-            ['playing', 'paused'].includes(
-                state?.preferences[game.appId]?.status ?? '',
-            ),
+            tracksSteamAchievements(state?.preferences[game.appId]?.status),
         )
         .map((game) => game.appId)
         .join(',');
@@ -889,6 +916,7 @@ export default function Home() {
                             steamTags={steamTags}
                             tagLabels={tagLabels}
                             onRecommend={() => recommend()}
+                            onStop={stopRecommendation}
                             onSurpriseMe={surpriseMe}
                             canRecommend={canRecommend}
                             busy={busy}

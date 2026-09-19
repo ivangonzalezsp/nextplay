@@ -36,7 +36,10 @@ import {
   updateShortlist,
 } from './selection.ts';
 import { askCodex, buildPrompt, codexStatus } from './codex.ts';
-import { DEFAULT_CODEX_SETTINGS } from '../lib/model.ts';
+import {
+  DEFAULT_CODEX_SETTINGS,
+  tracksSteamAchievements,
+} from '../lib/model.ts';
 import { openDatabase, writeSteamAchievements } from './database.ts';
 import { syncSteamTags } from './steam-tags-sync.ts';
 import { SteamTagsError } from './steam-tags.ts';
@@ -144,8 +147,10 @@ export function streamRecommendations(request: Request): Response {
         close();
         return;
       }
-      void handle(inner, (progress) =>
-        send({ type: 'progress', ...publicProgress(progress) }),
+      void handle(
+        inner,
+        (progress) => send({ type: 'progress', ...publicProgress(progress) }),
+        request.signal,
       )
         .then(async (response) => {
           let payload: unknown;
@@ -283,6 +288,7 @@ async function saveRecommendation(state: State, turn: Turn) {
 export async function handle(
   request: Request,
   onProgress?: ProgressListener,
+  signal: AbortSignal = request.signal,
 ): Promise<Response> {
   const started = Date.now();
   const path = new URL(request.url).pathname;
@@ -296,7 +302,12 @@ export async function handle(
       /* Progress reporting must never fail the recommendation. */
     }
   };
+  const ensureActive = () => {
+    // ponytail: source refreshes finish at their await boundary; this guard avoids threading signals through every source.
+    if (signal.aborted) throw new AppError('La búsqueda se ha detenido.', 499);
+  };
   const phase = (event: string, details?: Record<string, unknown>) => {
+    ensureActive();
     log('server', event, { path, ...details });
     publish({ event, ...(details ? { details } : {}) });
   };
@@ -504,9 +515,7 @@ export async function handle(
         const active = state.games.filter(
           (game) =>
             game.appId > 0 &&
-            ['playing', 'paused'].includes(
-              state.preferences[game.appId]?.status ?? '',
-            ),
+            tracksSteamAchievements(state.preferences[game.appId]?.status),
         );
         let games = active;
         if (payload.appId !== undefined) {
@@ -521,7 +530,7 @@ export async function handle(
           games = active.filter((game) => game.appId === payload.appId);
           if (!games.length)
             throw new AppError(
-              'Los logros solo se siguen en juegos que estás jugando o tienes en pausa.',
+              'Los logros solo se siguen en juegos que estás jugando, tienes en pausa o has terminado.',
               422,
             );
         }
@@ -782,6 +791,7 @@ export async function handle(
             recommendation.warnings.push(
               'El mensaje no se interpreta en modo local; usa los filtros y Tus gustos.',
             );
+          ensureActive();
           const next = await saveRecommendation(state, {
             text: payload.text.trim(),
             filters,
@@ -999,6 +1009,7 @@ export async function handle(
                 notify('recommendations:codex:catalog-query');
               else notify('recommendations:codex:thinking');
             },
+            signal,
           );
           phase('recommendations:codex:response');
           out = validatePicks(raw, candidates);
@@ -1032,6 +1043,7 @@ export async function handle(
           at: Date.now(),
           warnings: [...new Set(warnings)],
         };
+        ensureActive();
         const nextSnapshot = await saveRecommendation(
           { ...state, codex },
           {

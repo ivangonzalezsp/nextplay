@@ -30,6 +30,34 @@ void test('Codex JSON events are available to progress listeners', async () => {
     }
 });
 
+void test('Codex processes stop when the request is cancelled', async () => {
+    const previous = process.env.NEXTPLAY_CODEX_BIN;
+    process.env.NEXTPLAY_CODEX_BIN = process.execPath;
+    const controller = new AbortController();
+    try {
+        const pending = runProcess(
+            ['-e', 'setTimeout(() => {}, 60000)'],
+            '',
+            undefined,
+            process.cwd(),
+            undefined,
+            controller.signal,
+        );
+        controller.abort();
+        await assert.rejects(pending, (error: unknown) => {
+            assert.equal(
+                (error as Error).message,
+                'La búsqueda se ha detenido.',
+            );
+            assert.equal((error as { status?: number }).status, 499);
+            return true;
+        });
+    } finally {
+        if (previous === undefined) delete process.env.NEXTPLAY_CODEX_BIN;
+        else process.env.NEXTPLAY_CODEX_BIN = previous;
+    }
+});
+
 void test('Codex errors identify the failure without leaking raw output', async (t) => {
     const previous = process.env.NEXTPLAY_CODEX_BIN;
     process.env.NEXTPLAY_CODEX_BIN = process.execPath;

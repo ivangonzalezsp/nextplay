@@ -13,7 +13,7 @@ import {
     Users,
     BookOpen,
     ArrowRight,
-    LoaderCircle,
+    Square,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,6 +51,7 @@ export function QuickVibeBar({
     steamTags,
     tagLabels,
     onRecommend,
+    onStop,
     onSurpriseMe,
     canRecommend,
     busy,
@@ -69,6 +70,7 @@ export function QuickVibeBar({
     steamTags: { value: string; label: string }[];
     tagLabels: Map<string, string>;
     onRecommend: () => void;
+    onStop: () => void;
     onSurpriseMe: () => void;
     canRecommend: boolean;
     busy: string;
@@ -728,21 +730,23 @@ export function QuickVibeBar({
 
                 <Button
                     size="lg"
-                    onClick={onRecommend}
-                    disabled={!canRecommend || !!busy}
+                    onClick={busy === 'recommend' ? onStop : onRecommend}
+                    disabled={busy ? busy !== 'recommend' : !canRecommend}
                     className="hud-main-recommend-btn"
                 >
                     {busy === 'recommend' ? (
-                        <LoaderCircle className="spin mr-2" size={18} />
+                        <Square className="mr-2" size={16} />
                     ) : (
                         <Sparkles size={18} className="mr-2" />
                     )}
                     <span>
                         {busy === 'recommend'
-                            ? 'Buscando tu próxima partida…'
+                            ? 'Parar búsqueda'
                             : 'Encuentra mi próximo juego'}
                     </span>
-                    <ArrowRight size={17} className="ml-2 hud-btn-arrow" />
+                    {busy !== 'recommend' && (
+                        <ArrowRight size={17} className="ml-2 hud-btn-arrow" />
+                    )}
                 </Button>
             </div>
         </div>
