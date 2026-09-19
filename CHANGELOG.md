@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-19
+
 ### Features
 
 - Los juegos terminados de tu biblioteca también muestran y actualizan sus logros de Steam.
