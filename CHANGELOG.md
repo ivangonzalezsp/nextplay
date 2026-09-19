@@ -10,15 +10,11 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
-- Ninguna.
-
-### Features
-
-- Ninguno.
-
-### Correcciones de errores
-
 - HowLongToBeat prueba variantes simplificadas de los nombres con sufijos de edición, como `Master Collection Version`.
+- Los distintos tramos de un mismo juego ahora se muestran en una sola línea en Timeline y Calendario.
+- Cada fragmento del Timeline muestra ahora sus detalles al hacer clic, con inicio, final y estado.
+- Los fragmentos del Timeline ya no se animan al pasar el ratón y muestran cursor de puntero.
+- Las secuencias del mismo día que vuelven al estado inicial se ignoran para evitar tramos accidentales.
 
 ## [0.5.0] - 2026-09-17
 

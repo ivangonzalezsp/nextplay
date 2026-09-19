@@ -1,6 +1,7 @@
 import {
     STATUS_LABELS,
     type Game,
+    type GameStatus,
     type PlayEvent,
     type Preference,
     type State,
@@ -42,6 +43,16 @@ export function playPeriods(events: PlayEvent[]): PlayPeriod[] {
         }
     }
     return periods;
+}
+
+export function groupPlayPeriods(periods: PlayPeriod[]) {
+    const groups = new Map<number, PlayPeriod[]>();
+    for (const period of periods) {
+        const group = groups.get(period.start.appId);
+        if (group) group.push(period);
+        else groups.set(period.start.appId, [period]);
+    }
+    return [...groups.values()];
 }
 
 const calendarDay = (date: Date) =>
@@ -88,6 +99,37 @@ export const playEventLabel = (event: PlayEvent) =>
           ? 'Reanudado'
           : STATUS_LABELS[event.kind];
 
+const statusOfEvent = (event: PlayEvent): GameStatus =>
+    event.kind === 'started' ? 'playing' : event.kind;
+
+export function withoutSameDayRoundTrips(events: PlayEvent[]) {
+    const sorted = [...events].sort((a, b) => a.at - b.at);
+    const groups = new Map<string, PlayEvent[]>();
+    for (const event of sorted) {
+        const key = `${event.appId}:${dateInputValue(event.at)}`;
+        const group = groups.get(key);
+        if (group) group.push(event);
+        else groups.set(key, [event]);
+    }
+    const retained = new Set<PlayEvent>();
+    for (const group of groups.values()) {
+        const compacted: PlayEvent[] = [];
+        for (const event of group) {
+            const previous = compacted.at(-1);
+            if (
+                previous &&
+                statusOfEvent(event) === (previous.from ?? 'pending')
+            )
+                compacted.pop();
+            else compacted.push(event);
+        }
+        for (const event of compacted) retained.add(event);
+    }
+    return sorted.filter((event) => {
+        return retained.has(event);
+    });
+}
+
 export function recordPreference(
     state: State,
     game: Pick<Game, 'appId' | 'name' | 'cover'>,
@@ -100,14 +142,29 @@ export function recordPreference(
             previous === 'pending' && preference.status === 'playing'
                 ? 'started'
                 : preference.status;
-        (state.playHistory ??= []).push({
+        const candidate: PlayEvent = {
             appId: game.appId,
             name: game.name,
             ...(game.cover ? { cover: game.cover } : {}),
             kind,
             from: previous,
             at,
-        });
+        };
+        const history = state.playHistory ?? [];
+        const sameDay = history.filter(
+            (event) =>
+                event.appId === game.appId &&
+                dateInputValue(event.at) === dateInputValue(at),
+        );
+        const compacted = withoutSameDayRoundTrips([...sameDay, candidate]);
+        const retained = new Set(compacted);
+        state.playHistory = history.filter(
+            (event) =>
+                event.appId !== game.appId ||
+                dateInputValue(event.at) !== dateInputValue(at) ||
+                retained.has(event),
+        );
+        if (retained.has(candidate)) state.playHistory.push(candidate);
     }
     state.preferences[game.appId] = preference;
 }

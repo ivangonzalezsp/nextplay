@@ -6,9 +6,15 @@ import {
     playEventLabel,
     playEventPhase,
     recordPreference,
+    withoutSameDayRoundTrips,
 } from '../lib/play-history.ts';
 import { openDatabase, loadState, storeState } from '../server/database.ts';
-import { gameColor, playPeriods, periodSpan } from '../lib/play-history.ts';
+import {
+    gameColor,
+    groupPlayPeriods,
+    playPeriods,
+    periodSpan,
+} from '../lib/play-history.ts';
 import type { PlayEvent } from '../lib/model.ts';
 
 test('colored play periods pair each game independently and clip calendar ranges inclusively', () => {
@@ -29,8 +35,13 @@ test('colored play periods pair each game independently and clip calendar ranges
     ];
     const original = structuredClone(events);
     const periods = playPeriods(events);
+    const groups = groupPlayPeriods(periods);
     assert.deepEqual(events, original);
     assert.equal(periods.length, 3); // No invented start for game 3.
+    assert.deepEqual(
+        groups.map((group) => group.map((period) => period.start.appId)),
+        [[1], [2, 2]],
+    );
     const from = new Date(2026, 8, 1),
         to = new Date(2026, 8, 30);
     assert.deepEqual(periodSpan(periods[0], from, to, at(20)), {
@@ -109,7 +120,9 @@ test('play history records transitions, survives storage and groups by local yea
         cover: '/test-cover.jpg',
     };
     const start = new Date(2025, 11, 31, 23, 59).getTime();
-    const end = new Date(2026, 0, 1, 0, 1).getTime();
+    const pause = new Date(2026, 0, 1, 0, 1).getTime();
+    const resume = new Date(2026, 0, 2, 0, 1).getTime();
+    const end = new Date(2026, 0, 3, 0, 1).getTime();
     recordPreference(
         state,
         game,
@@ -122,17 +135,12 @@ test('play history records transitions, survives storage and groups by local yea
         { status: 'playing', favorite: true },
         start + 1,
     );
-    recordPreference(
-        state,
-        game,
-        { status: 'paused', favorite: true },
-        start + 2,
-    );
+    recordPreference(state, game, { status: 'paused', favorite: true }, pause);
     recordPreference(
         state,
         game,
         { status: 'playing', favorite: true },
-        start + 3,
+        resume,
     );
     recordPreference(state, game, { status: 'completed', favorite: true }, end);
     recordPreference(
@@ -156,7 +164,7 @@ test('play history records transitions, survives storage and groups by local yea
         state.playHistory?.map((event) => event.from),
         ['pending', 'playing', 'paused', 'playing'],
     );
-    assert.equal(eventsInYear(state.playHistory!, 2025)[0].at, start + 3);
+    assert.equal(eventsInYear(state.playHistory!, 2025)[0].at, start);
     assert.equal(eventsInYear(state.playHistory!, 2026)[0].at, end);
     recordPreference(
         state,
@@ -168,7 +176,7 @@ test('play history records transitions, survives storage and groups by local yea
         state,
         game,
         { status: 'playing', favorite: true },
-        end + 3,
+        end + 24 * 60 * 60 * 1000,
     );
     assert.equal(state.playHistory?.length, 6);
     const direct = { appId: 2, name: 'Final sin inicio conocido' };
@@ -228,11 +236,68 @@ test('play history records transitions, survives storage and groups by local yea
         assert.deepEqual(loadState(db)?.playHistory, state.playHistory);
         assert.deepEqual(
             eventsInYear(state.playHistory!, 2026).map((event) => event.at),
-            [end + 6, end + 5, end + 4, end + 3, end + 2, end],
+            [
+                end + 24 * 60 * 60 * 1000,
+                end + 6,
+                end + 5,
+                end + 4,
+                end + 2,
+                end,
+                resume,
+                pause,
+            ],
         );
         storeState(db, structuredClone(EMPTY_STATE));
         assert.equal(loadState(db)?.playHistory, undefined);
     } finally {
         db.close();
     }
+});
+
+test('same-day round trips do not become saved or visible play spans', () => {
+    const game = { appId: 1, name: 'Juego de prueba' };
+    const day = (day: number) => new Date(2026, 8, day, 12).getTime();
+    const legacy = [
+        {
+            ...game,
+            kind: 'started' as const,
+            from: 'pending' as const,
+            at: day(18),
+        },
+        {
+            ...game,
+            kind: 'paused' as const,
+            from: 'playing' as const,
+            at: day(19),
+        },
+        {
+            ...game,
+            kind: 'playing' as const,
+            from: 'paused' as const,
+            at: day(19) + 1,
+        },
+    ];
+    assert.deepEqual(withoutSameDayRoundTrips(legacy), [legacy[0]]);
+
+    const state = structuredClone(EMPTY_STATE);
+    recordPreference(
+        state,
+        game,
+        { status: 'playing', favorite: false },
+        day(18),
+    );
+    recordPreference(
+        state,
+        game,
+        { status: 'paused', favorite: false },
+        day(19),
+    );
+    recordPreference(
+        state,
+        game,
+        { status: 'playing', favorite: false },
+        day(19) + 1,
+    );
+    assert.equal(state.preferences[game.appId].status, 'playing');
+    assert.deepEqual(state.playHistory, [legacy[0]]);
 });

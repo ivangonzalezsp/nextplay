@@ -28,8 +28,11 @@ import {
     playEventLabel,
     playEventPhase,
     gameColor,
+    groupPlayPeriods,
     playPeriods,
     periodSpan,
+    withoutSameDayRoundTrips,
+    type PlayPeriod,
 } from '@/lib/play-history';
 
 const months = Array.from({ length: 12 }, (_, month) =>
@@ -203,20 +206,26 @@ export function PlayHistory({
         { length: currentYear - earliestYear + 1 },
         (_, index) => currentYear - index,
     );
-    const selected = eventsInYear(events, year);
+    const visibleEvents = withoutSameDayRoundTrips(events);
+    const selected = eventsInYear(visibleEvents, year);
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year, 11, 31);
     const yearDays =
         (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86400000;
-    const periods = playPeriods(events).filter((period) =>
+    const periods = playPeriods(visibleEvents).filter((period) =>
         periodSpan(period, yearStart, yearEnd, now),
     );
+    const periodGroups = groupPlayPeriods(periods);
     const dateLabel = (at: number) =>
         new Date(at).toLocaleDateString('es', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
         });
+    const periodRangeLabel = (period: PlayPeriod) =>
+        `Start ${dateLabel(period.start.at)} · ${period.end ? `${playEventLabel(period.end)} ${dateLabel(period.end.at)}` : 'En curso'}`;
+    const periodDescription = (period: PlayPeriod) =>
+        `${period.start.name}: ${periodRangeLabel(period)}${period.end ? '' : ' hasta hoy'}`;
     const maxDate = new Date(calendarDateAt(dateInputValue(now))!);
     const count = (kind: PlayEvent['kind']) =>
         new Set(
@@ -276,9 +285,14 @@ export function PlayHistory({
                 cada evento desde la lista de cambios.
             </p>
             <p className="text-sm text-muted-foreground">
-                Un color por juego. Cada línea une Start con End; al reanudar
-                comienza otro tramo del mismo color. Los tramos abiertos llegan
-                hasta hoy. Sin un inicio registrado no se dibuja un tramo.
+                Un color por juego. Cada juego aparece en una sola línea y cada
+                Start-End conserva su propio tramo; al reanudar comienza otro
+                tramo del mismo color. Los tramos abiertos llegan hasta hoy. Sin
+                un inicio registrado no se dibuja un tramo.
+            </p>
+            <p className="text-sm text-muted-foreground">
+                Las idas y vueltas que regresan al estado inicial el mismo día
+                se consideran un clic accidental y no crean un tramo.
             </p>
             {selected.length === 0 && periods.length === 0 && (
                 <p className="rounded-xl border border-border p-6">
@@ -299,22 +313,19 @@ export function PlayHistory({
                                     <span key={month}>{month.slice(0, 3)}</span>
                                 ))}
                             </div>
-                            {periods.map((period, index) => {
-                                const span = periodSpan(
-                                    period,
-                                    yearStart,
-                                    yearEnd,
-                                    now,
-                                )!;
-                                const color = gameColor(period.start.appId);
-                                const description = `${period.start.name}: Start ${dateLabel(period.start.at)} — ${period.end ? `${playEventLabel(period.end)} ${dateLabel(period.end.at)}` : 'En curso hasta hoy'}`;
+                            {periodGroups.map((group) => {
+                                const first = group[0];
+                                const color = gameColor(first.start.appId);
+                                const description = group
+                                    .map(periodDescription)
+                                    .join(' · ');
                                 return (
                                     <div
-                                        key={index}
+                                        key={first.start.appId}
                                         className="flex items-center gap-4"
                                     >
                                         <a
-                                            href={eventUrl(period.start)}
+                                            href={eventUrl(first.start)}
                                             target="_blank"
                                             rel="noreferrer"
                                             className="flex w-48 shrink-0 items-center gap-2 hover:underline"
@@ -323,56 +334,157 @@ export function PlayHistory({
                                                 <EventCover
                                                     src={
                                                         covers.get(
-                                                            period.start.appId,
-                                                        ) ?? period.start.cover
+                                                            first.start.appId,
+                                                        ) ?? first.start.cover
                                                     }
                                                 />
                                             </span>
                                             <span className="text-sm">
-                                                {period.start.name}
+                                                {first.start.name}
                                             </span>
                                         </a>
                                         <div className="min-w-0 flex-1">
-                                            <p className="mb-2 text-xs text-muted-foreground">
-                                                Start{' '}
-                                                {dateLabel(period.start.at)} ·{' '}
-                                                {period.end
-                                                    ? `${playEventLabel(period.end)} ${dateLabel(period.end.at)}`
-                                                    : 'En curso'}
+                                            <p className="mb-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                                                {group.map(
+                                                    (period, periodIndex) => (
+                                                        <span
+                                                            key={`${period.start.at}-${periodIndex}`}
+                                                        >
+                                                            {periodRangeLabel(
+                                                                period,
+                                                            )}
+                                                        </span>
+                                                    ),
+                                                )}
                                             </p>
                                             <div
                                                 className="relative h-5 rounded bg-muted/40"
                                                 aria-label={description}
                                                 title={description}
                                             >
-                                                <span
-                                                    className="absolute top-2 h-1 rounded-full opacity-70"
-                                                    style={{
-                                                        left: `${(span.start / yearDays) * 100}%`,
-                                                        width: `${((span.end - span.start + 1) / yearDays) * 100}%`,
-                                                        backgroundColor: color,
-                                                    }}
-                                                >
-                                                    <span
-                                                        className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full"
-                                                        style={{
-                                                            backgroundColor:
-                                                                color,
-                                                        }}
-                                                    />
-                                                    <span
-                                                        className={`absolute -right-0.5 -top-0.5 h-2 w-2 border ${period.end ? 'rounded-sm' : 'rounded-full bg-card'}`}
-                                                        style={{
-                                                            borderColor: color,
-                                                            ...(period.end
-                                                                ? {
-                                                                      backgroundColor:
-                                                                          color,
-                                                                  }
-                                                                : {}),
-                                                        }}
-                                                    />
-                                                </span>
+                                                {group.map(
+                                                    (period, periodIndex) => {
+                                                        const span = periodSpan(
+                                                            period,
+                                                            yearStart,
+                                                            yearEnd,
+                                                            now,
+                                                        )!;
+                                                        return (
+                                                            <Popover
+                                                                key={`${period.start.at}-${periodIndex}`}
+                                                            >
+                                                                <PopoverTrigger
+                                                                    type="button"
+                                                                    aria-label={periodDescription(
+                                                                        period,
+                                                                    )}
+                                                                    className="absolute top-2 h-1 cursor-pointer rounded-full border-0 p-0 opacity-70 focus-visible:-top-0.5 focus-visible:h-2 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                    style={{
+                                                                        left: `${(span.start / yearDays) * 100}%`,
+                                                                        width: `${((span.end - span.start + 1) / yearDays) * 100}%`,
+                                                                        backgroundColor:
+                                                                            color,
+                                                                    }}
+                                                                >
+                                                                    <span
+                                                                        aria-hidden="true"
+                                                                        className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full"
+                                                                        style={{
+                                                                            backgroundColor:
+                                                                                color,
+                                                                        }}
+                                                                    />
+                                                                    <span
+                                                                        aria-hidden="true"
+                                                                        className={`absolute -right-0.5 -top-0.5 h-2 w-2 border ${period.end ? 'rounded-sm' : 'rounded-full bg-card'}`}
+                                                                        style={{
+                                                                            borderColor:
+                                                                                color,
+                                                                            ...(period.end
+                                                                                ? {
+                                                                                      backgroundColor:
+                                                                                          color,
+                                                                                  }
+                                                                                : {}),
+                                                                        }}
+                                                                    />
+                                                                </PopoverTrigger>
+                                                                <PopoverContent
+                                                                    side="top"
+                                                                    align="start"
+                                                                    className="w-64 max-w-[calc(100vw-2rem)] border border-border bg-card p-0 text-card-foreground shadow-xl"
+                                                                >
+                                                                    <div
+                                                                        className="space-y-3 border-l-2 p-3"
+                                                                        style={{
+                                                                            borderColor:
+                                                                                color,
+                                                                        }}
+                                                                    >
+                                                                        <div className="flex items-start justify-between gap-3">
+                                                                            <div>
+                                                                                <p className="font-semibold">
+                                                                                    {
+                                                                                        first
+                                                                                            .start
+                                                                                            .name
+                                                                                    }
+                                                                                </p>
+                                                                                <p className="text-[11px] text-muted-foreground">
+                                                                                    Fragmento{' '}
+                                                                                    {periodIndex +
+                                                                                        1}{' '}
+                                                                                    de{' '}
+                                                                                    {
+                                                                                        group.length
+                                                                                    }
+                                                                                </p>
+                                                                            </div>
+                                                                            <span className="shrink-0 rounded-full bg-muted px-2 py-1 text-[10px] font-semibold uppercase tracking-wide">
+                                                                                {period.end
+                                                                                    ? playEventLabel(
+                                                                                          period.end,
+                                                                                      )
+                                                                                    : 'En curso'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                                                            <div>
+                                                                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                                                                    Start
+                                                                                </p>
+                                                                                <p className="font-medium">
+                                                                                    {dateLabel(
+                                                                                        period
+                                                                                            .start
+                                                                                            .at,
+                                                                                    )}
+                                                                                </p>
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                                                                    {period.end
+                                                                                        ? 'End'
+                                                                                        : 'Hasta hoy'}
+                                                                                </p>
+                                                                                <p className="font-medium">
+                                                                                    {period.end
+                                                                                        ? dateLabel(
+                                                                                              period
+                                                                                                  .end
+                                                                                                  .at,
+                                                                                          )
+                                                                                        : 'En curso'}
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        );
+                                                    },
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -612,16 +724,31 @@ export function PlayHistory({
                                                     )}
                                                 </div>
                                                 <div className="mt-1 space-y-1">
-                                                    {periods.map(
-                                                        (period, index) => {
-                                                            const span =
-                                                                periodSpan(
-                                                                    period,
-                                                                    weekStart,
-                                                                    weekEnd,
-                                                                    now,
+                                                    {periodGroups.map(
+                                                        (group) => {
+                                                            const visible =
+                                                                group.flatMap(
+                                                                    (
+                                                                        period,
+                                                                    ) => {
+                                                                        const span =
+                                                                            periodSpan(
+                                                                                period,
+                                                                                weekStart,
+                                                                                weekEnd,
+                                                                                now,
+                                                                            );
+                                                                        return span
+                                                                            ? [
+                                                                                  {
+                                                                                      period,
+                                                                                      span,
+                                                                                  },
+                                                                              ]
+                                                                            : [];
+                                                                    },
                                                                 );
-                                                            if (!span)
+                                                            if (!visible.length)
                                                                 return null;
                                                             const leading =
                                                                 Math.max(
@@ -629,38 +756,70 @@ export function PlayHistory({
                                                                     1 -
                                                                         firstDay,
                                                                 );
-                                                            const description = `${period.start.name}: Start ${dateLabel(period.start.at)} — ${period.end ? `${playEventLabel(period.end)} ${dateLabel(period.end.at)}` : 'En curso hasta hoy'}`;
+                                                            const description =
+                                                                visible
+                                                                    .map(
+                                                                        ({
+                                                                            period,
+                                                                        }) =>
+                                                                            periodDescription(
+                                                                                period,
+                                                                            ),
+                                                                    )
+                                                                    .join(
+                                                                        ' · ',
+                                                                    );
                                                             return (
                                                                 <div
-                                                                    key={index}
+                                                                    key={
+                                                                        group[0]
+                                                                            .start
+                                                                            .appId
+                                                                    }
                                                                     className="grid grid-cols-7"
+                                                                    aria-label={
+                                                                        description
+                                                                    }
                                                                 >
-                                                                    <div
-                                                                        className="min-w-0 border-t-2 px-1 text-xs"
-                                                                        style={{
-                                                                            gridColumn: `${leading + span.start + 1} / ${leading + span.end + 2}`,
-                                                                            borderColor:
-                                                                                gameColor(
-                                                                                    period
-                                                                                        .start
-                                                                                        .appId,
-                                                                                ),
-                                                                        }}
-                                                                        title={
-                                                                            description
-                                                                        }
-                                                                        aria-label={
-                                                                            description
-                                                                        }
-                                                                    >
-                                                                        <span className="block truncate">
+                                                                    {visible.map(
+                                                                        (
                                                                             {
-                                                                                period
-                                                                                    .start
-                                                                                    .name
-                                                                            }
-                                                                        </span>
-                                                                    </div>
+                                                                                period,
+                                                                                span,
+                                                                            },
+                                                                            index,
+                                                                        ) => (
+                                                                            <div
+                                                                                key={`${period.start.at}-${index}`}
+                                                                                className="min-w-0 border-t-2 px-1 text-xs"
+                                                                                style={{
+                                                                                    gridColumn: `${leading + span.start + 1} / ${leading + span.end + 2}`,
+                                                                                    gridRow: 1,
+                                                                                    borderColor:
+                                                                                        gameColor(
+                                                                                            group[0]
+                                                                                                .start
+                                                                                                .appId,
+                                                                                        ),
+                                                                                }}
+                                                                                title={periodDescription(
+                                                                                    period,
+                                                                                )}
+                                                                                aria-label={periodDescription(
+                                                                                    period,
+                                                                                )}
+                                                                            >
+                                                                                <span className="block truncate">
+                                                                                    {index ===
+                                                                                    0
+                                                                                        ? group[0]
+                                                                                              .start
+                                                                                              .name
+                                                                                        : ''}
+                                                                                </span>
+                                                                            </div>
+                                                                        ),
+                                                                    )}
                                                                 </div>
                                                             );
                                                         },
