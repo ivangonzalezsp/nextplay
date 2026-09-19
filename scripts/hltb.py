@@ -1,8 +1,16 @@
 """One bounded batch over stdin/stdout; no HTTP server or account credentials."""
 import json
 import math
+import re
 import sys
 from urllib.parse import urlparse
+
+
+def search_queries(name):
+    title = name.strip()
+    parts = [part.strip() for part in re.split(r'\s+[-–—]\s+', title) if part.strip()]
+    base = parts[0] if parts else title
+    return [title] if base == title else [title, base]
 
 
 def parse_detail(html, app_id, hltb_id):
@@ -68,20 +76,23 @@ def main():
     service = HowLongToBeat(input_minimum_similarity=0)
     results = []
     for game in payload:
-        rows = service.search(game['name'])
-        if rows is None:
-            raise ValueError('HLTB search unavailable')
         matches = []
-        # ponytail: three likely editions per query; unmatched games retain IGDB rather than guessing.
-        for candidate in sorted(rows,key=lambda r:r.similarity,reverse=True)[:3]:
-            ident = candidate.game_id
-            if type(ident) is not int or ident <= 0:
-                raise ValueError('Invalid HLTB identifier')
-            response = requests.get('https://howlongtobeat.com/game/' + str(ident),
-                headers=HTMLRequests.get_title_request_headers(UserAgent().random), timeout=10)
-            match = parse_detail(response.text,game['appId'],ident)
-            if match:
-                matches.append(match)
+        # ponytail: two bounded queries; broaden only if real misses justify extra requests.
+        for query in search_queries(game['name']):
+            rows = service.search(query, similarity_case_sensitive=False)
+            if rows is None:
+                raise ValueError('HLTB search unavailable')
+            for candidate in sorted(rows,key=lambda r:r.similarity,reverse=True)[:3]:
+                ident = candidate.game_id
+                if type(ident) is not int or ident <= 0:
+                    raise ValueError('Invalid HLTB identifier')
+                response = requests.get('https://howlongtobeat.com/game/' + str(ident),
+                    headers=HTMLRequests.get_title_request_headers(UserAgent().random), timeout=10)
+                match = parse_detail(response.text,game['appId'],ident)
+                if match:
+                    matches.append(match)
+            if matches:
+                break
         results.append({'appId':game['appId'], 'data':matches[0] if len(matches)==1 else None})
     print(json.dumps(results,allow_nan=False))
 
