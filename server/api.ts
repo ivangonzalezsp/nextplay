@@ -259,9 +259,17 @@ async function snapshot(
   warnings: string[] = [],
 ): Promise<Snapshot> {
   const c = await config();
-  return {
+  const durations = await getHltbCache();
+  const visible: State = {
     ...state,
-    tasteProfile: buildTasteProfile(state),
+    games: withHltb(state.games, durations),
+    ...(state.shortlist
+      ? { shortlist: withHltb(state.shortlist, durations) }
+      : {}),
+  };
+  return {
+    ...visible,
+    tasteProfile: buildTasteProfile(visible),
     setup: {
       steam: !!c.steam,
       family: !!c.familyToken,
@@ -588,6 +596,34 @@ export async function handle(
           throw new AppError('La carga de etiquetas se ha interrumpido.', 409);
         phase('steam:tags:sync:complete', result);
         return snapshot(await readState());
+      }
+      if (path === '/api/hltb/sync' && request.method === 'POST') {
+        const appId = payload.appId;
+        if (
+          typeof appId !== 'number' ||
+          !Number.isSafeInteger(appId) ||
+          appId <= 0
+        )
+          throw new AppError('El juego para actualizar HLTB no es válido.');
+        const game = state.games.find((candidate) => candidate.appId === appId);
+        if (!game)
+          throw new AppError(
+            'Ese juego no pertenece a tu biblioteca de Steam.',
+            404,
+          );
+        if (!(await hltbAvailable()))
+          throw new AppError(
+            'HowLongToBeat no está disponible en este entorno.',
+            503,
+          );
+        phase('hltb:refresh:start', { appId });
+        const durations = await getHltbCache();
+        const warnings = await refreshHltb([game], durations, true);
+        phase('hltb:refresh:complete', {
+          appId,
+          found: Boolean(durations[appId]?.data),
+        });
+        return snapshot(state, warnings);
       }
       if (path === '/api/play-history' && request.method === 'PATCH') {
         const events = state.playHistory ?? [];

@@ -570,6 +570,12 @@ export default function Home() {
         });
     }
 
+    async function refreshHltb(game: Game) {
+        await action('hltb-' + game.appId, async () => {
+            accept(await api('hltb/sync', { appId: game.appId }));
+        });
+    }
+
     const activeAchievementGames = (state?.games ?? [])
         .filter((game) =>
             tracksSteamAchievements(state?.preferences[game.appId]?.status),
@@ -1423,6 +1429,7 @@ export default function Home() {
                             onAdd={addGame}
                             onRemove={removeGame}
                             onRefreshAchievements={refreshAchievements}
+                            onRefreshHltb={refreshHltb}
                             busy={busy}
                         />
                     </TabsContent>

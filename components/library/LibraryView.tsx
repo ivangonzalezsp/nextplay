@@ -151,6 +151,7 @@ export function LibraryView({
     onAdd,
     onRemove,
     onRefreshAchievements,
+    onRefreshHltb,
     busy,
 }: {
     state: Snapshot | null;
@@ -175,6 +176,7 @@ export function LibraryView({
     onAdd: (input: AddGameInput) => Promise<void>;
     onRemove: (game: Game) => Promise<void>;
     onRefreshAchievements?: (game: Game) => Promise<void>;
+    onRefreshHltb?: (game: Game) => Promise<void>;
     busy: string;
 }) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -674,6 +676,34 @@ export function LibraryView({
                                             Similar
                                         </Button>
 
+                                        {game.appId > 0 && onRefreshHltb && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                                                disabled={!!busy}
+                                                onClick={() =>
+                                                    void onRefreshHltb(game)
+                                                }
+                                                title={
+                                                    game.hltb?.mainHours
+                                                        ? 'Actualizar duración HLTB'
+                                                        : 'Buscar duración HLTB'
+                                                }
+                                            >
+                                                <RefreshCw
+                                                    size={11}
+                                                    className={
+                                                        busy ===
+                                                        'hltb-' + game.appId
+                                                            ? 'mr-1 animate-spin'
+                                                            : 'mr-1'
+                                                    }
+                                                />
+                                                HLTB
+                                            </Button>
+                                        )}
+
                                         <a
                                             href={gameUrl(game)}
                                             target="_blank"
@@ -903,6 +933,45 @@ export function LibraryView({
                                                         }
                                                     />
                                                 </Button>
+                                                {game.appId > 0 &&
+                                                    onRefreshHltb && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-7 w-7 text-muted-foreground"
+                                                            disabled={!!busy}
+                                                            onClick={() =>
+                                                                void onRefreshHltb(
+                                                                    game,
+                                                                )
+                                                            }
+                                                            title={
+                                                                game.hltb
+                                                                    ?.mainHours
+                                                                    ? 'Actualizar duración HLTB'
+                                                                    : 'Buscar duración HLTB'
+                                                            }
+                                                            aria-label={
+                                                                game.hltb
+                                                                    ?.mainHours
+                                                                    ? 'Actualizar HLTB de ' +
+                                                                      game.name
+                                                                    : 'Buscar HLTB de ' +
+                                                                      game.name
+                                                            }
+                                                        >
+                                                            <RefreshCw
+                                                                size={13}
+                                                                className={
+                                                                    busy ===
+                                                                    'hltb-' +
+                                                                        game.appId
+                                                                        ? 'animate-spin'
+                                                                        : ''
+                                                                }
+                                                            />
+                                                        </Button>
+                                                    )}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"

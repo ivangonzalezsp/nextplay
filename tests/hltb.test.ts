@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DEFAULT_FILTERS, EMPTY_STATE, storyHours } from '../lib/model.ts';
 import type { Game } from '../lib/model.ts';
+import { atomicJson, saveState } from '../server/store.ts';
+import { handle } from '../server/api.ts';
 import {
     expireHltbCache,
     getHltbCache,
@@ -162,6 +164,37 @@ void test('HLTB cache bounds work, survives failures and missing matches, and su
     } finally {
         if (previous === undefined) delete process.env.NEXTPLAY_DATA_DIR;
         else process.env.NEXTPLAY_DATA_DIR = previous;
+        await rm(dir, { recursive: true, force: true });
+    }
+});
+
+void test('state snapshots expose cached HLTB durations to the library', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'nextplay-hltb-state-'));
+    const previousDataDir = process.env.NEXTPLAY_DATA_DIR;
+    const previousUserDir = process.env.NEXTPLAY_USER_DIR;
+    process.env.NEXTPLAY_DATA_DIR = dir;
+    process.env.NEXTPLAY_USER_DIR = dir;
+    try {
+        await atomicJson(join(dir, 'hltb.json'), {
+            '400': { checkedAt: Date.now(), data: duration },
+        });
+        await saveState({
+            ...structuredClone(EMPTY_STATE),
+            games: [portal],
+        });
+        const response = await handle(
+            new Request('http://127.0.0.1:3000/api/state', {
+                method: 'GET',
+            }),
+        );
+        assert.equal(response.status, 200);
+        const snapshot = (await response.json()) as { games: Game[] };
+        assert.equal(snapshot.games[0].hltb?.mainHours, 3.12);
+    } finally {
+        if (previousDataDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+        else process.env.NEXTPLAY_DATA_DIR = previousDataDir;
+        if (previousUserDir === undefined) delete process.env.NEXTPLAY_USER_DIR;
+        else process.env.NEXTPLAY_USER_DIR = previousUserDir;
         await rm(dir, { recursive: true, force: true });
     }
 });

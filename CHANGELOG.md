@@ -4,6 +4,10 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- La biblioteca permite buscar o actualizar manualmente la duración HLTB de cada juego de Steam.
+
 ## [0.6.1] - 2026-09-20
 
 ### Correcciones de errores
