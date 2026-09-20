@@ -4,6 +4,10 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Correcciones de errores
+
+- Los juegos añadidos directamente como terminados vuelven a aparecer en el Calendario de Mi año en su fecha real, aunque no tengan un inicio registrado.
+
 ## [0.6.0] - 2026-09-19
 
 ### Features
@@ -13,7 +17,6 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
-- Los juegos añadidos directamente como terminados vuelven a aparecer en el Calendario de Mi año en su fecha real, aunque no tengan un inicio registrado.
 - HowLongToBeat prueba variantes simplificadas de los nombres con sufijos de edición, como `Master Collection Version`.
 - Los distintos tramos de un mismo juego ahora se muestran en una sola línea en Timeline y Calendario.
 - Cada fragmento del Timeline muestra ahora sus detalles al hacer clic, con inicio, final y estado.
