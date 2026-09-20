@@ -9,6 +9,7 @@ import {
     DEFAULT_FILTERS,
     gameUrl,
     libraryLabel,
+    steamLaunchUrl,
     type Game,
     type Snapshot,
 } from '../lib/model.ts';
@@ -26,6 +27,12 @@ import { enrich, review } from '../server/sources.ts';
 import { refreshHltb } from '../server/hltb.ts';
 import { buildPrompt } from '../server/codex.ts';
 import { validatePicks } from '../server/selection.ts';
+
+void test('Steam launch URLs only accept positive AppIDs', () => {
+    assert.equal(steamLaunchUrl(132), 'steam://run/132');
+    assert.equal(steamLaunchUrl(0), undefined);
+    assert.equal(steamLaunchUrl(-42), undefined);
+});
 
 void test('manual games: IGDB search, migration, persistence, feedback, recommendations and Steam sync', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'nextplay-manual-'));

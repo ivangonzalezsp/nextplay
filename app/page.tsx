@@ -52,6 +52,7 @@ import {
     inLibrary,
     libraryLabel,
     sortLibraryGames,
+    steamLaunchUrl,
     steamTagKey,
     tracksSteamAchievements,
 } from '@/lib/model';
@@ -209,6 +210,9 @@ function formatHours(value: number | null | undefined) {
         ? 'sin datos'
         : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
 }
+type HltbSyncResponse = Snapshot & {
+    hltbSync: { remaining: number; stopped: boolean };
+};
 
 export default function Home() {
     const [state, setState] = useState<Snapshot | null>(null);
@@ -226,6 +230,7 @@ export default function Home() {
         useState<LibraryOrderBy>('original');
     const [limit, setLimit] = useState(36);
     const [busy, setBusy] = useState('');
+    const [hltbRemaining, setHltbRemaining] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [activity, setActivity] = useState<RecommendationProgress[]>([]);
     const [error, setError] = useState('');
@@ -570,9 +575,30 @@ export default function Home() {
         });
     }
 
-    async function refreshHltb(game: Game) {
-        await action('hltb-' + game.appId, async () => {
-            accept(await api('hltb/sync', { appId: game.appId }));
+    async function refreshHltb() {
+        await action('hltb-all', async () => {
+            const initial = (state?.games ?? []).filter(
+                (game) => game.appId > 0 && !game.hltb?.mainHours,
+            ).length;
+            setHltbRemaining(initial);
+            try {
+                let remaining = initial;
+                do {
+                    const next = (await api('hltb/sync', {
+                        allMissing: true,
+                    })) as HltbSyncResponse;
+                    accept(next);
+                    remaining = next.hltbSync.remaining;
+                    setHltbRemaining(remaining);
+                    if (next.hltbSync.stopped)
+                        throw new Error(
+                            next.warnings[0] ??
+                                'HowLongToBeat no ha podido continuar la búsqueda.',
+                        );
+                } while (remaining > 0);
+            } finally {
+                setHltbRemaining(null);
+            }
         });
     }
 
@@ -800,6 +826,8 @@ export default function Home() {
                 setProfileUrl={setProfileUrl}
                 onSync={sync}
                 onTagsSync={syncTags}
+                onRefreshHltb={refreshHltb}
+                hltbRemaining={hltbRemaining}
                 onFamilySync={async () => {
                     await action('family', async () => {
                         accept(await api('steam/family/sync', {}));
@@ -1053,6 +1081,21 @@ export default function Home() {
                                                     {game.name}
                                                 </h4>
                                                 <div className="hud-card-actions">
+                                                    {game.appId > 0 && (
+                                                        <a
+                                                            href={steamLaunchUrl(
+                                                                game.appId,
+                                                            )}
+                                                            className="hud-steam-launch-link"
+                                                            aria-label="Jugar en Steam"
+                                                            title="Jugar en Steam"
+                                                        >
+                                                            <Play
+                                                                size={13}
+                                                                aria-hidden="true"
+                                                            />
+                                                        </a>
+                                                    )}
                                                     <a
                                                         href={gameUrl(game)}
                                                         target="_blank"
@@ -1061,7 +1104,7 @@ export default function Home() {
                                                     >
                                                         <span>
                                                             {game.appId > 0
-                                                                ? 'Abrir Steam'
+                                                                ? 'Ver tienda'
                                                                 : 'Ver en IGDB'}
                                                         </span>
                                                         <ExternalLink
@@ -1429,7 +1472,6 @@ export default function Home() {
                             onAdd={addGame}
                             onRemove={removeGame}
                             onRefreshAchievements={refreshAchievements}
-                            onRefreshHltb={refreshHltb}
                             busy={busy}
                         />
                     </TabsContent>
@@ -1556,16 +1598,31 @@ export default function Home() {
                                                         />
                                                         Quitar
                                                     </Button>
+                                                    {game.appId > 0 && (
+                                                        <a
+                                                            href={steamLaunchUrl(
+                                                                game.appId,
+                                                            )}
+                                                            className="hud-steam-launch-link ml-auto"
+                                                            aria-label="Jugar en Steam"
+                                                            title="Jugar en Steam"
+                                                        >
+                                                            <Play
+                                                                size={13}
+                                                                aria-hidden="true"
+                                                            />
+                                                        </a>
+                                                    )}
                                                     <a
                                                         href={gameUrl(game)}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="hud-card-steam-link ml-auto"
+                                                        className="hud-card-steam-link"
                                                     >
                                                         <span>
                                                             {game.appId > 0
-                                                                ? 'Steam'
-                                                                : 'IGDB'}
+                                                                ? 'Ver tienda'
+                                                                : 'Ver en IGDB'}
                                                         </span>
                                                         <ExternalLink
                                                             size={12}

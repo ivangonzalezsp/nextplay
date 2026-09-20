@@ -11,6 +11,7 @@ import {
     Gamepad2,
     AlertTriangle,
     Flame,
+    Play,
     Check,
     X,
 } from 'lucide-react';
@@ -28,6 +29,7 @@ import {
     gameUrl,
     inLibrary,
     libraryLabel,
+    steamLaunchUrl,
     steamTagKey,
     type Game,
     type GameStatus,
@@ -68,6 +70,7 @@ export function HeroSpotlight({
 }) {
     const { game } = pick;
     const [coverFailed, setCoverFailed] = useState(false);
+    const steamUrl = steamLaunchUrl(game.appId);
 
     const steamReviewScore =
         game.reviews && game.reviews.total > 0
@@ -198,16 +201,24 @@ export function HeroSpotlight({
 
                     {/* Action Row */}
                     <div className="hud-hero-actions-row">
+                        {steamUrl && (
+                            <a
+                                href={steamUrl}
+                                className="hud-steam-launch-link"
+                                aria-label="Jugar en Steam"
+                                title="Jugar en Steam"
+                            >
+                                <Play size={14} aria-hidden="true" />
+                            </a>
+                        )}
                         <a
                             href={gameUrl(game)}
                             target="_blank"
                             rel="noreferrer"
-                            className="hud-play-steam-btn"
+                            className="hud-card-steam-link"
                         >
                             <span>
-                                {game.appId > 0
-                                    ? 'Ver en Steam'
-                                    : 'Ver en IGDB'}
+                                {steamUrl ? 'Ver tienda' : 'Ver en IGDB'}
                             </span>
                             <ExternalLink size={15} />
                         </a>

@@ -67,6 +67,7 @@ import {
   expireHltbCache,
   getHltbCache,
   hltbAvailable,
+  pendingHltb,
   refreshHltb,
   withHltb,
 } from './hltb.ts';
@@ -598,6 +599,38 @@ export async function handle(
         return snapshot(await readState());
       }
       if (path === '/api/hltb/sync' && request.method === 'POST') {
+        if (
+          payload.allMissing !== undefined &&
+          typeof payload.allMissing !== 'boolean'
+        )
+          throw new AppError('La opción de búsqueda HLTB no es válida.');
+        if (payload.allMissing === true) {
+          if (!(await hltbAvailable()))
+            throw new AppError(
+              'HowLongToBeat no está disponible en este entorno.',
+              503,
+            );
+          const durations = await getHltbCache();
+          const candidates = pendingHltb(state.games, durations);
+          const warnings = await refreshHltb(candidates, durations);
+          const nextDurations = await getHltbCache();
+          const remaining = pendingHltb(
+            state.games,
+            nextDurations,
+          ).length;
+          const progressed = remaining < candidates.length;
+          phase('hltb:refresh:complete', {
+            games: candidates.length - remaining,
+            remaining,
+          });
+          return {
+            ...(await snapshot(state, warnings)),
+            hltbSync: {
+              remaining,
+              stopped: candidates.length > 0 && !progressed,
+            },
+          };
+        }
         const appId = payload.appId;
         if (
           typeof appId !== 'number' ||

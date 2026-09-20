@@ -1714,26 +1714,6 @@ h1 {
     margin-top: 16px;
 }
 
-.hud-play-steam-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    font-weight: 700;
-    background: var(--theme-accent, #00f0a8);
-    color: var(--theme-on-accent, #05261d);
-    box-shadow: 0 4px 14px rgba(var(--theme-accent-rgb, 0, 240, 168), 0.3);
-    transition: all 0.2s ease;
-}
-
-.hud-play-steam-btn:hover {
-    background: var(--theme-accent-hover, #1afcb5);
-    color: var(--theme-on-accent, #041f17);
-    transform: translateY(-1px);
-}
-
 .hud-status-opinion-row {
     margin-top: 16px;
     padding-top: 14px;
@@ -1899,6 +1879,33 @@ h1 {
 
 .hud-card-steam-link:hover {
     text-decoration: underline;
+}
+
+.hud-steam-launch-link {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    border: 1px solid rgba(var(--theme-accent-rgb, 0, 240, 168), 0.45);
+    border-radius: 6px;
+    background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.08);
+    color: var(--theme-accent, #00f0a8);
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.hud-steam-launch-link:hover {
+    border-color: var(--theme-accent, #00f0a8);
+    background: rgba(var(--theme-accent-rgb, 0, 240, 168), 0.18);
+    color: var(--theme-accent-hover, #1afcb5);
+}
+
+.hud-steam-launch-link:focus-visible {
+    outline: 2px solid var(--theme-accent, #00f0a8);
+    outline-offset: 2px;
 }
 
 /* COPILOT DOCK */

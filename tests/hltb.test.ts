@@ -10,6 +10,7 @@ import { handle } from '../server/api.ts';
 import {
     expireHltbCache,
     getHltbCache,
+    pendingHltb,
     refreshHltb,
     validateHltb,
     withHltb,
@@ -155,6 +156,10 @@ void test('HLTB cache bounds work, survives failures and missing matches, and su
             return batch.map((g) => ({ appId: g.appId, data: null }));
         });
         assert.equal(count, 8);
+        assert.deepEqual(
+            pendingHltb(games, cache).map((game) => game.appId),
+            games.slice(8).map((game) => game.appId),
+        );
         assert.deepEqual(
             await refreshHltb(games.slice(0, 8), cache, false, async () => {
                 assert.fail('Negative results must be cached');

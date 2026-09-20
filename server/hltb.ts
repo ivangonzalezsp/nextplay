@@ -39,6 +39,15 @@ export async function hltbAvailable() {
         return false;
     }
 }
+export function pendingHltb(games: Game[], cache: Cache) {
+    const now = Date.now();
+    return games.filter(
+        (game) =>
+            game.appId > 0 &&
+            !cache[game.appId]?.data?.mainHours &&
+            now - (cache[game.appId]?.checkedAt ?? 0) >= WEEK,
+    );
+}
 export function validateHltb(value: unknown, games: Game[]) {
     if (!Array.isArray(value) || value.length !== games.length)
         throw new AppError('Respuesta incompleta de HowLongToBeat.', 502);
@@ -148,14 +157,10 @@ export async function refreshHltb(
     force = false,
     runner = runPython,
 ) {
-    const missing = games
-        .filter(
-            (g) =>
-                g.appId > 0 &&
-                (force ||
-                    Date.now() - (cache[g.appId]?.checkedAt ?? 0) >= WEEK),
-        )
-        .slice(0, 8);
+    const missing = (force
+        ? games.filter((game) => game.appId > 0)
+        : pendingHltb(games, cache)
+    ).slice(0, 8);
     if (!missing.length) {
         log('server', 'hltb:refresh:skipped', { games: games.length });
         return [];

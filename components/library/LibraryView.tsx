@@ -13,6 +13,7 @@ import {
     Check,
     X,
     Gamepad2,
+    Play,
     Trophy,
     RefreshCw,
     Trash2,
@@ -41,6 +42,7 @@ import {
     gameUrl,
     inLibrary,
     libraryLabel,
+    steamLaunchUrl,
     steamTagKey,
     tracksSteamAchievements,
     type Game,
@@ -54,6 +56,26 @@ function formatHours(value: number | null | undefined) {
     return value == null
         ? 'sin datos'
         : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
+}
+
+function HltbBreakdown({ game }: { game: Game }) {
+    if (!game.hltb) return null;
+    return (
+        <details className="mb-2 text-xs text-muted-foreground">
+            <summary className="flex cursor-pointer list-none items-center gap-1 text-emerald-300">
+                <Clock size={11} aria-hidden="true" />
+                HLTB: {formatHours(game.hltb.mainHours)}
+            </summary>
+            <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 pl-4">
+                <dt>Historia principal</dt>
+                <dd>{formatHours(game.hltb.mainHours)}</dd>
+                <dt>Historia + extras</dt>
+                <dd>{formatHours(game.hltb.extraHours)}</dd>
+                <dt>Completista</dt>
+                <dd>{formatHours(game.hltb.completionHours)}</dd>
+            </dl>
+        </details>
+    );
 }
 
 export function AchievementProgress({
@@ -151,7 +173,6 @@ export function LibraryView({
     onAdd,
     onRemove,
     onRefreshAchievements,
-    onRefreshHltb,
     busy,
 }: {
     state: Snapshot | null;
@@ -176,7 +197,6 @@ export function LibraryView({
     onAdd: (input: AddGameInput) => Promise<void>;
     onRemove: (game: Game) => Promise<void>;
     onRefreshAchievements?: (game: Game) => Promise<void>;
-    onRefreshHltb?: (game: Game) => Promise<void>;
     busy: string;
 }) {
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -262,7 +282,6 @@ export function LibraryView({
                             setQuickFilter('all');
                         }}
                     />
-
                     {/* View Mode Toggle */}
                     <div className="hud-view-switcher">
                         <button
@@ -638,6 +657,7 @@ export function LibraryView({
                                             {STATUS_LABELS[pref.status]}
                                         </span>
                                     </div>
+                                    <HltbBreakdown game={game} />
 
                                     {/* Actions Bar */}
                                     <div className="hud-lib-actions">
@@ -676,42 +696,34 @@ export function LibraryView({
                                             Similar
                                         </Button>
 
-                                        {game.appId > 0 && onRefreshHltb && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                                                disabled={!!busy}
-                                                onClick={() =>
-                                                    void onRefreshHltb(game)
-                                                }
-                                                title={
-                                                    game.hltb?.mainHours
-                                                        ? 'Actualizar duración HLTB'
-                                                        : 'Buscar duración HLTB'
-                                                }
+                                        {game.appId > 0 && (
+                                            <a
+                                                href={steamLaunchUrl(
+                                                    game.appId,
+                                                )}
+                                                className="hud-steam-launch-link ml-auto"
+                                                aria-label="Jugar en Steam"
+                                                title="Jugar en Steam"
                                             >
-                                                <RefreshCw
-                                                    size={11}
-                                                    className={
-                                                        busy ===
-                                                        'hltb-' + game.appId
-                                                            ? 'mr-1 animate-spin'
-                                                            : 'mr-1'
-                                                    }
+                                                <Play
+                                                    size={13}
+                                                    aria-hidden="true"
                                                 />
-                                                HLTB
-                                            </Button>
+                                            </a>
                                         )}
-
                                         <a
                                             href={gameUrl(game)}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="hud-lib-steam-link ml-auto"
+                                            className="hud-lib-steam-link"
+                                            aria-label={
+                                                game.appId > 0
+                                                    ? `Ver tienda de ${game.name}`
+                                                    : `Ver en IGDB: ${game.name}`
+                                            }
                                             title={
                                                 game.appId > 0
-                                                    ? 'Ver en tienda Steam'
+                                                    ? 'Ver tienda'
                                                     : 'Ver en IGDB'
                                             }
                                         >
@@ -897,9 +909,11 @@ export function LibraryView({
                                                   })} h`}
                                         </td>
                                         <td className="text-xs text-muted-foreground">
-                                            {game.hltb?.mainHours
-                                                ? `${formatHours(game.hltb.mainHours)}`
-                                                : '—'}
+                                            {game.hltb ? (
+                                                <HltbBreakdown game={game} />
+                                            ) : (
+                                                '—'
+                                            )}
                                         </td>
                                         <td>
                                             <span
@@ -933,45 +947,6 @@ export function LibraryView({
                                                         }
                                                     />
                                                 </Button>
-                                                {game.appId > 0 &&
-                                                    onRefreshHltb && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-7 w-7 text-muted-foreground"
-                                                            disabled={!!busy}
-                                                            onClick={() =>
-                                                                void onRefreshHltb(
-                                                                    game,
-                                                                )
-                                                            }
-                                                            title={
-                                                                game.hltb
-                                                                    ?.mainHours
-                                                                    ? 'Actualizar duración HLTB'
-                                                                    : 'Buscar duración HLTB'
-                                                            }
-                                                            aria-label={
-                                                                game.hltb
-                                                                    ?.mainHours
-                                                                    ? 'Actualizar HLTB de ' +
-                                                                      game.name
-                                                                    : 'Buscar HLTB de ' +
-                                                                      game.name
-                                                            }
-                                                        >
-                                                            <RefreshCw
-                                                                size={13}
-                                                                className={
-                                                                    busy ===
-                                                                    'hltb-' +
-                                                                        game.appId
-                                                                        ? 'animate-spin'
-                                                                        : ''
-                                                                }
-                                                            />
-                                                        </Button>
-                                                    )}
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -982,14 +957,34 @@ export function LibraryView({
                                                 >
                                                     Similar
                                                 </Button>
+                                                {game.appId > 0 && (
+                                                    <a
+                                                        href={steamLaunchUrl(
+                                                            game.appId,
+                                                        )}
+                                                        className="hud-steam-launch-link"
+                                                        aria-label="Jugar en Steam"
+                                                        title="Jugar en Steam"
+                                                    >
+                                                        <Play
+                                                            size={13}
+                                                            aria-hidden="true"
+                                                        />
+                                                    </a>
+                                                )}
                                                 <a
                                                     href={gameUrl(game)}
                                                     target="_blank"
                                                     rel="noreferrer"
                                                     className="hud-lib-steam-link"
+                                                    aria-label={
+                                                        game.appId > 0
+                                                            ? `Ver tienda de ${game.name}`
+                                                            : `Ver en IGDB: ${game.name}`
+                                                    }
                                                     title={
                                                         game.appId > 0
-                                                            ? 'Abrir en Steam'
+                                                            ? 'Ver tienda'
                                                             : 'Ver en IGDB'
                                                     }
                                                 >

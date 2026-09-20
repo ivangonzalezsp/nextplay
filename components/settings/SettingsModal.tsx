@@ -45,6 +45,8 @@ export function SettingsModal({
     setProfileUrl,
     onSync,
     onTagsSync,
+    onRefreshHltb,
+    hltbRemaining,
     onFamilySync,
     onReload,
     engine,
@@ -61,6 +63,8 @@ export function SettingsModal({
     setProfileUrl: (url: string) => void;
     onSync: () => Promise<void>;
     onTagsSync: () => Promise<void>;
+    onRefreshHltb: () => Promise<void>;
+    hltbRemaining: number | null;
     onFamilySync: () => Promise<void>;
     onReload: () => Promise<void>;
     engine: RecommendationEngine;
@@ -118,6 +122,9 @@ export function SettingsModal({
     const steamGames = state?.games.filter((game) => game.appId > 0) ?? [];
     const checkedSteamGames = steamGames.filter(
         (game) => game.steamTagsCheckedAt != null,
+    ).length;
+    const pendingHltbCount = steamGames.filter(
+        (game) => !game.hltb?.mainHours,
     ).length;
 
     return (
@@ -229,6 +236,50 @@ export function SettingsModal({
                                 públicos en la privacidad de Steam.
                             </p>
                         </div>
+
+                        {state?.setup.hltb && pendingHltbCount > 0 && (
+                            <div className="hud-card-subpanel">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                        <RefreshCw
+                                            size={16}
+                                            className="text-emerald-400"
+                                        />
+                                        Duraciones de HowLongToBeat
+                                    </h4>
+                                    <span className="text-xs text-muted-foreground">
+                                        {pendingHltbCount} pendientes
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mb-2">
+                                    Busca las duraciones que faltan para todos
+                                    tus juegos de Steam.
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => void onRefreshHltb()}
+                                    disabled={!!busy}
+                                    className="w-full"
+                                    title="Buscar en HowLongToBeat los juegos que aún no tienen duración"
+                                    aria-busy={busy === 'hltb-all'}
+                                >
+                                    <RefreshCw
+                                        size={13}
+                                        className={
+                                            busy === 'hltb-all'
+                                                ? 'spin mr-2'
+                                                : 'mr-2'
+                                        }
+                                    />
+                                    {busy === 'hltb-all'
+                                        ? hltbRemaining === null
+                                            ? 'Buscando HLTB…'
+                                            : `Buscando HLTB… (${hltbRemaining} restantes)`
+                                        : 'Buscar HLTB pendientes'}
+                                </Button>
+                            </div>
+                        )}
 
                         <div className="hud-card-subpanel">
                             <div className="flex items-center justify-between mb-2">

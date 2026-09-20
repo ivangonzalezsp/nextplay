@@ -6,7 +6,13 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
-- La biblioteca permite buscar o actualizar manualmente la duración HLTB de cada juego de Steam.
+- Los juegos de Steam se pueden abrir directamente con un botón compacto de reproducción.
+- Ajustes permite buscar en bloque las duraciones HLTB que faltan.
+- El resumen de HLTB de cada juego se puede desplegar para ver sus tres duraciones.
+
+### Correcciones de errores
+
+- La búsqueda de HLTB muestra claramente su progreso mientras consulta los juegos pendientes.
 
 ## [0.6.1] - 2026-09-20
 

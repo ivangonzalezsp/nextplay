@@ -257,6 +257,10 @@ export const STATUS_LABELS: Record<GameStatus, string> = {
 };
 export const storeUrl = (appId: number) =>
     `https://store.steampowered.com/app/${appId}/`;
+export const steamLaunchUrl = (appId: number) =>
+    Number.isSafeInteger(appId) && appId > 0
+        ? `steam://run/${appId}`
+        : undefined;
 export const gameUrl = (game: { appId: number; igdbUrl?: string }) =>
     game.appId > 0 ? storeUrl(game.appId) : game.igdbUrl;
 export const storyHours = (game: Game) =>

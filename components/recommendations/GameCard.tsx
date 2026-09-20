@@ -9,6 +9,7 @@ import {
     Bookmark,
     Sparkles,
     Gamepad2,
+    Play,
     Check,
     X,
 } from 'lucide-react';
@@ -26,6 +27,7 @@ import {
     gameUrl,
     inLibrary,
     libraryLabel,
+    steamLaunchUrl,
     steamTagKey,
     type Game,
     type GameStatus,
@@ -68,6 +70,7 @@ export function GameCard({
 }) {
     const { game } = pick;
     const [coverFailed, setCoverFailed] = useState(false);
+    const steamUrl = steamLaunchUrl(game.appId);
 
     const steamReviewScore =
         game.reviews && game.reviews.total > 0
@@ -148,13 +151,23 @@ export function GameCard({
 
                 {/* Action Toolbar */}
                 <div className="hud-card-actions">
+                    {steamUrl && (
+                        <a
+                            href={steamUrl}
+                            className="hud-steam-launch-link"
+                            aria-label="Jugar en Steam"
+                            title="Jugar en Steam"
+                        >
+                            <Play size={13} aria-hidden="true" />
+                        </a>
+                    )}
                     <a
                         href={gameUrl(game)}
                         target="_blank"
                         rel="noreferrer"
                         className="hud-card-steam-link"
                     >
-                        <span>{game.appId > 0 ? 'Steam' : 'IGDB'}</span>
+                        <span>{steamUrl ? 'Ver tienda' : 'Ver en IGDB'}</span>
                         <ExternalLink size={12} />
                     </a>
 
