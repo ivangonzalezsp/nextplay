@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-09-20
+
 ### Correcciones de errores
 
 - Los juegos añadidos directamente como terminados vuelven a aparecer en el Calendario de Mi año en su fecha real, aunque no tengan un inicio registrado.
