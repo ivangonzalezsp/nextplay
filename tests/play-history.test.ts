@@ -14,6 +14,7 @@ import {
     groupPlayPeriods,
     playPeriods,
     periodSpan,
+    standalonePlayEvents,
 } from '../lib/play-history.ts';
 import type { PlayEvent } from '../lib/model.ts';
 
@@ -38,6 +39,10 @@ test('colored play periods pair each game independently and clip calendar ranges
     const groups = groupPlayPeriods(periods);
     assert.deepEqual(events, original);
     assert.equal(periods.length, 3); // No invented start for game 3.
+    assert.deepEqual(
+        standalonePlayEvents(events, periods).map((event) => event.appId),
+        [3],
+    );
     assert.deepEqual(
         groups.map((group) => group.map((period) => period.start.appId)),
         [[1], [2, 2]],

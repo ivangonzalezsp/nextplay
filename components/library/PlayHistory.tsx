@@ -32,6 +32,7 @@ import {
     groupPlayPeriods,
     playPeriods,
     periodSpan,
+    standalonePlayEvents,
     withoutSameDayRoundTrips,
     type PlayPeriod,
 } from '@/lib/play-history';
@@ -173,6 +174,7 @@ function PeriodPopover({
     periodIndex,
     groupLength,
     color,
+    standalone = false,
     description,
     triggerLabel,
     dateLabel,
@@ -185,6 +187,7 @@ function PeriodPopover({
     periodIndex: number;
     groupLength: number;
     color: string;
+    standalone?: boolean;
     description: string;
     triggerLabel?: string;
     dateLabel: (at: number) => string;
@@ -235,30 +238,36 @@ function PeriodPopover({
                             </p>
                         </div>
                         <span className={styles.detailStatus}>
-                            {period.end
-                                ? playEventLabel(period.end)
-                                : 'En curso'}
+                            {standalone
+                                ? playEventLabel(period.start)
+                                : period.end
+                                  ? playEventLabel(period.end)
+                                  : 'En curso'}
                         </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div
+                        className={`grid gap-3 text-xs ${standalone ? 'grid-cols-1' : 'grid-cols-2'}`}
+                    >
                         <div>
                             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                Inicio
+                                {standalone ? 'Fecha' : 'Inicio'}
                             </p>
                             <p className="font-medium">
                                 {dateLabel(period.start.at)}
                             </p>
                         </div>
-                        <div>
-                            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                {period.end ? 'Fin' : 'Hasta hoy'}
-                            </p>
-                            <p className="font-medium">
-                                {period.end
-                                    ? dateLabel(period.end.at)
-                                    : 'En curso'}
-                            </p>
-                        </div>
+                        {!standalone && (
+                            <div>
+                                <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                    {period.end ? 'Fin' : 'Hasta hoy'}
+                                </p>
+                                <p className="font-medium">
+                                    {period.end
+                                        ? dateLabel(period.end.at)
+                                        : 'En curso'}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </PopoverContent>
@@ -316,6 +325,7 @@ export function PlayHistory({
         periodSpan(period, yearStart, yearEnd, now),
     );
     const periodGroups = groupPlayPeriods(periods);
+    const standaloneEvents = standalonePlayEvents(visibleEvents, periods);
     const dateLabel = (at: number) =>
         new Date(at).toLocaleDateString('es', {
             day: 'numeric',
@@ -328,6 +338,10 @@ export function PlayHistory({
         `${period.start.name}: ${periodRangeLabel(period)}${period.end ? '' : ' hasta hoy'}`;
     const periodCalendarLabel = (period: PlayPeriod) =>
         `${period.start.name}: actividad desde ${dateLabel(period.start.at)}${period.end ? ` hasta ${dateLabel(period.end.at)}` : ' hasta hoy'}. Pulsa para ver el detalle.`;
+    const standaloneDescription = (event: PlayEvent) =>
+        `${event.name}: ${playEventLabel(event)} el ${dateLabel(event.at)}`;
+    const standaloneCalendarLabel = (event: PlayEvent) =>
+        `${event.name}: actividad el ${dateLabel(event.at)}. Pulsa para ver el detalle.`;
     const maxDate = new Date(calendarDateAt(dateInputValue(now))!);
     const count = (kind: PlayEvent['kind']) =>
         new Set(
@@ -673,6 +687,19 @@ export function PlayHistory({
                                 ),
                             ),
                         );
+                        const monthPointEvents = standaloneEvents.filter(
+                            (event) => {
+                                const date = new Date(event.at);
+                                return (
+                                    date.getFullYear() === year &&
+                                    date.getMonth() === month
+                                );
+                            },
+                        );
+                        const monthGameIds = new Set([
+                            ...monthGroups.map((group) => group[0].start.appId),
+                            ...monthPointEvents.map((event) => event.appId),
+                        ]);
                         return (
                             <section
                                 key={month}
@@ -684,8 +711,8 @@ export function PlayHistory({
                                         {monthName} <span>{year}</span>
                                     </h3>
                                     <span>
-                                        {monthGroups.length}{' '}
-                                        {monthGroups.length === 1
+                                        {monthGameIds.size}{' '}
+                                        {monthGameIds.size === 1
                                             ? 'juego'
                                             : 'juegos'}
                                     </span>
@@ -744,6 +771,21 @@ export function PlayHistory({
                                                     : [];
                                             },
                                         );
+                                        const weekPointEvents =
+                                            monthPointEvents.filter((event) => {
+                                                const day = new Date(
+                                                    event.at,
+                                                ).getDate();
+                                                return (
+                                                    day >=
+                                                        Math.max(1, firstDay) &&
+                                                    day <=
+                                                        Math.min(
+                                                            days,
+                                                            firstDay + 6,
+                                                        )
+                                                );
+                                            });
                                         return (
                                             <div
                                                 key={week}
@@ -815,7 +857,9 @@ export function PlayHistory({
                                                         },
                                                     )}
                                                 </div>
-                                                {weekGroups.length > 0 && (
+                                                {(weekGroups.length > 0 ||
+                                                    weekPointEvents.length >
+                                                        0) && (
                                                     <div
                                                         className={styles.lanes}
                                                     >
@@ -897,6 +941,75 @@ export function PlayHistory({
                                                                     </div>
                                                                 );
                                                             },
+                                                        )}
+                                                        {weekPointEvents.length >
+                                                            0 && (
+                                                            <div
+                                                                className={
+                                                                    styles.lane
+                                                                }
+                                                                aria-label="Actividad puntual de la semana"
+                                                            >
+                                                                {weekPointEvents.map(
+                                                                    (event) => {
+                                                                        const color =
+                                                                            gameColor(
+                                                                                event.appId,
+                                                                            );
+                                                                        const day =
+                                                                            new Date(
+                                                                                event.at,
+                                                                            ).getDate();
+                                                                        return (
+                                                                            <PeriodPopover
+                                                                                key={`${event.appId}-${event.at}`}
+                                                                                period={{
+                                                                                    start: event,
+                                                                                }}
+                                                                                periodIndex={
+                                                                                    0
+                                                                                }
+                                                                                groupLength={
+                                                                                    1
+                                                                                }
+                                                                                color={
+                                                                                    color
+                                                                                }
+                                                                                standalone
+                                                                                description={standaloneDescription(
+                                                                                    event,
+                                                                                )}
+                                                                                triggerLabel={standaloneCalendarLabel(
+                                                                                    event,
+                                                                                )}
+                                                                                dateLabel={
+                                                                                    dateLabel
+                                                                                }
+                                                                                gameHref={eventUrl(
+                                                                                    event,
+                                                                                )}
+                                                                                className={
+                                                                                    styles.band
+                                                                                }
+                                                                                style={
+                                                                                    {
+                                                                                        gridColumn:
+                                                                                            day -
+                                                                                            firstDay +
+                                                                                            1,
+                                                                                        '--game-color':
+                                                                                            color,
+                                                                                    } as CSSProperties
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    event.name
+                                                                                }
+                                                                            </PeriodPopover>
+                                                                        );
+                                                                    },
+                                                                )}
+                                                            </div>
                                                         )}
                                                     </div>
                                                 )}

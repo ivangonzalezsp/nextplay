@@ -55,6 +55,18 @@ export function groupPlayPeriods(periods: PlayPeriod[]) {
     return [...groups.values()];
 }
 
+export function standalonePlayEvents(
+    events: PlayEvent[],
+    periods: PlayPeriod[],
+) {
+    const pairedEnds = new Set(
+        periods.flatMap((period) => (period.end ? [period.end] : [])),
+    );
+    return events.filter(
+        (event) => playEventPhase(event) === 'end' && !pairedEnds.has(event),
+    );
+}
+
 const calendarDay = (date: Date) =>
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
 export function periodSpan(
