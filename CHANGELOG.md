@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-09-21
+
 ### Features
 
 - Los juegos de Steam se pueden abrir directamente con un botón compacto de reproducción.
