@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
-import { THEMES, THEME_STORAGE_KEY, resolveTheme } from '@/lib/themes';
+import {
+    DEFAULT_THEME,
+    THEMES,
+    THEME_STORAGE_KEY,
+    resolveTheme,
+} from '@/lib/themes';
 
 function subscribe(onChange: () => void) {
     function sync(event: StorageEvent) {
@@ -21,7 +26,7 @@ export function useTheme() {
     return useSyncExternalStore(
         subscribe,
         () => resolveTheme(document.documentElement.dataset.theme),
-        () => 'default',
+        () => DEFAULT_THEME,
     );
 }
 

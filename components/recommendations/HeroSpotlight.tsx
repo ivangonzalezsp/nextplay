@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTheme } from '@/components/header/ThemeSelector';
+import { useGameVideoPreview } from '@/components/recommendations/useGameVideoPreview';
 import {
     ExternalLink,
     Clock,
@@ -85,6 +86,7 @@ export function HeroSpotlight({
     const [failedArtwork, setFailedArtwork] = useState<number | null>(null);
     const hasArtwork =
         theme === 'cinema' && game.appId > 0 && failedArtwork !== game.appId;
+    const preview = useGameVideoPreview(game.appId, hasArtwork);
     const [coverFailed, setCoverFailed] = useState(false);
     const steamUrl = steamLaunchUrl(game.appId);
 
@@ -96,6 +98,10 @@ export function HeroSpotlight({
     return (
         <article
             className={`hud-hero-spotlight ${hasArtwork ? 'has-artwork' : ''}`}
+            onPointerEnter={preview.onPointerEnter}
+            onPointerLeave={preview.onPointerLeave}
+            onFocusCapture={preview.onFocusCapture}
+            onBlurCapture={preview.onBlurCapture}
         >
             {hasArtwork && (
                 <img
@@ -105,6 +111,18 @@ export function HeroSpotlight({
                     aria-hidden="true"
                     onError={() => setFailedArtwork(game.appId)}
                 />
+            )}
+            {preview.videoId && preview.active && (
+                <div className="cinema-hero-preview-clip" aria-hidden="true">
+                    <iframe
+                        className={`cinema-hero-preview cinema-preview-frame ${preview.revealed ? 'is-visible' : ''}`}
+                        src={`https://www.youtube-nocookie.com/embed/${preview.videoId}?autoplay=1&mute=1&controls=0&disablekb=1&start=4&end=12&playsinline=1&rel=0`}
+                        title={`Tráiler de ${game.name}`}
+                        tabIndex={-1}
+                        allow="autoplay; encrypted-media; picture-in-picture"
+                        onLoad={preview.onFrameLoad}
+                    />
+                </div>
             )}
             {/* Dynamic blurred backdrop for ambient glow */}
             {game.cover && !coverFailed && (

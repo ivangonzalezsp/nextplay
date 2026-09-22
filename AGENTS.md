@@ -54,7 +54,7 @@ Reutiliza el servidor existente si corresponde a la prueba. Si un puerto está o
 ## Comportamientos que deben conservarse
 
 - **Motor & IA:** en `components/settings/SettingsModal.tsx`, los controles editan borradores. Solo **Guardar** aplica motor, modelo y esfuerzo; cerrar o cancelar descarta los cambios. Conserva la validación de `codexEffortsForModel`.
-- **Temas:** el predeterminado mantiene el diseño original. Añade temas como módulos siguiendo [app/themes/README.md](app/themes/README.md), incluyendo modales y portales; no reemplaces estilos globales para introducir una opción.
+- **Temas:** Inmersivo es el tema inicial; `Legacy` conserva el diseño original. Añade temas como módulos siguiendo [app/themes/README.md](app/themes/README.md), incluyendo modales y portales; no reemplaces estilos globales para introducir una opción.
 - **Filtros:** reutiliza `DEFAULT_FILTERS`, `clearFilters` y la elegibilidad compartida. Limpiar filtros conserva `replay: false`; los ignorados se excluyen siempre y los completados/abandonados requieren permitir rejugar. Comprueba tanto el recuento como la selección final.
 - **Etiquetas:** las portadas de la biblioteca muestran hasta cuatro en la parte inferior. El filtro de biblioteca debe corresponder a las etiquetas visibles; conserva la búsqueda, selección por clic/Enter y chips extraíbles donde se admiten varias. Usa `steamTagKey` para la identidad, sin confundir etiquetas de Steam con géneros de IGDB.
 - **Juegos manuales:** usan `appId` negativo e identidad de IGDB; cero no es válido. Deben sobrevivir a la sincronización propia/familiar y quedar fuera de consultas exclusivas de Steam. Usa `gameUrl` para sus enlaces e `inLibrary` para incluir juegos propios y compartidos.

@@ -479,6 +479,59 @@ export async function searchIgdb(query: string): Promise<IgdbSearchResult[]> {
         }));
 }
 
+const gameVideoCache = new Map<number, Promise<string | null>>();
+async function lookupGameVideo(appId: number): Promise<string | null> {
+    const cachedId = (await getCache()).metadata[appId]?.igdbId;
+    let igdbId = natural(cachedId) && cachedId > 0 ? cachedId : undefined;
+    if (!igdbId) {
+        const d = await dictionary();
+        const links = await igdb<IgdbLink>(
+            'external_games',
+            `fields uid,game,url; where external_game_source = ${d.source} & uid = "${appId}"; limit 10;`,
+        );
+        const matches = [
+            ...new Set(
+                links
+                    .filter(
+                        (link) =>
+                            steamAppLink(link) &&
+                            link.uid === String(appId) &&
+                            natural(link.game) &&
+                            link.game > 0,
+                    )
+                    .map((link) => link.game),
+            ),
+        ];
+        if (matches.length !== 1) return null;
+        igdbId = matches[0];
+    }
+    const videos = await igdb<{ game: number; video_id: string }>(
+        'game_videos',
+        `fields game,video_id; where game = ${igdbId}; limit 20;`,
+    );
+    return (
+        videos.find(
+            (video) =>
+                video.game === igdbId &&
+                typeof video.video_id === 'string' &&
+                /^[A-Za-z0-9_-]{11}$/.test(video.video_id),
+        )?.video_id ?? null
+    );
+}
+export function getGameVideo(appId: number): Promise<string | null> {
+    if (!natural(appId) || appId <= 0)
+        throw new AppError('El AppID de Steam no es válido.');
+    let video = gameVideoCache.get(appId);
+    if (!video) {
+        video = lookupGameVideo(appId).catch((error: unknown) => {
+            gameVideoCache.delete(appId);
+            throw error;
+        });
+        gameVideoCache.set(appId, video);
+    }
+    return video;
+}
+
 export async function getIgdbGame(id: number) {
     const [raw] = await igdb(
         'games',

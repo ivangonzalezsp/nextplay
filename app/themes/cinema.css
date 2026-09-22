@@ -48,6 +48,9 @@ html[data-theme='cinema'] .hud-brand-group {
     left: 24px;
     z-index: 20;
 }
+html[data-theme='cinema'] .hud-settings-btn {
+    display: none;
+}
 html[data-theme='cinema'] .hud-brand-icon,
 html[data-theme='cinema'] .hud-badge-tag,
 html[data-theme='cinema'] .page-heading .eyebrow,
@@ -74,11 +77,13 @@ html[data-theme='cinema'] .app-navigation {
     display: block;
 }
 html[data-theme='cinema'] .view-navigation {
-    display: block;
+    display: flex;
+    flex-direction: column;
     position: fixed;
     inset: 0 auto 0 0;
     width: 220px;
     padding: 104px 14px 20px;
+    overflow-y: auto;
     background: linear-gradient(180deg, #111b28, #0d151f 62%, #0a1119);
     border-right: 1px solid var(--border);
     z-index: 10;
@@ -172,6 +177,28 @@ html[data-theme='cinema']
     background: rgba(116, 237, 202, 0.12);
     color: var(--theme-accent);
 }
+html[data-theme='cinema'] .cinema-sidebar-footer {
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+}
+html[data-theme='cinema'] .cinema-sidebar-settings {
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    color: #aebdcd;
+    font-size: 13px;
+}
+html[data-theme='cinema'] .cinema-sidebar-settings:hover {
+    color: var(--foreground);
+    background: rgba(116, 237, 202, 0.08);
+}
+html[data-theme='cinema'] .cinema-sidebar-settings svg {
+    flex: none;
+    color: #8295a8;
+}
 html[data-theme='cinema'] :is(.hud-quick-vibe-container, .hud-copilot-dock) {
     box-shadow: none;
     border: 1px solid var(--border);
@@ -251,6 +278,33 @@ html[data-theme='cinema'] .cinema-hero-artwork {
     object-fit: cover;
     object-position: 65% center;
     z-index: -2;
+}
+html[data-theme='cinema'] .cinema-hero-preview-clip {
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 85%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -2;
+}
+html[data-theme='cinema'] .cinema-hero-preview {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: none;
+    transform: translate(-50%, -50%);
+    border: 0;
+}
+html[data-theme='cinema'] .cinema-preview-frame {
+    opacity: 0;
+    transition: opacity 420ms ease;
+}
+html[data-theme='cinema'] .cinema-preview-frame.is-visible {
+    opacity: 1;
 }
 html[data-theme='cinema'] .has-artwork::after {
     content: '';
@@ -434,6 +488,28 @@ html[data-theme='cinema'] .cinema-result-cards .hud-card-cover {
     height: 100%;
     object-fit: cover;
 }
+html[data-theme='cinema'] .cinema-card-preview-clip {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1;
+}
+html[data-theme='cinema'] .cinema-card-preview {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: auto;
+    height: 100%;
+    aspect-ratio: 16 / 9;
+    max-width: none;
+    transform: translate(-50%, -50%);
+    border: 0;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-card-overlay-badges,
+html[data-theme='cinema'] .cinema-result-cards .hud-card-bottom-badge {
+    z-index: 2;
+}
 html[data-theme='cinema'] .cinema-result-cards .hud-card-body {
     min-width: 0;
     padding: 16px;
@@ -465,11 +541,65 @@ html[data-theme='cinema'] [data-slot='dialog-content'] {
     box-shadow: 0 24px 80px #0009;
 }
 html[data-theme='cinema'] .hud-filters-sheet {
-    border-left: 1px solid var(--border);
+    inset: 50% auto auto 50%;
+    width: min(560px, calc(100% - 28px));
+    max-width: 560px;
+    height: auto;
+    max-height: calc(100vh - 32px);
+    transform: translate(-50%, -50%);
+    overflow: hidden;
+    border: 1px solid #4b5b53;
+    border-radius: 12px;
+    transition: opacity 0.15s ease;
+}
+html[data-theme='cinema'] .hud-filters-sheet > [data-slot='sheet-header'] {
+    padding: 22px 24px 18px;
+    border-bottom: 1px solid var(--border);
+}
+html[data-theme='cinema'] .hud-filters-sheet [data-slot='sheet-title'] {
+    font-size: 21px;
+    letter-spacing: -0.04em;
+}
+html[data-theme='cinema'] .hud-filters-sheet [data-slot='sheet-description'] {
+    margin-top: 4px;
+    font-size: 12px;
+}
+html[data-theme='cinema'] .hud-filters-dialog-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 17px;
+    max-height: calc(100vh - 170px);
+    margin: 0;
+    padding: 20px 24px;
+}
+html[data-theme='cinema'] .hud-filters-dialog-body > * {
+    min-width: 0;
+    margin-top: 0;
+}
+html[data-theme='cinema'] .hud-filters-dialog-body .hud-filter-tags,
+html[data-theme='cinema'] .hud-filters-dialog-body .hud-filter-options {
+    grid-column: 1 / -1;
+}
+html[data-theme='cinema'] .hud-filters-dialog-body .hud-filter-options {
+    padding-top: 17px;
 }
 html[data-theme='cinema'] .hud-filters-footer {
+    justify-content: space-between;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin-top: 0;
+    padding: 15px 24px;
     border-top: 1px solid var(--border);
-    padding: 16px 0 0;
+}
+html[data-theme='cinema'] .hud-filters-clear {
+    color: var(--muted-foreground);
+}
+html[data-theme='cinema'] .hud-filters-clear:hover {
+    color: var(--foreground);
+}
+html[data-theme='cinema'] .hud-filters-done {
+    min-width: 96px;
 }
 html[data-theme='cinema'] .hud-game-detail-dialog {
     border: 1px solid #496377;
@@ -795,7 +925,11 @@ html[data-theme='cinema'] .cinema-history .saved-search > .cinema-result-cards {
         width: auto;
         border: 0;
         padding: 0 0 18px;
+        overflow: visible;
         background: transparent;
+    }
+    html[data-theme='cinema'] .cinema-sidebar-footer {
+        margin-top: 12px;
     }
     html[data-theme='cinema']
         .view-navigation
@@ -813,8 +947,21 @@ html[data-theme='cinema'] .cinema-history .saved-search > .cinema-result-cards {
     html[data-theme='cinema'] .view-navigation [role='tab'] {
         min-height: 44px;
     }
+    html[data-theme='cinema'] .view-navigation [role='tab']:last-child {
+        grid-column: 1 / -1;
+    }
 }
 @media (max-width: 600px) {
+    html[data-theme='cinema'] .hud-filters-dialog-body {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .hud-filters-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    html[data-theme='cinema'] .hud-filters-footer > * {
+        width: 100%;
+    }
     html[data-theme='cinema'] :is(.hud-bento-grid, .hud-library-grid) {
         grid-template-columns: minmax(0, 1fr);
     }
@@ -835,6 +982,15 @@ html[data-theme='cinema'] .cinema-history .saved-search > .cinema-result-cards {
         width: 100%;
         height: 260px;
         object-position: 65% top;
+    }
+    html[data-theme='cinema'] .cinema-hero-preview-clip {
+        inset: 0 0 auto;
+        width: 100%;
+        height: 260px;
+    }
+    html[data-theme='cinema'] .cinema-hero-preview {
+        width: 100%;
+        height: auto;
     }
     html[data-theme='cinema'] .has-artwork::after {
         background: linear-gradient(

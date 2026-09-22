@@ -64,6 +64,7 @@ void test('manual games: IGDB search, migration, persistence, feedback, recommen
     const viewer = '76561198000000001';
     let failing = false;
     let missing = false;
+    let videoLookupEnabled = false;
     let networkCalls = 0;
     const queries: string[] = [];
     const call = (path: string, body?: object, method = 'POST') =>
@@ -110,8 +111,22 @@ void test('manual games: IGDB search, migration, persistence, feedback, recommen
                         !query.includes('"-'),
                         'manual IDs must never go to Steam mapping',
                     );
-                    return Response.json([]);
+                    return Response.json(
+                        videoLookupEnabled
+                            ? [
+                                  {
+                                      uid: '132',
+                                      game: raw.id,
+                                      url: 'https://store.steampowered.com/app/132/',
+                                  },
+                              ]
+                            : [],
+                    );
                 }
+                if (path === '/v4/game_videos')
+                    return Response.json([
+                        { game: raw.id, video_id: 'dQw4w9WgXcQ' },
+                    ]);
                 if (path === '/v4/game_time_to_beats')
                     return Response.json([
                         { game_id: 132, count: 10, hastily: 72000 },
@@ -171,6 +186,16 @@ void test('manual games: IGDB search, migration, persistence, feedback, recommen
         assert.equal(result.id, 132);
         assert.deepEqual(result.platforms, ['PC (Microsoft Windows)']);
         assert.match(result.cover, /t_cover_big/);
+        assert.equal((await call('igdb/video?appId=-1')).status, 400);
+        videoLookupEnabled = true;
+        const video = await call('igdb/video?appId=132');
+        assert.equal(video.status, 200);
+        assert.deepEqual(await video.json(), { videoId: 'dQw4w9WgXcQ' });
+        const callsAfterVideo = networkCalls;
+        assert.deepEqual(await (await call('igdb/video?appId=132')).json(), {
+            videoId: 'dQw4w9WgXcQ',
+        });
+        assert.equal(networkCalls, callsAfterVideo, 'video lookup is cached');
         await call(`igdb/search?q=${encodeURIComponent('A"; limit 500;')}`);
         assert.ok(
             queries.includes(

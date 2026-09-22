@@ -6,6 +6,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
+- En Inmersivo, Ajustes y conexiones pasa al pie de la navegación lateral; en pantallas estrechas queda al final del menú.
+- Nueva sección Estadísticas con horas registradas, distribución de tiempo, estados, juegos más jugados y rankings de etiquetas de Steam y géneros por presencia y horas, con desglose de los juegos al pasar sobre cada barra.
 - Nuevo tema Inmersivo con navegación lateral, arte panorámico de Steam, tarjetas coherentes en recomendaciones, biblioteca y lista corta, y estados vacíos sin copy ornamental.
 - La vista Inmersivo mantiene la recomendación como foco, compacta las alternativas y los juegos en curso en una cuadrícula con carátulas verticales, tags y progreso visible, y añade un diálogo de detalles sin ocultar acciones ni filtros.
 - La Biblioteca en Inmersivo usa tarjetas horizontales con carátulas verticales, tags visibles y filtros agrupados para reducir espacio vacío sin perder acciones.
@@ -13,6 +15,10 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 - El Historial presenta sus búsquedas guardadas como bloques desplegables y reutiliza las tarjetas horizontales de recomendaciones.
 - La navegación del tema Inmersivo usa una rail más ligera, con estados activos claros y contadores separados.
 - La rail lateral del tema Inmersivo comparte ahora la misma superficie desde el logo hasta la navegación.
+- El diálogo de filtros del tema Inmersivo adopta una composición centrada con campos agrupados y acciones claras.
+- Inmersivo pasa a ser el tema inicial; el HUD original sigue disponible como Legacy y las elecciones de tema guardadas se conservan.
+- La elección principal, otras opciones y los descubrimientos muestran el vídeo de IGDB al cargar, sin espera ni bucle.
+- La previsualización de vídeo en Inmersivo ya no muestra el aviso «Tráiler al pasar» sobre las carátulas.
 - Los juegos de Steam se pueden abrir directamente con un botón compacto de reproducción.
 - Ajustes permite buscar en bloque las duraciones HLTB que faltan.
 - El resumen de HLTB de cada juego se puede desplegar para ver sus tres duraciones.

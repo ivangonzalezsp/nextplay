@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/header/ThemeSelector';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
@@ -41,6 +41,8 @@ import {
     X,
     Play,
     ArrowRight,
+    ChartNoAxesCombined,
+    Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -72,6 +74,11 @@ import type {
     RecommendationStreamFrame,
     Snapshot,
 } from '@/lib/model';
+
+const StatsDashboard = lazy(async () => ({
+    default: (await import('@/components/library/StatsDashboard'))
+        .StatsDashboard,
+}));
 
 async function api(path: string, body?: unknown, method = 'POST') {
     const request = {
@@ -870,6 +877,7 @@ export default function Home() {
                                       tastes: 'Tus gustos',
                                       history: 'Historial',
                                       year: 'Mi año',
+                                      stats: 'Estadísticas',
                                   }[tab] ?? '¿Qué te apetece jugar?')
                                 : '¿Qué te apetece jugar hoy?'}
                         </h1>
@@ -954,10 +962,26 @@ export default function Home() {
                             <TabsTrigger value="year">
                                 <Gamepad2 size={16} /> <span>Mi año</span>
                             </TabsTrigger>
+                            <TabsTrigger value="stats">
+                                <ChartNoAxesCombined size={16} />
+                                <span>Estadísticas</span>
+                            </TabsTrigger>
                         </TabsList>
                         <span className="subtle-label">
                             Experiencia Console & Steam Deck HUD
                         </span>
+                        {theme === 'cinema' && (
+                            <div className="cinema-sidebar-footer">
+                                <Button
+                                    variant="ghost"
+                                    className="cinema-sidebar-settings"
+                                    onClick={() => setSettingsOpen(true)}
+                                >
+                                    <Settings size={16} aria-hidden="true" />
+                                    <span>Ajustes y conexiones</span>
+                                </Button>
+                            </div>
+                        )}
                     </div>
 
                     {/* =================================================================== */}
@@ -1385,6 +1409,7 @@ export default function Home() {
                                                     <GameCard
                                                         key={pick.appId}
                                                         pick={pick}
+                                                        videoPreview
                                                         status={
                                                             state?.preferences[
                                                                 pick.appId
@@ -1465,6 +1490,7 @@ export default function Home() {
                                                     key={pick.appId}
                                                     pick={pick}
                                                     isDiscovery
+                                                    videoPreview
                                                     status={
                                                         state?.preferences[
                                                             pick.appId
@@ -1891,6 +1917,19 @@ export default function Home() {
                                 busy={!!busy}
                                 onDateChange={playHistoryDate}
                             />
+                        )}
+                    </TabsContent>
+                    <TabsContent value="stats">
+                        {state && (
+                            <Suspense
+                                fallback={
+                                    <div className="stats-empty">
+                                        Cargando estadísticas…
+                                    </div>
+                                }
+                            >
+                                <StatsDashboard state={state} />
+                            </Suspense>
                         )}
                     </TabsContent>
                 </Tabs>
