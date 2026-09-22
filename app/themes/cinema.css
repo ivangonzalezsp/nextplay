@@ -76,10 +76,10 @@ html[data-theme='cinema'] .app-navigation {
 html[data-theme='cinema'] .view-navigation {
     display: block;
     position: fixed;
-    inset: 90px auto 0 0;
-    width: 194px;
-    padding: 20px 12px;
-    background: var(--theme-inset);
+    inset: 0 auto 0 0;
+    width: 220px;
+    padding: 104px 14px 20px;
+    background: linear-gradient(180deg, #111b28, #0d151f 62%, #0a1119);
     border-right: 1px solid var(--border);
     z-index: 10;
     margin: 0;
@@ -91,7 +91,7 @@ html[data-theme='cinema'] .view-navigation [role='tablist'] {
     justify-content: start;
     width: 100%;
     height: auto;
-    gap: 8px;
+    gap: 4px;
 }
 html[data-theme='cinema'] .view-navigation [role='tab'] {
     flex: none;
@@ -100,17 +100,77 @@ html[data-theme='cinema'] .view-navigation [role='tab'] {
     min-height: 46px;
     white-space: normal;
     justify-content: start;
-    padding: 12px;
+    padding: 11px 12px;
     font-size: 13px;
     border-radius: 8px;
+    border-color: transparent;
+    color: #aebdcd;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+html[data-theme='cinema'] .view-navigation [role='tab'] svg {
+    color: #8295a8;
+    transition: color 0.2s ease;
+}
+html[data-theme='cinema']
+    .view-navigation
+    [role='tab']
+    > span:not(.cinema-nav-count) {
+    flex-shrink: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+html[data-theme='cinema'] .view-navigation [role='tab']:hover {
+    border-color: rgba(116, 237, 202, 0.16);
+    background: rgba(116, 237, 202, 0.06);
+    color: var(--foreground);
+}
+html[data-theme='cinema'] .view-navigation [role='tab']:hover svg {
+    color: var(--theme-accent);
 }
 html[data-theme='cinema'] .view-navigation [role='tab'][data-active] {
-    background: var(--theme-selected);
+    background:
+        linear-gradient(90deg, rgba(116, 237, 202, 0.16), transparent),
+        var(--theme-selected);
     color: var(--theme-accent);
     border-left: 3px solid var(--theme-accent);
+    border-top-color: rgba(116, 237, 202, 0.22);
+    border-right-color: rgba(116, 237, 202, 0.12);
+    border-bottom-color: rgba(116, 237, 202, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+html[data-theme='cinema'] .view-navigation [role='tab'][data-active] svg {
+    color: var(--theme-accent);
 }
 html[data-theme='cinema'] .view-navigation [role='tab']::after {
     display: none;
+}
+html[data-theme='cinema'] .view-navigation [role='tab']:nth-child(4) {
+    margin-top: 12px;
+}
+html[data-theme='cinema'] .cinema-nav-count {
+    flex-shrink: 0;
+    min-width: 24px;
+    margin-left: auto;
+    padding: 2px 6px;
+    border: 1px solid rgba(130, 149, 168, 0.28);
+    border-radius: 999px;
+    color: #9fb0c1;
+    font-size: 11px;
+    line-height: 1.2;
+    text-align: center;
+}
+html[data-theme='cinema']
+    .view-navigation
+    [role='tab'][data-active]
+    .cinema-nav-count {
+    border-color: rgba(116, 237, 202, 0.35);
+    background: rgba(116, 237, 202, 0.12);
+    color: var(--theme-accent);
 }
 html[data-theme='cinema'] :is(.hud-quick-vibe-container, .hud-copilot-dock) {
     box-shadow: none;
@@ -736,6 +796,15 @@ html[data-theme='cinema'] .cinema-history .saved-search > .cinema-result-cards {
         border: 0;
         padding: 0 0 18px;
         background: transparent;
+    }
+    html[data-theme='cinema']
+        .view-navigation
+        [role='tab']
+        > span:not(.cinema-nav-count) {
+        flex-shrink: 1;
+        overflow: visible;
+        text-overflow: clip;
+        white-space: normal;
     }
     html[data-theme='cinema'] .view-navigation [role='tablist'] {
         display: grid;

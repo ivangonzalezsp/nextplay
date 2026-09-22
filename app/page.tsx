@@ -929,24 +929,30 @@ export default function Home() {
                     <div className="view-navigation">
                         <TabsList variant="line" aria-label="Vista principal">
                             <TabsTrigger value="recommend">
-                                <Sparkles size={16} /> Para ti
+                                <Sparkles size={16} /> <span>Para ti</span>
                             </TabsTrigger>
                             <TabsTrigger value="library">
-                                <Library size={16} /> Tu biblioteca (
-                                {games.length})
+                                <Library size={16} />
+                                <span>Tu biblioteca</span>
+                                <span className="cinema-nav-count">
+                                    {games.length}
+                                </span>
                             </TabsTrigger>
                             <TabsTrigger value="shortlist">
-                                <Bookmark size={16} /> Lista corta (
-                                {savedGames.length})
+                                <Bookmark size={16} />
+                                <span>Lista corta</span>
+                                <span className="cinema-nav-count">
+                                    {savedGames.length}
+                                </span>
                             </TabsTrigger>
                             <TabsTrigger value="tastes">
-                                <Star size={16} /> Tus gustos
+                                <Star size={16} /> <span>Tus gustos</span>
                             </TabsTrigger>
                             <TabsTrigger value="history">
-                                <History size={16} /> Historial
+                                <History size={16} /> <span>Historial</span>
                             </TabsTrigger>
                             <TabsTrigger value="year">
-                                <Gamepad2 size={16} /> Mi año
+                                <Gamepad2 size={16} /> <span>Mi año</span>
                             </TabsTrigger>
                         </TabsList>
                         <span className="subtle-label">

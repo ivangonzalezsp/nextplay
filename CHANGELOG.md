@@ -11,6 +11,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 - La Biblioteca en Inmersivo usa tarjetas horizontales con carátulas verticales, tags visibles y filtros agrupados para reducir espacio vacío sin perder acciones.
 - La Lista corta adopta el mismo formato horizontal para aprovechar mejor las carátulas y destacar la decisión entre candidatos.
 - El Historial presenta sus búsquedas guardadas como bloques desplegables y reutiliza las tarjetas horizontales de recomendaciones.
+- La navegación del tema Inmersivo usa una rail más ligera, con estados activos claros y contadores separados.
+- La rail lateral del tema Inmersivo comparte ahora la misma superficie desde el logo hasta la navegación.
 - Los juegos de Steam se pueden abrir directamente con un botón compacto de reproducción.
 - Ajustes permite buscar en bloque las duraciones HLTB que faltan.
 - El resumen de HLTB de cada juego se puede desplegar para ver sus tres duraciones.
