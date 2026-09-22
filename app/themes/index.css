@@ -1,6 +1,7 @@
 @import './steam.css';
 @import './ps5.css';
 @import './switch2.css';
+@import './cinema.css';
 
 .theme-selector {
     display: flex;

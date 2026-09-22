@@ -1,0 +1,655 @@
+/* Approved art-led layout. Other themes retain the original component layout. */
+.cinema-action-label,
+.cinema-hero-artwork {
+    display: none;
+}
+
+html[data-theme='cinema'] {
+    --background: #0b1018;
+    --foreground: #edf3fa;
+    --muted-foreground: #b0c0d0;
+    --border: #344758;
+    --theme-accent: #74edca;
+    --theme-accent-rgb: 116, 237, 202;
+    --theme-accent-hover: #a1f5dd;
+    --theme-accent-end: #74edca;
+    --theme-on-accent: #092b25;
+    --theme-surface: #17212d;
+    --theme-inset: #101924;
+    --theme-selected: #214c4a;
+    --theme-backdrop: #0b1018;
+    --theme-panel: #17212d;
+    --theme-radius: 12px;
+    --theme-button-radius: 8px;
+}
+html[data-theme='cinema'] .app-shell {
+    max-width: 1680px;
+    margin: auto;
+    padding: 0 28px 40px 222px;
+}
+html[data-theme='cinema'] .workspace {
+    padding: 24px 0;
+    min-width: 0;
+}
+html[data-theme='cinema'] body .app-shell .hud-topbar {
+    backdrop-filter: none;
+    position: relative;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    padding: 18px 0;
+    box-shadow: none;
+    background: transparent;
+    flex-wrap: wrap;
+}
+html[data-theme='cinema'] .hud-brand-group {
+    position: fixed;
+    top: 25px;
+    left: 24px;
+    z-index: 20;
+}
+html[data-theme='cinema'] .hud-brand-icon,
+html[data-theme='cinema'] .hud-badge-tag,
+html[data-theme='cinema'] .page-heading .eyebrow,
+html[data-theme='cinema'] .page-heading p,
+html[data-theme='cinema'] .view-navigation .subtle-label {
+    display: none;
+}
+html[data-theme='cinema'] .footer {
+    display: none;
+}
+html[data-theme='cinema'] .page-heading {
+    margin: 0 0 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+html[data-theme='cinema'] .page-heading h1 {
+    font-size: clamp(26px, 3vw, 34px);
+    letter-spacing: -1px;
+}
+html[data-theme='cinema'] .page-heading > .flex {
+    display: none;
+}
+html[data-theme='cinema'] .app-navigation {
+    display: block;
+}
+html[data-theme='cinema'] .view-navigation {
+    display: block;
+    position: fixed;
+    inset: 90px auto 0 0;
+    width: 194px;
+    padding: 20px 12px;
+    background: var(--theme-inset);
+    border-right: 1px solid var(--border);
+    z-index: 10;
+    margin: 0;
+}
+html[data-theme='cinema'] .view-navigation [role='tablist'] {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: start;
+    width: 100%;
+    height: auto;
+    gap: 8px;
+}
+html[data-theme='cinema'] .view-navigation [role='tab'] {
+    flex: none;
+    width: 100%;
+    height: auto;
+    min-height: 46px;
+    white-space: normal;
+    justify-content: start;
+    padding: 12px;
+    font-size: 13px;
+    border-radius: 8px;
+}
+html[data-theme='cinema'] .view-navigation [role='tab'][data-active] {
+    background: var(--theme-selected);
+    color: var(--theme-accent);
+    border-left: 3px solid var(--theme-accent);
+}
+html[data-theme='cinema'] .view-navigation [role='tab']::after {
+    display: none;
+}
+html[data-theme='cinema'] :is(.hud-quick-vibe-container, .hud-copilot-dock) {
+    box-shadow: none;
+    border: 1px solid var(--border);
+    padding: 16px 18px;
+}
+html[data-theme='cinema'] .hud-quick-vibe-container {
+    border-radius: 12px 12px 0 0;
+    margin-bottom: 0;
+}
+html[data-theme='cinema'] .hud-copilot-dock {
+    margin-top: 0;
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+}
+html[data-theme='cinema'] .hud-copilot-textarea {
+    min-height: 64px;
+    font-size: 14px;
+}
+html[data-theme='cinema'] .hud-copilot-header,
+html[data-theme='cinema'] .hud-copilot-header > .flex,
+html[data-theme='cinema'] .hud-pill-selector,
+html[data-theme='cinema'] .hud-card-subpanel > .flex {
+    flex-wrap: wrap;
+    min-width: 0;
+}
+html[data-theme='cinema'] .hud-main-recommend-btn {
+    box-shadow: none;
+    min-height: 40px;
+}
+
+html[data-theme='cinema'] .cinema-recommendation-page {
+    display: flex;
+    flex-direction: column;
+}
+html[data-theme='cinema'] .cinema-recommendations-output {
+    order: 2;
+}
+html[data-theme='cinema'] .cinema-in-progress-shelf {
+    order: 3;
+}
+
+html[data-theme='cinema'] .hud-hero-spotlight {
+    padding: 28px;
+    box-shadow: 0 18px 45px #0003;
+    border: 1px solid var(--border);
+    isolation: isolate;
+    background: #101924;
+}
+html[data-theme='cinema'] .hud-hero-content {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 32%);
+    align-items: center;
+}
+html[data-theme='cinema'] .hud-hero-details {
+    grid-column: 1;
+    grid-row: 1;
+}
+html[data-theme='cinema'] .hud-hero-poster-container {
+    grid-column: 2;
+    aspect-ratio: auto;
+    box-shadow: none;
+    background: transparent;
+}
+html[data-theme='cinema'] .hud-hero-poster {
+    height: auto;
+    max-height: 340px;
+    object-fit: contain;
+}
+html[data-theme='cinema'] .hud-hero-backdrop {
+    display: none;
+}
+html[data-theme='cinema'] .cinema-hero-artwork {
+    display: block;
+    position: absolute;
+    inset: 0 0 0 auto;
+    width: 85%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 65% center;
+    z-index: -2;
+}
+html[data-theme='cinema'] .has-artwork::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            90deg,
+            #101924 0%,
+            #101924ed 28%,
+            #10192494 55%,
+            #10192412 90%
+        ),
+        linear-gradient(0deg, #101924 0%, transparent 70%);
+    z-index: -1;
+}
+html[data-theme='cinema'] .has-artwork .hud-hero-content {
+    display: block;
+}
+html[data-theme='cinema'] .has-artwork .hud-hero-poster-container {
+    display: none;
+}
+html[data-theme='cinema']
+    .has-artwork
+    .hud-hero-details
+    > :is(.hud-hero-title, .hud-tags-row, .hud-hero-reason-box) {
+    max-width: 65%;
+}
+html[data-theme='cinema'] .hud-hero-title {
+    font-size: clamp(30px, 3.6vw, 48px);
+    letter-spacing: -1.4px;
+    line-height: 1.08;
+    margin: 18px 0;
+}
+html[data-theme='cinema'] .hud-hero-reason-box {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    margin: 18px 0 26px;
+}
+html[data-theme='cinema'] .hud-pitch-text {
+    font-size: 15px;
+    line-height: 1.65;
+}
+html[data-theme='cinema'] :is(.hud-tags-row, .hud-cover-tags) {
+    gap: 6px;
+    flex-wrap: wrap;
+}
+html[data-theme='cinema'] :is(.hud-tag-pill, .hud-cover-tag) {
+    background: #243343;
+    color: #e0e9f3;
+    border: 1px solid #344758;
+    border-radius: 5px;
+    font-size: 11px;
+    padding: 3px 7px;
+}
+html[data-theme='cinema'] .hud-hero-actions-row {
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+html[data-theme='cinema'] .hud-status-opinion-row > .flex {
+    flex-wrap: wrap;
+}
+html[data-theme='cinema'] .cinema-action-label {
+    display: inline;
+}
+html[data-theme='cinema'] .hud-steam-launch-link {
+    display: inline-flex;
+    width: auto;
+    height: 38px;
+    min-width: 0;
+    flex: 0 0 auto;
+    padding: 8px 16px;
+    gap: 7px;
+    background: var(--theme-accent);
+    color: var(--theme-on-accent);
+    border: 0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-left: 0;
+}
+html[data-theme='cinema'] .hud-steam-launch-link:hover {
+    background: var(--theme-accent-hover);
+}
+html[data-theme='cinema'] .cinema-in-progress-shelf .hud-bento-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 8px;
+}
+html[data-theme='cinema'] .cinema-in-progress-shelf .hud-game-card {
+    display: grid;
+    grid-template-columns: minmax(136px, 36%) minmax(0, 1fr);
+    align-items: stretch;
+    min-width: 0;
+}
+html[data-theme='cinema'] .cinema-in-progress-shelf .hud-card-cover-wrapper {
+    aspect-ratio: auto;
+    min-height: 220px;
+    height: 100%;
+    overflow: hidden;
+}
+html[data-theme='cinema'] .cinema-in-progress-shelf .hud-card-cover {
+    aspect-ratio: auto;
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    object-fit: cover;
+}
+html[data-theme='cinema'] .cinema-in-progress-shelf .hud-card-body {
+    min-width: 0;
+    padding: 13px 15px;
+}
+html[data-theme='cinema'] .cinema-in-progress-shelf .hud-card-title {
+    font-size: 15px;
+}
+html[data-theme='cinema'] .cinema-in-progress-tags {
+    margin-top: 8px;
+}
+html[data-theme='cinema'] .cinema-in-progress-meter {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+html[data-theme='cinema'] .cinema-in-progress-meter-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    color: var(--muted-foreground);
+    font-size: 11px;
+}
+html[data-theme='cinema'] .cinema-in-progress-meter-header span:first-child {
+    color: var(--foreground);
+    font-weight: 600;
+}
+html[data-theme='cinema'] .cinema-in-progress-meter-track {
+    height: 5px;
+    margin-top: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+}
+html[data-theme='cinema'] .cinema-in-progress-meter-track span {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--theme-accent);
+    transition: width 0.25s ease;
+}
+html[data-theme='cinema']
+    .cinema-in-progress-meter[data-status='paused']
+    .cinema-in-progress-meter-track
+    span {
+    background: #f5b942;
+}
+html[data-theme='cinema']
+    .cinema-in-progress-meter[data-progress='unknown']
+    .cinema-in-progress-meter-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+html[data-theme='cinema'] .cinema-result-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-game-card {
+    display: grid;
+    grid-template-columns: minmax(118px, 33%) minmax(0, 1fr);
+    align-items: stretch;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-card-cover-wrapper {
+    aspect-ratio: auto;
+    min-height: 230px;
+    height: 100%;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-card-cover {
+    aspect-ratio: auto;
+    height: 100%;
+    object-fit: cover;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-card-body {
+    min-width: 0;
+    padding: 16px;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-card-title {
+    font-size: 17px;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-card-reason {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+}
+html[data-theme='cinema'] .cinema-result-cards .hud-card-actions {
+    margin-top: auto;
+}
+html[data-theme='cinema'] .cinema-recommendation-page > .cinema-warning {
+    order: 4;
+}
+html[data-theme='cinema'] [data-slot='sheet-overlay'],
+html[data-theme='cinema'] [data-slot='dialog-overlay'] {
+    background: rgba(3, 8, 14, 0.78);
+    backdrop-filter: blur(10px);
+}
+html[data-theme='cinema'] [data-slot='sheet-content'],
+html[data-theme='cinema'] [data-slot='dialog-content'] {
+    border-color: var(--border);
+    background: #111b28;
+    box-shadow: 0 24px 80px #0009;
+}
+html[data-theme='cinema'] .hud-filters-sheet {
+    border-left: 1px solid var(--border);
+}
+html[data-theme='cinema'] .hud-filters-footer {
+    border-top: 1px solid var(--border);
+    padding: 16px 0 0;
+}
+html[data-theme='cinema'] .hud-game-detail-dialog {
+    border: 1px solid #496377;
+    background:
+        linear-gradient(135deg, rgba(116, 237, 202, 0.08), transparent 35%),
+        #111b28;
+}
+html[data-theme='cinema'] .hud-game-detail-layout {
+    display: grid;
+    grid-template-columns: 148px minmax(0, 1fr);
+    gap: 20px;
+}
+html[data-theme='cinema'] .hud-game-detail-cover-wrap {
+    display: grid;
+    min-height: 212px;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--theme-inset);
+}
+html[data-theme='cinema'] .hud-game-detail-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+html[data-theme='cinema'] .hud-game-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    color: var(--muted-foreground);
+    font-size: 12px;
+}
+html[data-theme='cinema'] .hud-game-detail-meta span {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 8px;
+}
+html[data-theme='cinema'] .hud-game-detail-caveat {
+    border-left: 2px solid #f5b942;
+    padding-left: 10px;
+    color: #f7d98b;
+    font-size: 12px;
+}
+html[data-theme='cinema'] .hud-game-detail-footer {
+    border-top-color: var(--border);
+    background: rgba(9, 16, 25, 0.7);
+}
+html[data-theme='cinema'] :is(.hud-bento-grid, .hud-library-grid) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+html[data-theme='cinema'] :is(.hud-game-card, .hud-library-card) {
+    background: var(--theme-surface);
+    border: 1px solid var(--border);
+    box-shadow: none;
+    transform: none;
+}
+html[data-theme='cinema'] :is(.hud-game-card, .hud-library-card):hover {
+    border-color: #61788b;
+    transform: none;
+}
+html[data-theme='cinema'] :is(.hud-card-cover-wrapper, .hud-lib-cover-wrap) {
+    aspect-ratio: auto;
+    height: auto;
+    overflow: visible;
+}
+html[data-theme='cinema'] :is(.hud-card-cover, .hud-lib-cover) {
+    aspect-ratio: 460/215;
+    height: auto;
+    max-height: 260px;
+    object-fit: contain;
+    display: block;
+    background: var(--theme-inset);
+}
+html[data-theme='cinema'] .hud-cover-bottom {
+    position: static;
+    background: transparent;
+    padding: 12px 18px 0;
+}
+html[data-theme='cinema'] :is(.hud-card-body, .hud-lib-details) {
+    padding: 18px;
+}
+html[data-theme='cinema'] :is(.hud-card-title, .hud-lib-title) {
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    min-height: 0;
+    line-height: 1.3;
+}
+html[data-theme='cinema'] .hud-card-reason {
+    font-size: 13px;
+    line-height: 1.65;
+    -webkit-line-clamp: unset;
+}
+html[data-theme='cinema'] :is(.hud-card-actions, .hud-lib-actions) {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 14px;
+}
+html[data-theme='cinema'] :is(.hud-card-actions, .hud-lib-actions) button {
+    width: auto;
+    height: auto;
+    min-height: 36px;
+    padding: 7px 9px;
+    gap: 5px;
+    border: 0;
+    background: transparent;
+    font-size: 12px;
+    margin-left: 0;
+}
+html[data-theme='cinema']
+    :is(.hud-card-actions, .hud-lib-actions)
+    button:hover {
+    background: var(--theme-selected);
+}
+html[data-theme='cinema'] .hud-lib-steam-link {
+    display: inline-flex;
+    gap: 5px;
+    font-size: 12px;
+}
+html[data-theme='cinema'] .hud-lib-fav-btn {
+    width: 32px;
+    height: 32px;
+}
+html[data-theme='cinema'] .hud-library-toolbar {
+    gap: 12px;
+    flex-wrap: wrap;
+}
+html[data-theme='cinema'] .hud-library-filter-strip {
+    gap: 14px;
+    padding: 14px 0;
+    background: transparent;
+    border: 0;
+}
+html[data-theme='cinema'] .hud-lib-chip {
+    min-height: 36px;
+    border-radius: 7px;
+    font-size: 12px;
+}
+html[data-theme='cinema'] .hud-lib-chip.active {
+    background: var(--theme-selected);
+    color: var(--theme-accent);
+}
+html[data-theme='cinema'] .hud-library-selects {
+    flex-wrap: wrap;
+}
+@media (min-width: 1500px) {
+    html[data-theme='cinema'] .hud-library-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+@media (max-width: 790px) {
+    html[data-theme='cinema'] .cinema-in-progress-shelf .hud-bento-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    html[data-theme='cinema'] .app-shell {
+        padding: 0 16px 24px;
+    }
+    html[data-theme='cinema'] .hud-brand-group {
+        position: static;
+    }
+    html[data-theme='cinema'] .view-navigation {
+        position: static;
+        width: auto;
+        border: 0;
+        padding: 0 0 18px;
+        background: transparent;
+    }
+    html[data-theme='cinema'] .view-navigation [role='tablist'] {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    html[data-theme='cinema'] .view-navigation [role='tab'] {
+        min-height: 44px;
+    }
+}
+@media (max-width: 600px) {
+    html[data-theme='cinema'] :is(.hud-bento-grid, .hud-library-grid) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .hud-hero-content {
+        display: flex;
+        flex-direction: column;
+    }
+    html[data-theme='cinema'] .has-artwork .hud-hero-content {
+        padding-top: 140px;
+    }
+    html[data-theme='cinema']
+        .has-artwork
+        .hud-hero-details
+        > :is(.hud-hero-title, .hud-tags-row, .hud-hero-reason-box) {
+        max-width: 100%;
+    }
+    html[data-theme='cinema'] .cinema-hero-artwork {
+        width: 100%;
+        height: 260px;
+        object-position: 65% top;
+    }
+    html[data-theme='cinema'] .has-artwork::after {
+        background: linear-gradient(
+            0deg,
+            #101924 65%,
+            #10192466 95%,
+            transparent
+        );
+    }
+    html[data-theme='cinema'] .hud-hero-spotlight {
+        padding: 18px;
+    }
+    html[data-theme='cinema'] .cinema-result-cards {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .cinema-result-cards .hud-game-card {
+        grid-template-columns: minmax(120px, 32%) minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .hud-game-detail-layout {
+        grid-template-columns: 92px minmax(0, 1fr);
+        gap: 14px;
+    }
+    html[data-theme='cinema'] .hud-game-detail-cover-wrap {
+        min-height: 138px;
+    }
+    html[data-theme='cinema'] .hud-copilot-textarea {
+        font-size: 16px;
+    }
+    html[data-theme='cinema'] .hud-topbar {
+        gap: 12px;
+    }
+    html[data-theme='cinema'] .hud-status-pills {
+        flex-wrap: wrap;
+    }
+}
+@media (pointer: coarse) {
+    html[data-theme='cinema']
+        :is(
+            .hud-steam-launch-link,
+            .hud-lib-fav-btn,
+            .hud-card-actions button,
+            .hud-lib-actions button
+        ) {
+        min-height: 44px;
+    }
+}

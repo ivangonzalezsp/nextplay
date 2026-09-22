@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTheme } from '@/components/header/ThemeSelector';
 import {
     ExternalLink,
     Clock,
@@ -11,11 +12,21 @@ import {
     Gamepad2,
     AlertTriangle,
     Flame,
+    Info,
     Play,
     Check,
     X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {
     Select,
     SelectTrigger,
@@ -69,6 +80,11 @@ export function HeroSpotlight({
     onFavorite?: () => void;
 }) {
     const { game } = pick;
+    const theme = useTheme();
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [failedArtwork, setFailedArtwork] = useState<number | null>(null);
+    const hasArtwork =
+        theme === 'cinema' && game.appId > 0 && failedArtwork !== game.appId;
     const [coverFailed, setCoverFailed] = useState(false);
     const steamUrl = steamLaunchUrl(game.appId);
 
@@ -78,7 +94,18 @@ export function HeroSpotlight({
             : null;
 
     return (
-        <article className="hud-hero-spotlight">
+        <article
+            className={`hud-hero-spotlight ${hasArtwork ? 'has-artwork' : ''}`}
+        >
+            {hasArtwork && (
+                <img
+                    className="cinema-hero-artwork"
+                    src={`https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${game.appId}/library_hero.jpg`}
+                    alt=""
+                    aria-hidden="true"
+                    onError={() => setFailedArtwork(game.appId)}
+                />
+            )}
             {/* Dynamic blurred backdrop for ambient glow */}
             {game.cover && !coverFailed && (
                 <div
@@ -166,7 +193,7 @@ export function HeroSpotlight({
                     {/* Steam Community Tags */}
                     {game.steamTags && game.steamTags.length > 0 && (
                         <div className="hud-tags-row">
-                            {game.steamTags.slice(0, 5).map((tag) => (
+                            {game.steamTags.slice(0, 4).map((tag) => (
                                 <span
                                     key={steamTagKey(tag)}
                                     className="hud-tag-pill"
@@ -209,6 +236,9 @@ export function HeroSpotlight({
                                 title="Jugar en Steam"
                             >
                                 <Play size={14} aria-hidden="true" />
+                                <span className="cinema-action-label">
+                                    Jugar
+                                </span>
                             </a>
                         )}
                         <a
@@ -222,6 +252,18 @@ export function HeroSpotlight({
                             </span>
                             <ExternalLink size={15} />
                         </a>
+
+                        {theme === 'cinema' && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setDetailsOpen(true)}
+                                disabled={busy}
+                            >
+                                <Info size={14} className="mr-1.5" />
+                                Ver detalles
+                            </Button>
+                        )}
 
                         {onSaved && (
                             <Button
@@ -370,6 +412,96 @@ export function HeroSpotlight({
                     )}
                 </div>
             </div>
+
+            {theme === 'cinema' && (
+                <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+                    <DialogContent className="hud-game-detail-dialog max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
+                        <DialogHeader>
+                            <DialogTitle>{game.name}</DialogTitle>
+                            <DialogDescription>
+                                El contexto completo de esta recomendación.
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="hud-game-detail-layout">
+                            <div className="hud-game-detail-cover-wrap">
+                                {game.cover && !coverFailed ? (
+                                    <img
+                                        src={game.cover}
+                                        alt={`Carátula de ${game.name}`}
+                                        className="hud-game-detail-cover"
+                                    />
+                                ) : (
+                                    <Gamepad2
+                                        size={42}
+                                        className="text-muted-foreground"
+                                    />
+                                )}
+                            </div>
+                            <div className="space-y-4">
+                                {game.steamTags &&
+                                    game.steamTags.length > 0 && (
+                                        <div className="hud-tags-row">
+                                            {game.steamTags
+                                                .slice(0, 4)
+                                                .map((tag) => (
+                                                    <span
+                                                        key={steamTagKey(tag)}
+                                                        className="hud-tag-pill"
+                                                    >
+                                                        {tag.name}
+                                                    </span>
+                                                ))}
+                                        </div>
+                                    )}
+                                <p className="hud-pitch-text">{pick.reason}</p>
+                                {pick.whyNow && (
+                                    <p className="hud-whynow-text">
+                                        <strong>¿Por qué ahora?</strong>{' '}
+                                        {pick.whyNow}
+                                    </p>
+                                )}
+                                {pick.caveat && (
+                                    <p className="hud-game-detail-caveat">
+                                        {pick.caveat}
+                                    </p>
+                                )}
+                                <div className="hud-game-detail-meta">
+                                    <span>{libraryLabel(game)}</span>
+                                    {game.hltb?.mainHours && (
+                                        <span>
+                                            {formatHours(game.hltb.mainHours)}{' '}
+                                            de historia
+                                        </span>
+                                    )}
+                                    {steamReviewScore !== null && (
+                                        <span>
+                                            {steamReviewScore}% de reseñas
+                                            positivas
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <DialogFooter className="hud-game-detail-footer">
+                            <DialogClose render={<Button variant="outline" />}>
+                                Cerrar
+                            </DialogClose>
+                            {onSaved && (
+                                <Button
+                                    variant={saved ? 'secondary' : 'default'}
+                                    onClick={onSaved}
+                                    disabled={busy}
+                                >
+                                    <Bookmark size={14} className="mr-1.5" />
+                                    {saved ? 'En lista corta' : 'Guardar'}
+                                </Button>
+                            )}
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </article>
     );
 }

@@ -17,12 +17,16 @@ function subscribe(onChange: () => void) {
     };
 }
 
-export function ThemeSelector() {
-    const theme = useSyncExternalStore(
+export function useTheme() {
+    return useSyncExternalStore(
         subscribe,
         () => resolveTheme(document.documentElement.dataset.theme),
         () => 'default',
     );
+}
+
+export function ThemeSelector() {
+    const theme = useTheme();
     const [storageError, setStorageError] = useState(false);
 
     return (

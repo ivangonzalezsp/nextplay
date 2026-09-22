@@ -21,6 +21,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     Sheet,
     SheetContent,
+    SheetClose,
+    SheetFooter,
     SheetHeader,
     SheetTitle,
     SheetDescription,
@@ -601,6 +603,15 @@ export function QuickVibeBar({
                                     </Button>
                                 </div>
                             </div>
+                            <SheetFooter className="hud-filters-footer">
+                                <SheetClose
+                                    render={
+                                        <Button className="w-full">
+                                            Listo
+                                        </Button>
+                                    }
+                                />
+                            </SheetFooter>
                         </SheetContent>
                     </Sheet>
                 </div>

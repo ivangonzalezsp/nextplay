@@ -129,7 +129,7 @@ export function GameCard({
                 {/* Tags */}
                 {game.steamTags && game.steamTags.length > 0 && (
                     <div className="hud-tags-row compact">
-                        {game.steamTags.slice(0, 3).map((tag) => (
+                        {game.steamTags.slice(0, 4).map((tag) => (
                             <span
                                 key={steamTagKey(tag)}
                                 className="hud-tag-pill small"
@@ -159,6 +159,7 @@ export function GameCard({
                             title="Jugar en Steam"
                         >
                             <Play size={13} aria-hidden="true" />
+                            <span className="cinema-action-label">Jugar</span>
                         </a>
                     )}
                     <a
@@ -188,6 +189,9 @@ export function GameCard({
                                 size={14}
                                 className={saved ? 'fill-current' : ''}
                             />
+                            <span className="cinema-action-label">
+                                {saved ? 'En lista' : 'Lista corta'}
+                            </span>
                         </Button>
                     )}
 
@@ -208,6 +212,9 @@ export function GameCard({
                                 size={14}
                                 className={favorite ? 'fill-current' : ''}
                             />
+                            <span className="cinema-action-label">
+                                Favorito
+                            </span>
                         </Button>
                     )}
 

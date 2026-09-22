@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTheme } from '@/components/header/ThemeSelector';
 import { flushSync } from 'react-dom';
 import Link from 'next/link';
 import Tastes from './tastes';
@@ -215,6 +216,7 @@ type HltbSyncResponse = Snapshot & {
 };
 
 export default function Home() {
+    const theme = useTheme();
     const [state, setState] = useState<Snapshot | null>(null);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [codex, setCodex] = useState<CodexSettings>(DEFAULT_CODEX_SETTINGS);
@@ -860,7 +862,17 @@ export default function Home() {
                         <div className="eyebrow">
                             CONSOLA NEXT PLAY · TU ESPACIO DE JUEGO
                         </div>
-                        <h1>¿Qué te apetece jugar hoy?</h1>
+                        <h1>
+                            {theme === 'cinema'
+                                ? ({
+                                      library: 'Tu biblioteca',
+                                      shortlist: 'Lista corta',
+                                      tastes: 'Tus gustos',
+                                      history: 'Historial',
+                                      year: 'Mi año',
+                                  }[tab] ?? '¿Qué te apetece jugar?')
+                                : '¿Qué te apetece jugar hoy?'}
+                        </h1>
                         <p>
                             Menos tiempo eligiendo, más tiempo disfrutando de tu
                             catálogo.
@@ -908,7 +920,12 @@ export default function Home() {
                 )}
 
                 {/* 3. MAIN NAVIGATION TABS */}
-                <Tabs value={tab} onValueChange={(v) => setTab(String(v))}>
+                <Tabs
+                    className="app-navigation"
+                    orientation={theme === 'cinema' ? 'vertical' : 'horizontal'}
+                    value={tab}
+                    onValueChange={(v) => setTab(String(v))}
+                >
                     <div className="view-navigation">
                         <TabsList variant="line" aria-label="Vista principal">
                             <TabsTrigger value="recommend">
@@ -940,7 +957,10 @@ export default function Home() {
                     {/* =================================================================== */}
                     {/* TAB 1: PARA TI (RECOMMENDATIONS & DISCOVERY)                       */}
                     {/* =================================================================== */}
-                    <TabsContent value="recommend" className="space-y-6">
+                    <TabsContent
+                        value="recommend"
+                        className="space-y-6 cinema-recommendation-page"
+                    >
                         {/* Quick Vibe & Mode Selector */}
                         <QuickVibeBar
                             filters={filters}
@@ -979,7 +999,7 @@ export default function Home() {
                         {inProgress.length > 0 && (
                             <section
                                 aria-labelledby="in-progress-heading"
-                                className="hud-shelf-section"
+                                className="hud-shelf-section cinema-in-progress-shelf"
                             >
                                 <div className="flex items-center justify-between mb-3">
                                     <h3
@@ -1002,56 +1022,69 @@ export default function Home() {
                                 </div>
 
                                 <div className="hud-bento-grid">
-                                    {inProgress.map((game) => (
-                                        <article
-                                            key={game.appId}
-                                            className="hud-game-card"
-                                        >
-                                            <div className="hud-card-cover-wrapper">
-                                                {game.cover ? (
-                                                    <img
-                                                        src={game.cover}
-                                                        alt=""
-                                                        className="hud-card-cover"
-                                                        loading="lazy"
-                                                    />
-                                                ) : (
-                                                    <div className="hud-card-cover-fallback">
-                                                        <Gamepad2
-                                                            size={28}
-                                                            className="text-muted-foreground"
+                                    {inProgress.map((game) => {
+                                        const currentStatus =
+                                            state?.preferences[game.appId]
+                                                ?.status ?? 'playing';
+                                        const achievementPercent = game
+                                            .steamAchievements?.total
+                                            ? Math.round(
+                                                  (game.steamAchievements
+                                                      .unlocked /
+                                                      game.steamAchievements
+                                                          .total) *
+                                                      100,
+                                              )
+                                            : null;
+
+                                        return (
+                                            <article
+                                                key={game.appId}
+                                                className="hud-game-card"
+                                            >
+                                                <div className="hud-card-cover-wrapper">
+                                                    {game.cover ? (
+                                                        <img
+                                                            src={game.cover}
+                                                            alt=""
+                                                            className="hud-card-cover"
+                                                            loading="lazy"
                                                         />
+                                                    ) : (
+                                                        <div className="hud-card-cover-fallback">
+                                                            <Gamepad2
+                                                                size={28}
+                                                                className="text-muted-foreground"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    <div className="hud-card-overlay-badges">
+                                                        <span className="hud-meta-badge source">
+                                                            {libraryLabel(game)}
+                                                        </span>
+                                                        <span
+                                                            className="hud-status-badge"
+                                                            data-status={
+                                                                currentStatus
+                                                            }
+                                                        >
+                                                            {
+                                                                STATUS_LABELS[
+                                                                    currentStatus
+                                                                ]
+                                                            }
+                                                        </span>
                                                     </div>
-                                                )}
-                                                <div className="hud-card-overlay-badges">
-                                                    <span className="hud-meta-badge source">
-                                                        {libraryLabel(game)}
-                                                    </span>
-                                                    <span
-                                                        className="hud-status-badge"
-                                                        data-status={
-                                                            state?.preferences[
-                                                                game.appId
-                                                            ]?.status
-                                                        }
-                                                    >
-                                                        {
-                                                            STATUS_LABELS[
-                                                                state
-                                                                    ?.preferences[
-                                                                    game.appId
-                                                                ]?.status ??
-                                                                    'playing'
-                                                            ]
-                                                        }
-                                                    </span>
                                                 </div>
-                                                {game.steamTags &&
-                                                    game.steamTags.length >
-                                                        0 && (
-                                                        <div className="hud-cover-bottom">
+                                                <div className="hud-card-body">
+                                                    <h4 className="hud-card-title">
+                                                        {game.name}
+                                                    </h4>
+                                                    {game.steamTags &&
+                                                        game.steamTags.length >
+                                                            0 && (
                                                             <div
-                                                                className="hud-cover-tags"
+                                                                className="hud-tags-row compact cinema-in-progress-tags"
                                                                 aria-label="Etiquetas"
                                                             >
                                                                 {game.steamTags
@@ -1073,85 +1106,123 @@ export default function Home() {
                                                                         ),
                                                                     )}
                                                             </div>
+                                                        )}
+                                                    <div
+                                                        className="cinema-in-progress-meter"
+                                                        data-status={
+                                                            currentStatus
+                                                        }
+                                                        data-progress={
+                                                            achievementPercent ===
+                                                            null
+                                                                ? 'unknown'
+                                                                : 'known'
+                                                        }
+                                                    >
+                                                        <div className="cinema-in-progress-meter-header">
+                                                            <span>
+                                                                {
+                                                                    STATUS_LABELS[
+                                                                        currentStatus
+                                                                    ]
+                                                                }
+                                                            </span>
+                                                            <span>
+                                                                {achievementPercent ===
+                                                                null
+                                                                    ? 'Sin datos de logros'
+                                                                    : `${achievementPercent}% logros`}
+                                                            </span>
                                                         </div>
-                                                    )}
-                                            </div>
-                                            <div className="hud-card-body">
-                                                <h4 className="hud-card-title">
-                                                    {game.name}
-                                                </h4>
-                                                <div className="hud-card-actions">
-                                                    {game.appId > 0 && (
-                                                        <a
-                                                            href={steamLaunchUrl(
-                                                                game.appId,
-                                                            )}
-                                                            className="hud-steam-launch-link"
-                                                            aria-label="Jugar en Steam"
-                                                            title="Jugar en Steam"
+                                                        <div
+                                                            className="cinema-in-progress-meter-track"
+                                                            aria-hidden="true"
                                                         >
-                                                            <Play
-                                                                size={13}
-                                                                aria-hidden="true"
+                                                            <span
+                                                                style={
+                                                                    achievementPercent ===
+                                                                    null
+                                                                        ? undefined
+                                                                        : {
+                                                                              width: `${achievementPercent}%`,
+                                                                          }
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="hud-card-actions">
+                                                        {game.appId > 0 && (
+                                                            <a
+                                                                href={steamLaunchUrl(
+                                                                    game.appId,
+                                                                )}
+                                                                className="hud-steam-launch-link"
+                                                                aria-label="Jugar en Steam"
+                                                                title="Jugar en Steam"
+                                                            >
+                                                                <Play
+                                                                    size={13}
+                                                                    aria-hidden="true"
+                                                                />
+                                                                <span className="cinema-action-label">
+                                                                    Jugar
+                                                                </span>
+                                                            </a>
+                                                        )}
+                                                        <a
+                                                            href={gameUrl(game)}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="hud-card-steam-link"
+                                                        >
+                                                            <span>
+                                                                {game.appId > 0
+                                                                    ? 'Ver tienda'
+                                                                    : 'Ver en IGDB'}
+                                                            </span>
+                                                            <ExternalLink
+                                                                size={12}
                                                             />
                                                         </a>
-                                                    )}
-                                                    <a
-                                                        href={gameUrl(game)}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="hud-card-steam-link"
-                                                    >
-                                                        <span>
-                                                            {game.appId > 0
-                                                                ? 'Ver tienda'
-                                                                : 'Ver en IGDB'}
-                                                        </span>
-                                                        <ExternalLink
-                                                            size={12}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="h-7 text-xs ml-auto"
+                                                            onClick={() =>
+                                                                preference(
+                                                                    game,
+                                                                    {
+                                                                        status:
+                                                                            currentStatus ===
+                                                                            'playing'
+                                                                                ? 'paused'
+                                                                                : 'playing',
+                                                                    },
+                                                                )
+                                                            }
+                                                        >
+                                                            {currentStatus ===
+                                                            'playing'
+                                                                ? 'Pausar'
+                                                                : 'Reanudar'}
+                                                        </Button>
+                                                    </div>
+                                                    {game.appId > 0 && (
+                                                        <AchievementProgress
+                                                            game={game}
+                                                            busy={
+                                                                busy ===
+                                                                `achievements-${game.appId}`
+                                                            }
+                                                            onRefresh={
+                                                                refreshAchievements
+                                                            }
                                                         />
-                                                    </a>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 text-xs ml-auto"
-                                                        onClick={() =>
-                                                            preference(game, {
-                                                                status:
-                                                                    state
-                                                                        ?.preferences[
-                                                                        game
-                                                                            .appId
-                                                                    ]
-                                                                        ?.status ===
-                                                                    'playing'
-                                                                        ? 'paused'
-                                                                        : 'playing',
-                                                            })
-                                                        }
-                                                    >
-                                                        {state?.preferences[
-                                                            game.appId
-                                                        ]?.status === 'playing'
-                                                            ? 'Pausar'
-                                                            : 'Reanudar'}
-                                                    </Button>
+                                                    )}
                                                 </div>
-                                                {game.appId > 0 && (
-                                                    <AchievementProgress
-                                                        game={game}
-                                                        busy={
-                                                            busy ===
-                                                            `achievements-${game.appId}`
-                                                        }
-                                                        onRefresh={
-                                                            refreshAchievements
-                                                        }
-                                                    />
-                                                )}
-                                            </div>
-                                        </article>
-                                    ))}
+                                            </article>
+                                        );
+                                    })}
                                 </div>
                             </section>
                         )}
@@ -1170,9 +1241,6 @@ export default function Home() {
                                         className="text-emerald-400"
                                     />
                                 </span>
-                                <div className="eyebrow">
-                                    TU PRÓXIMA PARTIDA TE ESTÁ ESPERANDO
-                                </div>
                                 <h2>
                                     {games.length
                                         ? '¿Listo para encontrar tu siguiente aventura?'
@@ -1201,7 +1269,7 @@ export default function Home() {
                             <div
                                 id="recommendations-output"
                                 ref={recommendationsRef}
-                                className="hud-results-container space-y-6"
+                                className="hud-results-container space-y-6 cinema-recommendations-output"
                             >
                                 {/* Result header banner */}
                                 <div className="hud-card-subpanel flex items-center justify-between flex-wrap gap-3">
@@ -1304,7 +1372,7 @@ export default function Home() {
                                             </span>
                                         </div>
 
-                                        <div className="hud-bento-grid">
+                                        <div className="hud-bento-grid cinema-result-cards">
                                             {result.owned
                                                 .slice(1)
                                                 .map((pick) => (
@@ -1385,7 +1453,7 @@ export default function Home() {
                                             </span>
                                         </div>
 
-                                        <div className="hud-bento-grid">
+                                        <div className="hud-bento-grid cinema-result-cards">
                                             {result.discoveries.map((pick) => (
                                                 <GameCard
                                                     key={pick.appId}
@@ -1428,21 +1496,19 @@ export default function Home() {
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Warnings */}
-                                {[
-                                    ...new Set([
-                                        ...(state?.warnings ?? []),
-                                        ...(result?.warnings ?? []),
-                                    ]),
-                                ].map((w) => (
-                                    <div className="notice" key={w}>
-                                        <AlertCircle size={16} />
-                                        <span>{w}</span>
-                                    </div>
-                                ))}
                             </div>
                         )}
+                        {[
+                            ...new Set([
+                                ...(state?.warnings ?? []),
+                                ...(result?.warnings ?? []),
+                            ]),
+                        ].map((w) => (
+                            <div className="notice cinema-warning" key={w}>
+                                <AlertCircle size={16} />
+                                <span>{w}</span>
+                            </div>
+                        ))}
                     </TabsContent>
 
                     {/* =================================================================== */}
@@ -1563,6 +1629,25 @@ export default function Home() {
                                                 <h4 className="hud-card-title">
                                                     {game.name}
                                                 </h4>
+                                                {theme === 'cinema' && (
+                                                    <div
+                                                        className="hud-tags-row"
+                                                        aria-label="Etiquetas"
+                                                    >
+                                                        {game.steamTags
+                                                            ?.slice(0, 4)
+                                                            .map((tag) => (
+                                                                <span
+                                                                    key={steamTagKey(
+                                                                        tag,
+                                                                    )}
+                                                                    className="hud-tag-pill"
+                                                                >
+                                                                    {tag.name}
+                                                                </span>
+                                                            ))}
+                                                    </div>
+                                                )}
                                                 <div className="text-xs text-muted-foreground space-y-1 mb-2">
                                                     {game.hltb?.mainHours && (
                                                         <div>
@@ -1611,6 +1696,9 @@ export default function Home() {
                                                                 size={13}
                                                                 aria-hidden="true"
                                                             />
+                                                            <span className="cinema-action-label">
+                                                                Jugar
+                                                            </span>
                                                         </a>
                                                     )}
                                                     <a

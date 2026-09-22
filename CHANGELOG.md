@@ -6,6 +6,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
+- Nuevo tema Inmersivo con navegación lateral, arte panorámico de Steam, tarjetas coherentes en recomendaciones, biblioteca y lista corta, y estados vacíos sin copy ornamental.
+- La vista Inmersivo mantiene la recomendación como foco, compacta las alternativas y los juegos en curso en una cuadrícula con carátulas verticales, tags y progreso visible, y añade un diálogo de detalles sin ocultar acciones ni filtros.
 - Los juegos de Steam se pueden abrir directamente con un botón compacto de reproducción.
 - Ajustes permite buscar en bloque las duraciones HLTB que faltan.
 - El resumen de HLTB de cada juego se puede desplegar para ver sus tres duraciones.

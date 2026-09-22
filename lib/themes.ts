@@ -1,5 +1,6 @@
 export const THEMES = [
     { id: 'default', label: 'Predeterminado' },
+    { id: 'cinema', label: 'Inmersivo' },
     { id: 'steam', label: 'Steam' },
     { id: 'ps5', label: 'PS5' },
     { id: 'switch2', label: 'Switch 2' },
