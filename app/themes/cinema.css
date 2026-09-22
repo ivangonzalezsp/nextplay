@@ -474,10 +474,13 @@ html[data-theme='cinema'] :is(.hud-game-card, .hud-library-card):hover {
 }
 html[data-theme='cinema'] :is(.hud-card-cover-wrapper, .hud-lib-cover-wrap) {
     aspect-ratio: auto;
-    height: auto;
     overflow: visible;
 }
-html[data-theme='cinema'] :is(.hud-card-cover, .hud-lib-cover) {
+html[data-theme='cinema'] .hud-card-cover-wrapper {
+    height: auto;
+}
+html[data-theme='cinema'] .hud-card-cover,
+html[data-theme='cinema'] .hud-lib-cover {
     aspect-ratio: 460/215;
     height: auto;
     max-height: 260px;
@@ -485,10 +488,38 @@ html[data-theme='cinema'] :is(.hud-card-cover, .hud-lib-cover) {
     display: block;
     background: var(--theme-inset);
 }
+html[data-theme='cinema'] .hud-library-card {
+    display: grid;
+    grid-template-columns: minmax(146px, 40%) minmax(0, 1fr);
+    align-items: stretch;
+    min-width: 0;
+}
+html[data-theme='cinema'] .hud-library-card .hud-lib-cover-wrap {
+    height: 100%;
+    min-height: 246px;
+    overflow: hidden;
+    border-right: 1px solid var(--border);
+}
+html[data-theme='cinema'] .hud-library-card .hud-lib-cover {
+    width: 100%;
+    height: 100%;
+    max-height: none;
+    aspect-ratio: auto;
+    object-fit: cover;
+}
 html[data-theme='cinema'] .hud-cover-bottom {
     position: static;
     background: transparent;
     padding: 12px 18px 0;
+}
+html[data-theme='cinema'] .hud-library-card .hud-cover-bottom {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    left: 8px;
+    z-index: 1;
+    padding: 0;
+    background: linear-gradient(0deg, rgba(5, 10, 15, 0.92), transparent);
 }
 html[data-theme='cinema'] :is(.hud-card-body, .hud-lib-details) {
     padding: 18px;
@@ -530,6 +561,13 @@ html[data-theme='cinema'] .hud-lib-steam-link {
     gap: 5px;
     font-size: 12px;
 }
+html[data-theme='cinema'] .hud-library-card .hud-lib-details {
+    min-width: 0;
+}
+html[data-theme='cinema'] .hud-library-card .hud-lib-title {
+    font-size: 17px;
+    line-height: 1.2;
+}
 html[data-theme='cinema'] .hud-lib-fav-btn {
     width: 32px;
     height: 32px;
@@ -537,12 +575,18 @@ html[data-theme='cinema'] .hud-lib-fav-btn {
 html[data-theme='cinema'] .hud-library-toolbar {
     gap: 12px;
     flex-wrap: wrap;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: linear-gradient(135deg, #17212d, #101924);
+    box-shadow: inset 0 1px 0 rgba(116, 237, 202, 0.08);
 }
 html[data-theme='cinema'] .hud-library-filter-strip {
     gap: 14px;
-    padding: 14px 0;
-    background: transparent;
-    border: 0;
+    padding: 12px 14px;
+    border: 1px solid rgba(52, 71, 88, 0.8);
+    border-radius: 10px;
+    background: rgba(16, 25, 36, 0.72);
 }
 html[data-theme='cinema'] .hud-lib-chip {
     min-height: 36px;
@@ -555,6 +599,121 @@ html[data-theme='cinema'] .hud-lib-chip.active {
 }
 html[data-theme='cinema'] .hud-library-selects {
     flex-wrap: wrap;
+}
+html[data-theme='cinema'] .cinema-shortlist-header {
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background:
+        linear-gradient(135deg, rgba(116, 237, 202, 0.08), transparent 48%),
+        var(--theme-surface);
+}
+html[data-theme='cinema'] .cinema-shortlist-header h3 {
+    font-size: 20px;
+    letter-spacing: -0.4px;
+}
+html[data-theme='cinema'] .cinema-shortlist-header p {
+    margin-top: 4px;
+    font-size: 13px;
+}
+html[data-theme='cinema'] .cinema-shortlist-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+html[data-theme='cinema'] .cinema-shortlist-card {
+    display: grid;
+    grid-template-columns: minmax(136px, 34%) minmax(0, 1fr);
+    align-items: stretch;
+    min-width: 0;
+}
+html[data-theme='cinema'] .cinema-shortlist-card .hud-card-cover-wrapper {
+    aspect-ratio: auto;
+    height: 100%;
+    min-height: 238px;
+    overflow: hidden;
+}
+html[data-theme='cinema'] .cinema-shortlist-card .hud-card-cover {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: auto;
+    object-fit: cover;
+}
+html[data-theme='cinema'] .cinema-shortlist-card .hud-card-body {
+    min-width: 0;
+    padding: 16px;
+}
+html[data-theme='cinema'] .cinema-shortlist-card .hud-card-title {
+    font-size: 18px;
+    line-height: 1.2;
+}
+html[data-theme='cinema'] .cinema-shortlist-card .hud-tags-row {
+    margin: 8px 0 6px;
+}
+html[data-theme='cinema'] .cinema-shortlist-card .hud-card-actions {
+    margin-top: auto;
+}
+html[data-theme='cinema'] .cinema-history {
+    gap: 16px;
+}
+html[data-theme='cinema'] .cinema-history-intro {
+    margin: 0;
+    padding: 12px 16px;
+    border-left: 2px solid var(--theme-accent);
+    border-radius: 0 8px 8px 0;
+    background: rgba(116, 237, 202, 0.06);
+}
+html[data-theme='cinema'] .cinema-history .saved-search {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--theme-surface);
+}
+html[data-theme='cinema'] .cinema-history .saved-search > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 18px;
+    list-style: none;
+    background: linear-gradient(135deg, #17212d, #101924);
+    color: var(--foreground);
+}
+html[data-theme='cinema']
+    .cinema-history
+    .saved-search
+    > summary::-webkit-details-marker {
+    display: none;
+}
+html[data-theme='cinema'] .cinema-history .saved-search > summary::before {
+    content: '›';
+    display: inline-block;
+    color: var(--theme-accent);
+    font-size: 20px;
+    line-height: 12px;
+    transform: rotate(0deg);
+    transition: transform 0.2s ease;
+}
+html[data-theme='cinema']
+    .cinema-history
+    .saved-search[open]
+    > summary::before {
+    transform: rotate(90deg);
+}
+html[data-theme='cinema'] .cinema-history .saved-search[open] > summary {
+    border-bottom: 1px solid var(--border);
+}
+html[data-theme='cinema'] .cinema-history .saved-search > p {
+    margin: 0;
+    padding: 14px 18px 0;
+    color: var(--muted-foreground);
+}
+html[data-theme='cinema'] .cinema-history .saved-search > p:not(.small-note) {
+    color: var(--foreground);
+    font-size: 13px;
+}
+html[data-theme='cinema'] .cinema-history .saved-search > .cinema-result-cards {
+    margin: 16px 18px 18px;
 }
 @media (min-width: 1500px) {
     html[data-theme='cinema'] .hud-library-grid {
@@ -621,6 +780,21 @@ html[data-theme='cinema'] .hud-library-selects {
     }
     html[data-theme='cinema'] .cinema-result-cards {
         grid-template-columns: minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .hud-library-card {
+        grid-template-columns: minmax(104px, 32%) minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .hud-library-card .hud-lib-cover-wrap {
+        min-height: 218px;
+    }
+    html[data-theme='cinema'] .cinema-shortlist-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .cinema-shortlist-card {
+        grid-template-columns: minmax(104px, 32%) minmax(0, 1fr);
+    }
+    html[data-theme='cinema'] .cinema-shortlist-card .hud-card-cover-wrapper {
+        min-height: 218px;
     }
     html[data-theme='cinema'] .cinema-result-cards .hud-game-card {
         grid-template-columns: minmax(120px, 32%) minmax(0, 1fr);

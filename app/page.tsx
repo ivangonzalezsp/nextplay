@@ -1546,8 +1546,8 @@ export default function Home() {
                     {/* TAB 3: LISTA CORTA (SHORTLIST)                                      */}
                     {/* =================================================================== */}
                     <TabsContent value="shortlist">
-                        <div className="hud-shelf-section space-y-4">
-                            <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div className="hud-shelf-section cinema-shortlist-page space-y-4">
+                            <div className="cinema-shortlist-header flex items-center justify-between flex-wrap gap-3">
                                 <div>
                                     <h3 className="text-base font-bold text-foreground">
                                         Tus próximos candidatos (
@@ -1597,11 +1597,11 @@ export default function Home() {
                                     </p>
                                 </div>
                             ) : (
-                                <div className="hud-bento-grid">
+                                <div className="hud-bento-grid cinema-shortlist-grid">
                                     {savedGames.map((game) => (
                                         <article
                                             key={game.appId}
-                                            className="hud-game-card"
+                                            className="hud-game-card cinema-shortlist-card"
                                         >
                                             <div className="hud-card-cover-wrapper">
                                                 {game.cover ? (
@@ -1753,8 +1753,8 @@ export default function Home() {
                     {/* TAB 5: HISTORIAL (SAVED SEARCHES)                                   */}
                     {/* =================================================================== */}
                     <TabsContent value="history">
-                        <div className="results space-y-4">
-                            <p className="small-note">
+                        <div className="results cinema-history space-y-4">
+                            <p className="small-note cinema-history-intro">
                                 Cada consulta conserva sus filtros y resultados
                                 originales, incluso después de empezar otra
                                 búsqueda.
@@ -1823,7 +1823,7 @@ export default function Home() {
                                         </p>
                                     )}
                                     <p>{entry.result.message}</p>
-                                    <div className="hud-bento-grid mt-4">
+                                    <div className="hud-bento-grid cinema-result-cards mt-4">
                                         {[
                                             ...entry.result.owned,
                                             ...entry.result.discoveries,
