@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-23
+
 ### Features
 
 - En Inmersivo, Ajustes y conexiones pasa al pie de la navegación lateral; en pantallas estrechas queda al final del menú.
