@@ -21,6 +21,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     Sheet,
     SheetContent,
+    SheetClose,
+    SheetFooter,
     SheetHeader,
     SheetTitle,
     SheetDescription,
@@ -253,7 +255,7 @@ export function QuickVibeBar({
                     >
                         <SheetContent
                             side="right"
-                            className="hud-filters-sheet p-6 sm:max-w-md"
+                            className="hud-filters-sheet sm:max-w-md"
                         >
                             <SheetHeader>
                                 <SheetTitle className="flex items-center gap-2">
@@ -261,18 +263,17 @@ export function QuickVibeBar({
                                         size={18}
                                         className="text-emerald-400"
                                     />
-                                    <span>Filtros de Recomendación</span>
+                                    <span>Filtros de recomendación</span>
                                 </SheetTitle>
                                 <SheetDescription className="text-xs">
-                                    Ajusta los criterios de selección para tu
-                                    biblioteca.
+                                    Todos los criterios en un único lugar.
                                 </SheetDescription>
                             </SheetHeader>
 
-                            <div className="space-y-4 py-4 overflow-y-auto max-h-[calc(100vh-140px)] pr-1">
+                            <div className="hud-filters-dialog-body space-y-4 py-4 overflow-y-auto max-h-[calc(100vh-140px)] pr-1">
                                 {/* Mode intent */}
                                 {filters.mode === 'today' && (
-                                    <div>
+                                    <div className="hud-filter-field">
                                         <label className="text-xs font-semibold text-foreground mb-1 block">
                                             ¿Qué tipo de sesión buscas?
                                         </label>
@@ -323,7 +324,7 @@ export function QuickVibeBar({
                                 )}
 
                                 {/* Genre */}
-                                <div>
+                                <div className="hud-filter-field">
                                     <label className="text-xs font-semibold text-foreground mb-1 block">
                                         Género
                                     </label>
@@ -363,7 +364,7 @@ export function QuickVibeBar({
                                 </div>
 
                                 {/* Game Mode */}
-                                <div>
+                                <div className="hud-filter-field">
                                     <label className="text-xs font-semibold text-foreground mb-1 block">
                                         Modalidad
                                     </label>
@@ -415,7 +416,7 @@ export function QuickVibeBar({
                                 </div>
 
                                 {/* Steam Tags Autocomplete */}
-                                <div className="space-y-2">
+                                <div className="hud-filter-tags space-y-2">
                                     <label
                                         htmlFor="hud-tags-input"
                                         className="text-xs font-semibold text-foreground block"
@@ -511,7 +512,7 @@ export function QuickVibeBar({
                                 </div>
 
                                 {/* Min Release Date */}
-                                <div>
+                                <div className="hud-filter-field">
                                     <label
                                         htmlFor="hud-release-date"
                                         className="text-xs font-semibold text-foreground mb-1 block"
@@ -534,7 +535,7 @@ export function QuickVibeBar({
                                 </div>
 
                                 {/* Checkboxes */}
-                                <div className="space-y-2.5 pt-2 border-t border-border/50">
+                                <div className="hud-filter-options space-y-2.5 pt-2 border-t border-border/50">
                                     <label className="flex items-center gap-2 text-xs cursor-pointer text-foreground">
                                         <Checkbox
                                             checked={!!filters.comfortZone}
@@ -583,24 +584,27 @@ export function QuickVibeBar({
                                         </span>
                                     </label>
                                 </div>
-
-                                {/* Clear filters */}
-                                <div className="pt-3">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="w-full text-muted-foreground hover:text-foreground"
-                                        onClick={() => {
-                                            setFilters(
-                                                clearFilters(filters.mode),
-                                            );
-                                            setTagSearch('');
-                                        }}
-                                    >
-                                        Limpiar todos los filtros
-                                    </Button>
-                                </div>
                             </div>
+                            <SheetFooter className="hud-filters-footer">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="hud-filters-clear w-full sm:w-auto"
+                                    onClick={() => {
+                                        setFilters(clearFilters(filters.mode));
+                                        setTagSearch('');
+                                    }}
+                                >
+                                    Limpiar filtros
+                                </Button>
+                                <SheetClose
+                                    render={
+                                        <Button className="hud-filters-done w-full sm:w-auto">
+                                            Listo
+                                        </Button>
+                                    }
+                                />
+                            </SheetFooter>
                         </SheetContent>
                     </Sheet>
                 </div>

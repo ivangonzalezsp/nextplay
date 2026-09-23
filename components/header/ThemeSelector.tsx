@@ -1,7 +1,12 @@
 'use client';
 
 import { useState, useSyncExternalStore } from 'react';
-import { THEMES, THEME_STORAGE_KEY, resolveTheme } from '@/lib/themes';
+import {
+    DEFAULT_THEME,
+    THEMES,
+    THEME_STORAGE_KEY,
+    resolveTheme,
+} from '@/lib/themes';
 
 function subscribe(onChange: () => void) {
     function sync(event: StorageEvent) {
@@ -17,12 +22,16 @@ function subscribe(onChange: () => void) {
     };
 }
 
-export function ThemeSelector() {
-    const theme = useSyncExternalStore(
+export function useTheme() {
+    return useSyncExternalStore(
         subscribe,
         () => resolveTheme(document.documentElement.dataset.theme),
-        () => 'default',
+        () => DEFAULT_THEME,
     );
+}
+
+export function ThemeSelector() {
+    const theme = useTheme();
     const [storageError, setStorageError] = useState(false);
 
     return (

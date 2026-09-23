@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useTheme } from '@/components/header/ThemeSelector';
+import { useGameVideoPreview } from '@/components/recommendations/useGameVideoPreview';
 import {
     ExternalLink,
     Clock,
@@ -11,7 +13,6 @@ import {
     Gamepad2,
     Play,
     Check,
-    X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,6 +45,7 @@ function formatHours(value: number | null | undefined) {
 export function GameCard({
     pick,
     isDiscovery = false,
+    videoPreview = false,
     status,
     onStatus,
     opinionPreference,
@@ -57,6 +59,7 @@ export function GameCard({
 }: {
     pick: Pick & { game: Game };
     isDiscovery?: boolean;
+    videoPreview?: boolean;
     status?: GameStatus;
     onStatus?: (status: GameStatus) => void;
     opinionPreference?: Preference;
@@ -69,6 +72,11 @@ export function GameCard({
     onFavorite?: () => void;
 }) {
     const { game } = pick;
+    const theme = useTheme();
+    const preview = useGameVideoPreview(
+        game.appId,
+        videoPreview && theme === 'cinema' && game.appId > 0,
+    );
     const [coverFailed, setCoverFailed] = useState(false);
     const steamUrl = steamLaunchUrl(game.appId);
 
@@ -78,7 +86,13 @@ export function GameCard({
             : null;
 
     return (
-        <article className={`hud-game-card ${isDiscovery ? 'discovery' : ''}`}>
+        <article
+            className={`hud-game-card ${isDiscovery ? 'discovery' : ''}`}
+            onPointerEnter={preview.onPointerEnter}
+            onPointerLeave={preview.onPointerLeave}
+            onFocusCapture={preview.onFocusCapture}
+            onBlurCapture={preview.onBlurCapture}
+        >
             {/* Cover with overlay badges */}
             <div className="hud-card-cover-wrapper">
                 {game.cover && !coverFailed ? (
@@ -95,6 +109,21 @@ export function GameCard({
                     </div>
                 )}
 
+                {preview.videoId && preview.active && (
+                    <div
+                        className="cinema-card-preview-clip"
+                        aria-hidden="true"
+                    >
+                        <iframe
+                            className={`cinema-card-preview cinema-preview-frame ${preview.revealed ? 'is-visible' : ''}`}
+                            src={`https://www.youtube-nocookie.com/embed/${preview.videoId}?autoplay=1&mute=1&controls=0&disablekb=1&start=4&end=12&playsinline=1&rel=0`}
+                            title={`Tráiler de ${game.name}`}
+                            tabIndex={-1}
+                            allow="autoplay; encrypted-media; picture-in-picture"
+                            onLoad={preview.onFrameLoad}
+                        />
+                    </div>
+                )}
                 <div className="hud-card-overlay-badges">
                     <span className="hud-meta-badge source">
                         {isDiscovery ? 'Descubrimiento' : libraryLabel(game)}
@@ -129,7 +158,7 @@ export function GameCard({
                 {/* Tags */}
                 {game.steamTags && game.steamTags.length > 0 && (
                     <div className="hud-tags-row compact">
-                        {game.steamTags.slice(0, 3).map((tag) => (
+                        {game.steamTags.slice(0, 4).map((tag) => (
                             <span
                                 key={steamTagKey(tag)}
                                 className="hud-tag-pill small"
@@ -159,6 +188,7 @@ export function GameCard({
                             title="Jugar en Steam"
                         >
                             <Play size={13} aria-hidden="true" />
+                            <span className="cinema-action-label">Jugar</span>
                         </a>
                     )}
                     <a
@@ -188,6 +218,9 @@ export function GameCard({
                                 size={14}
                                 className={saved ? 'fill-current' : ''}
                             />
+                            <span className="cinema-action-label">
+                                {saved ? 'En lista' : 'Lista corta'}
+                            </span>
                         </Button>
                     )}
 
@@ -208,6 +241,9 @@ export function GameCard({
                                 size={14}
                                 className={favorite ? 'fill-current' : ''}
                             />
+                            <span className="cinema-action-label">
+                                Favorito
+                            </span>
                         </Button>
                     )}
 

@@ -680,6 +680,11 @@ export function LibraryView({
                                                         : ''
                                                 }
                                             />
+                                            <span className="cinema-action-label">
+                                                {isSaved
+                                                    ? 'En lista'
+                                                    : 'Lista corta'}
+                                            </span>
                                         </Button>
 
                                         <Button
@@ -709,6 +714,9 @@ export function LibraryView({
                                                     size={13}
                                                     aria-hidden="true"
                                                 />
+                                                <span className="cinema-action-label">
+                                                    Jugar
+                                                </span>
                                             </a>
                                         )}
                                         <a
@@ -728,6 +736,11 @@ export function LibraryView({
                                             }
                                         >
                                             <ExternalLink size={12} />
+                                            <span className="cinema-action-label">
+                                                {game.appId > 0
+                                                    ? 'Ver tienda'
+                                                    : 'Ver en IGDB'}
+                                            </span>
                                         </a>
                                         {game.appId < 0 && (
                                             <Button

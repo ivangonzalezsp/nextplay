@@ -1,15 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { runInNewContext } from 'node:vm';
-import { THEMES, THEME_INIT_SCRIPT, resolveTheme } from '../lib/themes.ts';
+import {
+    DEFAULT_THEME,
+    THEMES,
+    THEME_INIT_SCRIPT,
+    resolveTheme,
+} from '../lib/themes.ts';
 
-void test('theme restoration validates saved values and tolerates blocked storage', () => {
-    for (const saved of [
-        ...THEMES.map((theme) => theme.id),
-        null,
-        'removed-theme',
-        '<script>',
-    ]) {
+void test('immersive is the fallback while saved themes, including legacy, persist', () => {
+    assert.equal(THEMES[0].id, DEFAULT_THEME);
+    assert.equal(
+        THEMES.find((theme) => theme.id === 'default')?.label,
+        'Legacy',
+    );
+
+    for (const saved of THEMES.map((theme) => theme.id)) {
         const document = { documentElement: { dataset: { theme: '' } } };
         runInNewContext(THEME_INIT_SCRIPT, {
             document,
@@ -19,9 +25,18 @@ void test('theme restoration validates saved values and tolerates blocked storag
             document.documentElement.dataset.theme,
             resolveTheme(saved),
         );
-        if (!THEMES.some((theme) => theme.id === saved))
-            assert.equal(resolveTheme(saved), 'default');
     }
+
+    for (const saved of [null, 'removed-theme', '<script>']) {
+        const document = { documentElement: { dataset: { theme: '' } } };
+        runInNewContext(THEME_INIT_SCRIPT, {
+            document,
+            localStorage: { getItem: () => saved },
+        });
+        assert.equal(resolveTheme(saved), DEFAULT_THEME);
+        assert.equal(document.documentElement.dataset.theme, DEFAULT_THEME);
+    }
+
     const document = { documentElement: { dataset: { theme: '' } } };
     runInNewContext(THEME_INIT_SCRIPT, {
         document,
@@ -31,5 +46,5 @@ void test('theme restoration validates saved values and tolerates blocked storag
             },
         },
     });
-    assert.equal(document.documentElement.dataset.theme, 'default');
+    assert.equal(document.documentElement.dataset.theme, DEFAULT_THEME);
 });
