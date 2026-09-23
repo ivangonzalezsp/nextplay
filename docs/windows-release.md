@@ -7,13 +7,13 @@
 - Crea un [personal access token fine-grained](https://github.com/settings/personal-access-tokens/new) cuyo propietario sea `ivangonzalezsp`, con **Only select repositories → nextplay-releases** y **Repository permissions → Contents: Read and write**. Utiliza una caducidad y renuévalo cuando corresponda.
 - Guarda el valor como secreto de Actions **RELEASES_TOKEN** en el repositorio de desarrollo. No lo guardes en `.env`, en Git, en el repositorio público de descargas ni en los artefactos.
 
-El token solo se entrega al último paso de publicación. `GITHUB_TOKEN` tiene `contents: read` en el repositorio de desarrollo. El publicador usa un borrador hasta completar ambas subidas; un intento fallido se puede reanudar mientras siga en borrador. Una versión ya pública es inmutable para este script.
+El token solo se entrega al último paso de publicación. En **Windows installer**, `GITHUB_TOKEN` tiene `contents: read` en el repositorio de desarrollo. El publicador usa un borrador hasta completar ambas subidas; un intento fallido se puede reanudar mientras siga en borrador. Una versión ya pública es inmutable para este script.
 
 ## Publicar una versión
 
 1. En cada PR, añade los cambios visibles para el usuario a `CHANGELOG.md` bajo `## [Unreleased]`, en `### Features` o `### Correcciones de errores`.
-2. Ejecuta manualmente **Release version** desde `main` y elige `patch`, `minor` o `major`. El workflow actualiza los manifiestos, promociona `Unreleased` a `## [X.Y.Z] - fecha` y abre un PR de release. Al hacer merge, crea la etiqueta `vX.Y.Z`.
-3. La etiqueta activa Actions, que ejecuta pruebas, tipos, compilación, HLTB con Python empaquetado, arranque del paquete y prueba del instalador. Después sube únicamente el EXE y `SHA256SUMS.txt` a la Release pública, usando la sección correspondiente de `CHANGELOG.md` como notas.
+2. Ejecuta manualmente **Release version** desde `main` y elige `patch`, `minor` o `major`. El workflow actualiza los manifiestos, promociona `Unreleased` a `## [X.Y.Z] - fecha` y abre un PR de release. Al hacer merge, crea la etiqueta `vX.Y.Z` y despacha **Windows installer** sobre ella.
+3. **Windows installer** ejecuta pruebas, tipos, compilación, HLTB con Python empaquetado, arranque del paquete y prueba del instalador. Después sube únicamente el EXE y `SHA256SUMS.txt` a la Release pública, usando la sección correspondiente de `CHANGELOG.md` como notas.
 
 La ejecución manual de **Windows installer** compila y guarda artefactos privados para revisión. Solo una ejecución sobre una etiqueta publica una Release. El README público se mantiene a partir de `packaging/RELEASES-README.md`. Los archivos antiguos de `docs/releases/` se conservan como histórico; las nuevas notas viven en `CHANGELOG.md`.
 
