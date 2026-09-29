@@ -27,12 +27,10 @@ import {
     Sparkles,
     Clock3,
     Star,
-    RefreshCw,
     SlidersHorizontal,
     MessageCircle,
     Check,
     Plus,
-    RotateCcw,
     AlertCircle,
     LoaderCircle,
     Bookmark,
@@ -63,6 +61,7 @@ import { filterSummary } from '@/lib/filters';
 import { log, logError } from '@/lib/log';
 import type {
     CodexSettings,
+    ConversationMode,
     Filters,
     Game,
     GameStatus,
@@ -228,6 +227,8 @@ export default function Home() {
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
     const [codex, setCodex] = useState<CodexSettings>(DEFAULT_CODEX_SETTINGS);
     const [engine, setEngine] = useState<RecommendationEngine>('local');
+    const [conversationMode, setConversationMode] =
+        useState<ConversationMode>('direct');
     const [profileUrl, setProfileUrl] = useState('');
     const [text, setText] = useState('');
     const [reference, setReference] = useState<Game | null>(null);
@@ -251,7 +252,7 @@ export default function Home() {
     const activeFilters = useRef(filters);
     const activeCodex = useRef(codex);
     const activeEngine = useRef(engine);
-    const recommendationsRef = useRef<HTMLDivElement>(null);
+    const activeConversationMode = useRef(conversationMode);
     const recommendationAbort = useRef<AbortController | null>(null);
 
     function addActivity(progress: RecommendationProgress) {
@@ -269,6 +270,10 @@ export default function Home() {
     useEffect(() => {
         activeEngine.current = engine;
     }, [engine]);
+
+    useEffect(() => {
+        activeConversationMode.current = conversationMode;
+    }, [conversationMode]);
 
     useEffect(() => {
         activeFilters.current = filters;
@@ -298,11 +303,19 @@ export default function Home() {
             },
         });
         setState(next);
-        setResult(next.conversation.at(-1)?.result ?? null);
+        const latest = next.conversation.at(-1)?.result ?? null;
+        setResult(latest);
+        if (scrollToResults) {
+            setReference(next.conversation.at(-1)?.reference ?? null);
+            if (latest?.engine === 'codex')
+                setConversationMode(
+                    latest.needsClarification ? 'guided' : 'direct',
+                );
+        }
         if (next.codex) setCodex(next.codex);
         if (scrollToResults)
             requestAnimationFrame(() =>
-                recommendationsRef.current?.scrollIntoView({
+                document.getElementById('copilot-latest')?.scrollIntoView({
                     behavior: 'smooth',
                     block: 'start',
                 }),
@@ -312,6 +325,11 @@ export default function Home() {
     async function load() {
         const next: Snapshot = await api('state');
         accept(next);
+        setConversationMode(
+            next.conversation.at(-1)?.result.needsClarification
+                ? 'guided'
+                : 'direct',
+        );
         setFilters(next.filters);
         setEngine(next.setup.codex ? (next.engine ?? 'codex') : 'local');
         setCodex(
@@ -328,6 +346,12 @@ export default function Home() {
         void api('state')
             .then((next: Snapshot) => {
                 accept(next);
+                setConversationMode(
+                    next.conversation.at(-1)?.result.needsClarification
+                        ? 'guided'
+                        : 'direct',
+                );
+                setReference(next.conversation.at(-1)?.reference ?? null);
                 setFilters(next.filters);
                 setEngine(
                     next.setup.codex ? (next.engine ?? 'codex') : 'local',
@@ -414,7 +438,7 @@ export default function Home() {
         register({
             name: 'request_game_recommendations',
             description:
-                'Request recommendations using the visible filters and engine; saves results in history. Codex consumes quota and interprets messages. The local algorithm uses saved tastes and filters without tokens and ignores free text.',
+                'Request a response using the visible filters, engine and conversation mode. Guided Codex asks a question; Directo recommends games and saves them in history. Codex consumes quota and interprets messages. The local algorithm uses saved tastes and filters without tokens and ignores free text.',
             inputSchema: {
                 type: 'object',
                 properties: { message: { type: 'string', maxLength: 2000 } },
@@ -447,6 +471,7 @@ export default function Home() {
                             filters: activeFilters.current,
                             codex: activeCodex.current,
                             engine: activeEngine.current,
+                            conversationMode: activeConversationMode.current,
                             text: data.message,
                         },
                         addActivity,
@@ -512,31 +537,31 @@ export default function Home() {
         });
     }
 
-    async function recommend(message = text, selectionFilters = filters) {
+    async function recommend(
+        message = text,
+        selectionFilters = filters,
+        mode = conversationMode,
+    ) {
         if (reference && engine !== 'codex') return;
         setActivity([]);
         const controller = new AbortController();
         recommendationAbort.current = controller;
         try {
             await action('recommend', async () => {
-                accept(
-                    await streamRecommendations(
-                        {
-                            filters: selectionFilters,
-                            codex,
-                            engine,
-                            ...(reference
-                                ? { referenceAppId: reference.appId }
-                                : {}),
-                            text: engine === 'local' ? '' : message,
-                        },
-                        addActivity,
-                        controller.signal,
-                    ),
-                    true,
+                const next = await streamRecommendations(
+                    {
+                        filters: selectionFilters,
+                        codex,
+                        engine,
+                        conversationMode: mode,
+                        referenceAppId: reference?.appId ?? null,
+                        text: engine === 'local' ? '' : message,
+                    },
+                    addActivity,
+                    controller.signal,
                 );
+                accept(next, true);
                 setText('');
-                setReference(null);
                 setTab('recommend');
             });
         } finally {
@@ -811,6 +836,139 @@ export default function Home() {
     const canRecommend =
         games.length > 0 && (engine === 'local' || !!state?.setup.codex);
 
+    function renderResult(result: Recommendation) {
+        return (
+            <div className="hud-results-container space-y-6">
+                {/* 1. HERO SPOTLIGHT FOR TOP PICK */}
+                {result.owned.length > 0 && (
+                    <HeroSpotlight
+                        pick={result.owned[0]}
+                        status={
+                            state?.preferences[result.owned[0].appId]?.status
+                        }
+                        onStatus={(status) =>
+                            void preference(result.owned[0].game, { status })
+                        }
+                        opinionPreference={
+                            state?.preferences[result.owned[0].appId]
+                        }
+                        onOpinion={(change) =>
+                            void preference(result.owned[0].game, change)
+                        }
+                        onSimilar={similar}
+                        busy={!!busy}
+                        saved={savedIds.has(result.owned[0].appId)}
+                        onSaved={() => void shortlist(result.owned[0].game)}
+                        favorite={
+                            state?.preferences[result.owned[0].appId]?.favorite
+                        }
+                        onFavorite={() =>
+                            preference(result.owned[0].game, {
+                                favorite:
+                                    !state?.preferences[result.owned[0].appId]
+                                        ?.favorite,
+                            })
+                        }
+                    />
+                )}
+
+                {/* 2. SECONDARY PICKS IN BENTO GRID */}
+                {result.owned.length > 1 && (
+                    <div>
+                        <div className="section-heading">
+                            <h3 className="text-base font-bold text-foreground">
+                                Otras buenas opciones de tu biblioteca
+                            </h3>
+                            <span className="text-xs text-muted-foreground">
+                                Seleccionadas según tus gustos y el tiempo
+                                disponible
+                            </span>
+                        </div>
+
+                        <div className="hud-bento-grid cinema-result-cards">
+                            {result.owned.slice(1).map((pick) => (
+                                <GameCard
+                                    key={pick.appId}
+                                    pick={pick}
+                                    videoPreview
+                                    status={
+                                        state?.preferences[pick.appId]?.status
+                                    }
+                                    onStatus={(status) =>
+                                        void preference(pick.game, { status })
+                                    }
+                                    opinionPreference={
+                                        state?.preferences[pick.appId]
+                                    }
+                                    onOpinion={(change) =>
+                                        void preference(pick.game, change)
+                                    }
+                                    onSimilar={similar}
+                                    busy={!!busy}
+                                    saved={savedIds.has(pick.appId)}
+                                    onSaved={() => void shortlist(pick.game)}
+                                    favorite={
+                                        state?.preferences[pick.appId]?.favorite
+                                    }
+                                    onFavorite={() =>
+                                        preference(pick.game, {
+                                            favorite:
+                                                !state?.preferences[pick.appId]
+                                                    ?.favorite,
+                                        })
+                                    }
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. DISCOVERIES FROM IGDB (Fuera de tu radar) */}
+                {result.discoveries.length > 0 && (
+                    <div>
+                        <div className="section-heading">
+                            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                                <Sparkles size={16} className="text-cyan-400" />
+                                <span>Fuera de tu radar</span>
+                            </h3>
+                            <span className="text-xs text-muted-foreground">
+                                Juegos recomendados que aún no tienes en tu
+                                biblioteca
+                            </span>
+                        </div>
+
+                        <div className="hud-bento-grid cinema-result-cards">
+                            {result.discoveries.map((pick) => (
+                                <GameCard
+                                    key={pick.appId}
+                                    pick={pick}
+                                    isDiscovery
+                                    videoPreview
+                                    status={
+                                        state?.preferences[pick.appId]?.status
+                                    }
+                                    onStatus={(status) =>
+                                        void preference(pick.game, { status })
+                                    }
+                                    opinionPreference={
+                                        state?.preferences[pick.appId]
+                                    }
+                                    onOpinion={(change) =>
+                                        void preference(pick.game, change)
+                                    }
+                                    onSimilar={similar}
+                                    busy={!!busy}
+                                    saved={savedIds.has(pick.appId)}
+                                    onSaved={() => void shortlist(pick.game)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     return (
         <div className="app-shell">
             <a className="skip-link" href="#main">
@@ -1006,6 +1164,7 @@ export default function Home() {
                             busy={busy}
                             engine={engine}
                             savedGamesCount={savedGames.length}
+                            conversationMode={conversationMode}
                         />
 
                         {/* Copilot Bar for instant refinement */}
@@ -1016,13 +1175,18 @@ export default function Home() {
                             setReference={setReference}
                             engine={engine}
                             setEngine={setEngine}
+                            conversationMode={conversationMode}
+                            setConversationMode={setConversationMode}
                             codex={codex}
                             state={state}
                             busy={busy}
                             activity={activity}
                             canRecommend={canRecommend}
-                            onRecommend={(msg) => recommend(msg ?? text)}
+                            onRecommend={(msg, mode) =>
+                                recommend(msg ?? text, filters, mode)
+                            }
                             onReset={reset}
+                            renderResult={renderResult}
                         />
 
                         {/* In Progress Shelf (if any) */}
@@ -1263,7 +1427,7 @@ export default function Home() {
                                 <LoaderCircle className="spin" size={36} />
                                 <h2>Abriendo tu espacio de juego…</h2>
                             </div>
-                        ) : !result ? (
+                        ) : result?.needsClarification ? null : !result ? (
                             <section className="empty-state">
                                 <span className="empty-symbol">
                                     <Gamepad2
@@ -1295,241 +1459,7 @@ export default function Home() {
                                     </span>
                                 </div>
                             </section>
-                        ) : (
-                            <div
-                                id="recommendations-output"
-                                ref={recommendationsRef}
-                                className="hud-results-container space-y-6 cinema-recommendations-output"
-                            >
-                                {/* Result header banner */}
-                                <div className="hud-card-subpanel flex items-center justify-between flex-wrap gap-3">
-                                    <p className="text-sm text-foreground flex-1">
-                                        {result.message}
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            disabled={!canRecommend || !!busy}
-                                            onClick={() =>
-                                                recommend(
-                                                    'Tráeme otras opciones que encajen con mis filtros y preferencias.',
-                                                )
-                                            }
-                                        >
-                                            <RefreshCw
-                                                size={13}
-                                                className="mr-1.5"
-                                            />
-                                            Tráeme otras opciones
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            disabled={!!busy}
-                                            onClick={reset}
-                                        >
-                                            <RotateCcw
-                                                size={13}
-                                                className="mr-1.5"
-                                            />
-                                            Nueva búsqueda
-                                        </Button>
-                                    </div>
-                                </div>
-
-                                {/* 1. HERO SPOTLIGHT FOR TOP PICK */}
-                                {result.owned.length > 0 && (
-                                    <HeroSpotlight
-                                        pick={result.owned[0]}
-                                        status={
-                                            state?.preferences[
-                                                result.owned[0].appId
-                                            ]?.status
-                                        }
-                                        onStatus={(status) =>
-                                            void preference(
-                                                result.owned[0].game,
-                                                { status },
-                                            )
-                                        }
-                                        opinionPreference={
-                                            state?.preferences[
-                                                result.owned[0].appId
-                                            ]
-                                        }
-                                        onOpinion={(change) =>
-                                            void preference(
-                                                result.owned[0].game,
-                                                change,
-                                            )
-                                        }
-                                        onSimilar={similar}
-                                        busy={!!busy}
-                                        saved={savedIds.has(
-                                            result.owned[0].appId,
-                                        )}
-                                        onSaved={() =>
-                                            void shortlist(result.owned[0].game)
-                                        }
-                                        favorite={
-                                            state?.preferences[
-                                                result.owned[0].appId
-                                            ]?.favorite
-                                        }
-                                        onFavorite={() =>
-                                            preference(result.owned[0].game, {
-                                                favorite:
-                                                    !state?.preferences[
-                                                        result.owned[0].appId
-                                                    ]?.favorite,
-                                            })
-                                        }
-                                    />
-                                )}
-
-                                {/* 2. SECONDARY PICKS IN BENTO GRID */}
-                                {result.owned.length > 1 && (
-                                    <div>
-                                        <div className="section-heading">
-                                            <h3 className="text-base font-bold text-foreground">
-                                                Otras buenas opciones de tu
-                                                biblioteca
-                                            </h3>
-                                            <span className="text-xs text-muted-foreground">
-                                                Seleccionadas según tus gustos y
-                                                el tiempo disponible
-                                            </span>
-                                        </div>
-
-                                        <div className="hud-bento-grid cinema-result-cards">
-                                            {result.owned
-                                                .slice(1)
-                                                .map((pick) => (
-                                                    <GameCard
-                                                        key={pick.appId}
-                                                        pick={pick}
-                                                        videoPreview
-                                                        status={
-                                                            state?.preferences[
-                                                                pick.appId
-                                                            ]?.status
-                                                        }
-                                                        onStatus={(status) =>
-                                                            void preference(
-                                                                pick.game,
-                                                                { status },
-                                                            )
-                                                        }
-                                                        opinionPreference={
-                                                            state?.preferences[
-                                                                pick.appId
-                                                            ]
-                                                        }
-                                                        onOpinion={(change) =>
-                                                            void preference(
-                                                                pick.game,
-                                                                change,
-                                                            )
-                                                        }
-                                                        onSimilar={similar}
-                                                        busy={!!busy}
-                                                        saved={savedIds.has(
-                                                            pick.appId,
-                                                        )}
-                                                        onSaved={() =>
-                                                            void shortlist(
-                                                                pick.game,
-                                                            )
-                                                        }
-                                                        favorite={
-                                                            state?.preferences[
-                                                                pick.appId
-                                                            ]?.favorite
-                                                        }
-                                                        onFavorite={() =>
-                                                            preference(
-                                                                pick.game,
-                                                                {
-                                                                    favorite:
-                                                                        !state
-                                                                            ?.preferences[
-                                                                            pick
-                                                                                .appId
-                                                                        ]
-                                                                            ?.favorite,
-                                                                },
-                                                            )
-                                                        }
-                                                    />
-                                                ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* 3. DISCOVERIES FROM IGDB (Fuera de tu radar) */}
-                                {result.discoveries.length > 0 && (
-                                    <div>
-                                        <div className="section-heading">
-                                            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                                                <Sparkles
-                                                    size={16}
-                                                    className="text-cyan-400"
-                                                />
-                                                <span>Fuera de tu radar</span>
-                                            </h3>
-                                            <span className="text-xs text-muted-foreground">
-                                                Juegos recomendados que aún no
-                                                tienes en tu biblioteca
-                                            </span>
-                                        </div>
-
-                                        <div className="hud-bento-grid cinema-result-cards">
-                                            {result.discoveries.map((pick) => (
-                                                <GameCard
-                                                    key={pick.appId}
-                                                    pick={pick}
-                                                    isDiscovery
-                                                    videoPreview
-                                                    status={
-                                                        state?.preferences[
-                                                            pick.appId
-                                                        ]?.status
-                                                    }
-                                                    onStatus={(status) =>
-                                                        void preference(
-                                                            pick.game,
-                                                            { status },
-                                                        )
-                                                    }
-                                                    opinionPreference={
-                                                        state?.preferences[
-                                                            pick.appId
-                                                        ]
-                                                    }
-                                                    onOpinion={(change) =>
-                                                        void preference(
-                                                            pick.game,
-                                                            change,
-                                                        )
-                                                    }
-                                                    onSimilar={similar}
-                                                    busy={!!busy}
-                                                    saved={savedIds.has(
-                                                        pick.appId,
-                                                    )}
-                                                    onSaved={() =>
-                                                        void shortlist(
-                                                            pick.game,
-                                                        )
-                                                    }
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+                        ) : null}
                         {[
                             ...new Set([
                                 ...(state?.warnings ?? []),

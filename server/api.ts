@@ -299,7 +299,9 @@ async function saveRecommendation(state: State, turn: Turn) {
         filters: turn.filters,
         engine: turn.result.engine ?? 'codex',
         conversation: [...state.conversation, turn],
-        history: [...(state.history ?? []), { ...turn, id: randomUUID() }],
+        history: turn.result.needsClarification
+            ? (state.history ?? [])
+            : [...(state.history ?? []), { ...turn, id: randomUUID() }],
     };
     await saveState(next);
     return snapshot(next, turn.result.warnings);
@@ -909,8 +911,28 @@ export async function handle(
                         ? (state.engine ?? 'codex')
                         : payload.engine,
                 );
+                const previousTurn = state.conversation.at(-1);
+                const conversationMode =
+                    payload.conversationMode === undefined
+                        ? previousTurn?.result.needsClarification
+                            ? 'guided'
+                            : 'direct'
+                        : payload.conversationMode;
+                if (
+                    conversationMode !== 'direct' &&
+                    conversationMode !== 'guided'
+                )
+                    throw new AppError(
+                        'Elige Directo o Modo guiado para conversar.',
+                    );
+                const referenceAppId =
+                    payload.referenceAppId === undefined &&
+                    engine === 'codex' &&
+                    previousTurn?.result.needsClarification
+                        ? previousTurn.reference?.appId
+                        : payload.referenceAppId;
                 const reference =
-                    payload.referenceAppId === undefined
+                    referenceAppId == null
                         ? undefined
                         : [
                               ...state.games,
@@ -926,13 +948,10 @@ export async function handle(
                                       ...turn.result.discoveries,
                                   ].map((pick) => pick.game),
                               ),
-                          ].find(
-                              (game) => game.appId === payload.referenceAppId,
-                          );
+                          ].find((game) => game.appId === referenceAppId);
                 if (
-                    payload.referenceAppId !== undefined &&
-                    (!Number.isSafeInteger(payload.referenceAppId) ||
-                        !reference)
+                    referenceAppId != null &&
+                    (!Number.isSafeInteger(referenceAppId) || !reference)
                 )
                     throw new AppError(
                         'El juego de referencia no está disponible. Vuelve a seleccionarlo.',
@@ -1168,12 +1187,13 @@ export async function handle(
                     library: state.games.length,
                     eligible: candidates.length,
                 });
-                const comfort = filters.comfortZone
-                    ? comfortSelection(state, candidates)
-                    : null;
+                const comfort =
+                    filters.comfortZone && conversationMode === 'direct'
+                        ? comfortSelection(state, candidates)
+                        : null;
                 if (comfort) candidates = comfort.games;
                 let out;
-                if (candidates.length) {
+                if (candidates.length || conversationMode === 'guided') {
                     phase('recommendations:codex:start', {
                         candidates: candidates.length,
                         model: codex.model,
@@ -1186,6 +1206,7 @@ export async function handle(
                             filters,
                             payload.text,
                             reference,
+                            conversationMode,
                         ),
                         codex,
                         { state, candidates },
@@ -1199,13 +1220,15 @@ export async function handle(
                             else notify('recommendations:codex:thinking');
                         },
                         signal,
+                        conversationMode,
                     );
                     phase('recommendations:codex:response');
-                    out = validatePicks(raw, candidates);
+                    out = validatePicks(raw, candidates, conversationMode);
                     if (comfort) {
                         if (
+                            out.needsClarification ||
                             out.owned.length + out.discoveries.length !==
-                            candidates.length
+                                candidates.length
                         )
                             throw new AppError(
                                 'Codex no devolvió las opciones de zona de confort. Reintenta la consulta.',
@@ -1222,6 +1245,7 @@ export async function handle(
                 } else {
                     phase('recommendations:codex:skipped');
                     out = {
+                        needsClarification: false,
                         message:
                             comfort?.message ??
                             'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.',
@@ -1242,6 +1266,9 @@ export async function handle(
                         text: payload.text.trim(),
                         filters,
                         result: recommendation,
+                        ...(recommendation.needsClarification && reference
+                            ? { reference }
+                            : {}),
                     },
                 );
                 phase('recommendations:complete', {
