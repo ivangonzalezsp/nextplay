@@ -6,6 +6,8 @@
 
 ## English
 
+**Next Play was created using vibecoding:** development assisted by AI through natural-language instructions.
+
 A personal app for choosing what to play from your Steam library. Switch between **English 🇬🇧 and Spanish 🇪🇸** in the top corner; your browser remembers the language. Use the local algorithm without AI, or your **Codex session with ChatGPT**, without an OpenAI API key. Each person installs the app on their own computer and connects their own accounts.
 
 ### Install on Windows
@@ -239,6 +241,8 @@ Sources: [Steam Player Service](https://partner.steamgames.com/doc/webapi/IPlaye
 ## Español
 
 [🇬🇧 English](#english) · [🇪🇸 Español](#espanol)
+
+**Next Play se ha creado usando vibecoding:** desarrollo asistido por IA mediante instrucciones en lenguaje natural.
 
 Web personal en español e inglés para elegir qué jugar de tu biblioteca de Steam. Puedes usar el algoritmo local sin IA o tu sesión de **Codex con ChatGPT**, sin configurar la API de OpenAI. Cada persona instala la app en su ordenador y utiliza sus propias cuentas y claves.
 
