@@ -7,6 +7,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 ### Features
 
 - Modo guiado en el chat: la IA hace preguntas para acotar tu juego ideal hasta que pulses «Recomiéndame ya». Los mensajes y las fichas recomendadas aparecen como una conversación encima del cuadro de texto.
+- La IA recibe un índice compacto de los juegos elegibles para orientarse en bibliotecas grandes, con etiquetas compartidas y un límite de contexto que conserva el acceso al catálogo completo.
 
 ### Correcciones de errores
 

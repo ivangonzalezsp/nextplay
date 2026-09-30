@@ -1,7 +1,7 @@
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
 import { z } from 'zod';
 import type { Game, State } from '../lib/model.ts';
-import { storyHours } from '../lib/model.ts';
+import { steamTagKey, storyHours } from '../lib/model.ts';
 import { gameAffinities } from '../lib/tastes.ts';
 
 export function catalogGame(game: Game, state: State) {
@@ -26,6 +26,61 @@ export function catalogGame(game: Game, state: State) {
               : null,
         affinities: gameAffinities(game),
     };
+}
+
+export function catalogIndex(candidates: Game[]) {
+    const tags: NonNullable<Game['steamTags']> = [];
+    const tagIndexes = new Map<string, number>();
+    const index = {
+        columns: ['appId', 'name', 'source', 'durationHours', 'tagIndexes'],
+        tags,
+        games: candidates.map((game) => [
+            game.appId,
+            game.name,
+            game.owned ? 'owned' : game.shared ? 'shared' : 'discoveries',
+            storyHours(game) ?? null,
+            (game.steamTags ?? []).slice(0, 4).map((tag) => {
+                const key = steamTagKey(tag);
+                let position = tagIndexes.get(key);
+                if (position === undefined) {
+                    position = tags.length;
+                    tagIndexes.set(key, position);
+                    tags.push({
+                        id: tag.id,
+                        name: tag.name,
+                        englishName: tag.englishName,
+                    });
+                }
+                return position;
+            }),
+        ]),
+        nextOffset: null as number | null,
+    };
+    // ponytail: character budget, not a token count; use model tokenization if needed.
+    const maxCharacters = 160_000;
+    if (JSON.stringify(index).length <= maxCharacters) return index;
+
+    // Keep every title before sacrificing coverage for metadata.
+    index.columns = index.columns.slice(0, 3);
+    index.tags = [];
+    index.games = index.games.map((row) => row.slice(0, 3));
+    if (JSON.stringify(index).length <= maxCharacters) return index;
+
+    const rows = index.games;
+    index.games = [];
+    let characters = JSON.stringify({
+        ...index,
+        nextOffset: candidates.length,
+    }).length;
+    for (const row of rows) {
+        const size = JSON.stringify(row).length + (index.games.length ? 1 : 0);
+        if (characters + size > maxCharacters) break;
+        index.games.push(row);
+        characters += size;
+    }
+    // Same order as query_games with source=all and sort=relevance.
+    index.nextOffset = index.games.length;
+    return index;
 }
 
 export const querySchema = z

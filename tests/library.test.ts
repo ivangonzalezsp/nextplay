@@ -12,10 +12,154 @@ import {
 } from '../lib/model.ts';
 import type { Game } from '../lib/model.ts';
 import { openDatabase, replaceGames } from '../server/database.ts';
-import { catalogGame, queryGames } from '../server/library.ts';
+import { catalogGame, catalogIndex, queryGames } from '../server/library.ts';
 import { buildPrompt, runProcess } from '../server/codex.ts';
 import { selectCandidates, validatePicks } from '../server/selection.ts';
 import { readState, saveState } from '../server/store.ts';
+
+void test('Codex indexes 2500 eligible titles with shared tags and current preferences', () => {
+    const state = structuredClone(EMPTY_STATE);
+    const tags = [
+        { id: 19, name: 'Acción', englishName: 'Action' },
+        { id: 1, name: 'Simulación', englishName: 'Simulation' },
+        { id: 2, name: 'Simulación', englishName: 'Sim' },
+        { name: 'Etiqueta local' },
+        { id: 3, name: 'Solo en ficha' },
+    ];
+    state.games = Array.from({ length: 2500 }, (_, i): Game => ({
+        appId: i === 2499 ? -2500 : i + 1,
+        name: `Juego ${i + 1}`,
+        owned: i % 2 === 0 || i === 2499,
+        shared: i % 2 === 1 && i !== 2499,
+        playtimeMinutes: null,
+        recentMinutes: null,
+        ownerSteamIds: ['76561198000000002'],
+        summary: 'Descripción completa que solo pertenece a la ficha.',
+        steamTags: tags,
+        durationHours: i === 2499 ? null : 20,
+        ...(i === 2499 ? { igdbId: 999, platform: 'PC' } : {}),
+    }));
+    state.games[0].hltb = {
+        id: 10,
+        mainHours: 8,
+        extraHours: null,
+        completionHours: null,
+        at: 1,
+    };
+    state.games.push({ ...state.games[0], appId: 2501 });
+    state.preferences = {
+        '1': { status: 'playing', favorite: true },
+        '2501': { status: 'ignored', favorite: false },
+    };
+    const data = () => {
+        const candidates = selectCandidates(state, [], DEFAULT_FILTERS);
+        return JSON.parse(
+            buildPrompt(state, candidates, DEFAULT_FILTERS, '').split(
+                'DATOS_JSON:\n',
+            )[1],
+        );
+    };
+    const prompt = data();
+    const index = prompt.catalog.index;
+    assert.equal(prompt.catalog.total, 2500);
+    assert.equal(index.games.length, 2500);
+    assert.equal(index.nextOffset, null);
+    assert.equal(prompt.candidates.length, 8);
+    assert.deepEqual(index.columns, [
+        'appId',
+        'name',
+        'source',
+        'durationHours',
+        'tagIndexes',
+    ]);
+    assert.deepEqual(index.tags, tags.slice(0, 4));
+    const rows = new Map<number, unknown[]>(
+        index.games.map((row: unknown[]) => [row[0], row]),
+    );
+    assert.equal(rows.size, 2500);
+    assert.deepEqual(rows.get(1), [1, 'Juego 1', 'owned', 8, [0, 1, 2, 3]]);
+    assert.deepEqual(rows.get(2), [2, 'Juego 2', 'shared', 20, [0, 1, 2, 3]]);
+    assert.deepEqual(rows.get(-2500), [
+        -2500,
+        'Juego 2500',
+        'owned',
+        null,
+        [0, 1, 2, 3],
+    ]);
+    assert.ok(!rows.has(2501));
+    const serialized = JSON.stringify(index);
+    assert.ok(serialized.length < 160_000);
+    for (const excluded of [
+        '76561198000000002',
+        'Descripción completa',
+        'Solo en ficha',
+    ])
+        assert.ok(!serialized.includes(excluded));
+    assert.equal(
+        prompt.preferences.find((p: { appId: number }) => p.appId === 1).status,
+        'playing',
+    );
+
+    // Each request reflects new metadata and eligibility without a cached index.
+    state.games[0].name = 'Título actualizado';
+    state.games[0].hltb.mainHours = 9;
+    state.preferences['2'] = { status: 'completed', favorite: false };
+    const updated = data();
+    assert.equal(updated.catalog.total, 2499);
+    assert.equal(updated.catalog.index.games.length, 2499);
+    assert.deepEqual(
+        updated.catalog.index.games.find((row: unknown[]) => row[0] === 1),
+        [1, 'Título actualizado', 'owned', 9, [0, 1, 2, 3]],
+    );
+    assert.ok(
+        !updated.catalog.index.games.some((row: unknown[]) => row[0] === 2),
+    );
+});
+
+void test('large indexes keep titles first and expose a resumable offset within their budget', () => {
+    const games = Array.from({ length: 3000 }, (_, i): Game => ({
+        appId: i + 1,
+        name: `Juego ${i + 1}`,
+        owned: false,
+        playtimeMinutes: null,
+        recentMinutes: null,
+        steamTags: [{ id: i + 1, name: `Etiqueta ${i} ${'x'.repeat(100)}` }],
+    }));
+    const compact = catalogIndex(games);
+    assert.equal(compact.games.length, 3000);
+    assert.equal(compact.nextOffset, null);
+    assert.deepEqual(compact.columns, ['appId', 'name', 'source']);
+    assert.deepEqual(compact.tags, []);
+    assert.deepEqual(compact.games.at(-1), [3000, 'Juego 3000', 'discoveries']);
+    assert.ok(JSON.stringify(compact).length <= 160_000);
+
+    const oversized = games.map((game) => ({
+        ...game,
+        name: `${game.name} ${'🎮"\\\n'.repeat(25)}`,
+    }));
+    const partial = catalogIndex(oversized);
+    assert.ok(
+        partial.games.length > 0 && partial.games.length < oversized.length,
+    );
+    assert.equal(partial.nextOffset, partial.games.length);
+    assert.ok(JSON.stringify(partial).length <= 160_000);
+    const db = openDatabase(':memory:');
+    try {
+        replaceGames(db, oversized);
+        const page = queryGames(db, { offset: partial.nextOffset, limit: 1 });
+        assert.equal(
+            page.games[0].appId,
+            oversized[partial.games.length].appId,
+        );
+        assert.equal(page.total, oversized.length);
+    } finally {
+        db.close();
+    }
+    const empty = catalogIndex([]);
+    assert.deepEqual(empty.games, []);
+    assert.deepEqual(empty.tags, []);
+    assert.equal(empty.nextOffset, null);
+});
 
 void test('SQLite and the real MCP transport search and paginate the full personal/family catalog', async () => {
     const root = resolve(tmpdir());

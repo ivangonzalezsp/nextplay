@@ -21,7 +21,7 @@ import type {
 import { DEFAULT_CODEX_SETTINGS, inLibrary } from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
 import { openDatabase, replaceGames } from './database.ts';
-import { catalogGame } from './library.ts';
+import { catalogGame, catalogIndex } from './library.ts';
 import { recentRecommendationPenalties } from './selection.ts';
 import { comfortSelection } from './selection.ts';
 
@@ -409,6 +409,7 @@ export function buildPrompt(
         `${filters.comfortZone && conversationMode === 'direct' ? 'Modo zona de confort: devuelve exactamente los appIds de comfortZone.games, conservando las conexiones y diferencias de comfortZone.reasons. Si solo hay una opción, explica que faltan datos para una alternativa; no añadas otros juegos.\n' : ''}Eres el asesor de videojuegos de Next Play. Responde en español y exclusivamente con el JSON solicitado.
 Devuelve en la lista "owned" hasta 3 juegos de la biblioteca: owned=true (propios) O shared=true (prestados por Steam Families). El primero es la recomendación principal. En "discoveries" devuelve hasta 2 candidatos con owned=false Y shared=false. No añadas juegos fuera del catálogo consultable ni cambies propiedad.
 Tienes la herramienta query_games para consultar la base de datos SQLite completa de candidatos elegibles. query busca también en las etiquetas comunitarias de Steam (name en español y englishName en inglés); tag filtra por nombre exacto en español o inglés y tagIds por IDs (coincide cualquiera de los IDs). candidates es solo una muestra inicial, no el catálogo completo. Consulta siempre query_games antes de recomendar: busca según la petición y prueba distintas consultas, etiquetas, filtros y páginas (offset=nextOffset) si hace falta. Una página no representa toda la biblioteca. Comprueba las fichas de tus propuestas con appIds. Si no has recorrido todos los resultados, no afirmes haber evaluado toda la biblioteca. No impongas un límite total de 60 juegos.
+catalog.index ofrece una vista compacta de los candidatos ya filtrados: cada fila de games sigue columns. tagIndexes contiene posiciones desde 0 en index.tags, no IDs de Steam; cada entrada del diccionario conserva su id si existe. Solo resume hasta cuatro etiquetas por juego; su ausencia no prueba que un juego carezca de ellas. Los estados, favoritos y opiniones están en preferences por appId; sin preferencia registrada, el estado es pending. Revisa el índice para ampliar opciones más allá de candidates y consulta sus fichas con query_games antes de recomendar; el índice no sustituye los detalles ni permite inventar características por el título. Si nextOffset es null, están todos los títulos elegibles, no necesariamente todas sus fichas leídas. Si nextOffset es un número, quedan títulos por consultar con query_games usando ese offset, source=all y sort=relevance sin otros filtros; también puedes buscar directamente por lo pedido. En bibliotecas grandes el índice puede omitir duración y etiquetas para conservar más títulos; comprueba columns y no interpretes campos ausentes como cero o falsos.
 Los compartidos ya son accesibles mediante Steam Families; no los presentes como compras pendientes ni como propiedad del jugador. Sus horas corresponden exclusivamente al perfil conectado. La disponibilidad de una copia libre en este instante no está comprobada; avisa de esa limitación si recomiendas un compartido.
 Los juegos añadidos manualmente tienen appId negativo (identificador local), igdbId y platform. Ya pertenecen al jugador en esa plataforma; conserva el appId al consultar y recomendar, y no los presentes como juegos de Steam. Las horas desconocidas no significan cero horas jugadas.
 Usa únicamente hechos de los datos aportados. No inventes precios, duraciones, modos, finalizaciones ni reseñas. No confundas horas de historia con duración de sesión. Si no se conoce la adecuación a una sesión corta, indícalo como incertidumbre.
@@ -492,6 +493,7 @@ DATOS_JSON:\n` +
                 discoveries: candidates.filter((game) => !inLibrary(game))
                     .length,
                 tool: 'query_games',
+                index: catalogIndex(candidates),
             },
             candidates: candidates
                 .slice(0, 8)
