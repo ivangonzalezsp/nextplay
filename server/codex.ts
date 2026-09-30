@@ -1,3 +1,4 @@
+import { t as translateMessage, requestLanguage } from './i18n.ts';
 import { spawn, type ChildProcess } from 'node:child_process';
 import {
     access,
@@ -47,7 +48,9 @@ export async function codexBinary() {
             (process.platform === 'win32' && !custom.endsWith('.exe'))
         )
             throw new AppError(
-                'NEXTPLAY_CODEX_BIN debe apuntar al ejecutable nativo de Codex.',
+                translateMessage(
+                    'NEXTPLAY_CODEX_BIN debe apuntar al ejecutable nativo de Codex.',
+                ),
                 503,
             );
         await access(custom);
@@ -77,7 +80,9 @@ export async function codexBinary() {
     }
     log('server', 'codex:binary:missing');
     throw new AppError(
-        'No se encuentra Codex CLI. Instálalo y ejecuta codex login con ChatGPT.',
+        translateMessage(
+            'No se encuentra Codex CLI. Instálalo y ejecuta codex login con ChatGPT.',
+        ),
         503,
     );
 }
@@ -121,9 +126,17 @@ export async function runProcess(
         command,
         ...(timeout === undefined ? {} : { timeout }),
     });
-    if (signal?.aborted) throw new AppError('La búsqueda se ha detenido.', 499);
+    if (signal?.aborted)
+        throw new AppError(
+            translateMessage('La búsqueda se ha detenido.'),
+            499,
+        );
     const binary = await codexBinary();
-    if (signal?.aborted) throw new AppError('La búsqueda se ha detenido.', 499);
+    if (signal?.aborted)
+        throw new AppError(
+            translateMessage('La búsqueda se ha detenido.'),
+            499,
+        );
     return new Promise<string>((resolveRun, reject) => {
         const child = trackCodexProcess(
             spawn(binary, args, {
@@ -166,7 +179,12 @@ export async function runProcess(
         };
         if (signal) {
             const abort = () =>
-                finish(new AppError('La búsqueda se ha detenido.', 499));
+                finish(
+                    new AppError(
+                        translateMessage('La búsqueda se ha detenido.'),
+                        499,
+                    ),
+                );
             if (signal.aborted) return abort();
             signal.addEventListener('abort', abort, { once: true });
             removeAbortListener = () =>
@@ -177,7 +195,9 @@ export async function runProcess(
                 () =>
                     finish(
                         new AppError(
-                            'Codex ha tardado demasiado. Tu biblioteca está guardada; vuelve a intentarlo.',
+                            translateMessage(
+                                'Codex ha tardado demasiado. Tu biblioteca está guardada; vuelve a intentarlo.',
+                            ),
                             504,
                         ),
                     ),
@@ -186,7 +206,9 @@ export async function runProcess(
         child.on('error', () =>
             finish(
                 new AppError(
-                    'No se ha podido iniciar Codex. Comprueba su instalación y tu sesión de ChatGPT.',
+                    translateMessage(
+                        'No se ha podido iniciar Codex. Comprueba su instalación y tu sesión de ChatGPT.',
+                    ),
                     503,
                 ),
             ),
@@ -226,7 +248,9 @@ export async function runProcess(
             if (stdout.length > 1_000_000 || eventBuffer.length > 1_000_000)
                 finish(
                     new AppError(
-                        'La respuesta de Codex supera el tamaño permitido.',
+                        translateMessage(
+                            'La respuesta de Codex supera el tamaño permitido.',
+                        ),
                         502,
                     ),
                 );
@@ -242,32 +266,44 @@ export async function runProcess(
             const specificErrors: [RegExp, string, number][] = [
                 [
                     /requires a newer version of Codex|upgrade to the latest (app or )?CLI/i,
-                    'Este modelo requiere una versión más reciente de Codex. Actualiza Codex CLI con npm install -g @openai/codex y vuelve a intentarlo.',
+                    translateMessage(
+                        'Este modelo requiere una versión más reciente de Codex. Actualiza Codex CLI con npm install -g @openai/codex y vuelve a intentarlo.',
+                    ),
                     502,
                 ],
                 [
                     /context.{0,30}(length|window|limit)|too many tokens|input.{0,20}too long/i,
-                    'La consulta supera el contexto del modelo. Inicia una conversación nueva o reduce la petición.',
+                    translateMessage(
+                        'La consulta supera el contexto del modelo. Inicia una conversación nueva o reduce la petición.',
+                    ),
                     502,
                 ],
                 [
                     /model.{0,100}(not found|not supported|unsupported|does not exist|not available)|unsupported.{0,40}(model|reasoning)|reasoning.{0,40}(not supported|unsupported|invalid)/i,
-                    'Codex no admite el modelo o el esfuerzo seleccionado para esta cuenta. Cambia la selección y vuelve a intentarlo.',
+                    translateMessage(
+                        'Codex no admite el modelo o el esfuerzo seleccionado para esta cuenta. Cambia la selección y vuelve a intentarlo.',
+                    ),
                     502,
                 ],
                 [
                     /mcp.{0,100}(failed|error|timed out)|required.{0,40}(server|mcp).{0,100}failed/i,
-                    'Codex no ha podido conectar con el catálogo local de juegos (MCP). Vuelve a intentarlo y comprueba el arranque del catálogo.',
+                    translateMessage(
+                        'Codex no ha podido conectar con el catálogo local de juegos (MCP). Vuelve a intentarlo y comprueba el arranque del catálogo.',
+                    ),
                     502,
                 ],
                 [
                     /unexpected argument|error parsing|failed to (parse|load).{0,30}config/i,
-                    'Codex ha rechazado los argumentos o la configuración de la app. Comprueba la compatibilidad de la versión instalada.',
+                    translateMessage(
+                        'Codex ha rechazado los argumentos o la configuración de la app. Comprueba la compatibilidad de la versión instalada.',
+                    ),
                     502,
                 ],
                 [
                     /stream disconnected|error sending request|connection (reset|refused|closed)|dns error|failed to lookup|TLS|502 Bad Gateway|503 Service Unavailable|504 Gateway|Internal Server Error/i,
-                    'Se ha interrumpido la conexión con Codex o el servicio no está disponible. Vuelve a intentarlo.',
+                    translateMessage(
+                        'Se ha interrumpido la conexión con Codex o el servicio no está disponible. Vuelve a intentarlo.',
+                    ),
                     502,
                 ],
             ];
@@ -278,7 +314,9 @@ export async function runProcess(
             if (/limit|quota|usage|429/i.test(msg))
                 return finish(
                     new AppError(
-                        'Codex ha alcanzado un límite de uso de tu cuenta. Revisa el cupo y vuelve a intentarlo cuando se restablezca.',
+                        translateMessage(
+                            'Codex ha alcanzado un límite de uso de tu cuenta. Revisa el cupo y vuelve a intentarlo cuando se restablezca.',
+                        ),
                         429,
                     ),
                 );
@@ -286,8 +324,12 @@ export async function runProcess(
                 return finish(
                     new AppError(
                         process.env.NEXTPLAY_INSTALLED
-                            ? 'No se puede abrir la sesión de ChatGPT. Cierra Next Play y vuelve a abrirla desde su acceso directo.'
-                            : 'Codex no puede localizar tu carpeta de usuario. Abre la app desde una terminal normal de Windows y comprueba codex login status.',
+                            ? translateMessage(
+                                  'No se puede abrir la sesión de ChatGPT. Cierra Next Play y vuelve a abrirla desde su acceso directo.',
+                              )
+                            : translateMessage(
+                                  'Codex no puede localizar tu carpeta de usuario. Abre la app desde una terminal normal de Windows y comprueba codex login status.',
+                              ),
                         503,
                     ),
                 );
@@ -295,14 +337,20 @@ export async function runProcess(
                 return finish(
                     new AppError(
                         process.env.NEXTPLAY_INSTALLED
-                            ? 'Conecta ChatGPT desde Configurar cuentas y aplicación. Mientras tanto puedes usar el algoritmo local.'
-                            : 'Codex necesita iniciar sesión. Ejecuta codex login y elige tu cuenta de ChatGPT.',
+                            ? translateMessage(
+                                  'Conecta ChatGPT desde Configurar cuentas y aplicación. Mientras tanto puedes usar el algoritmo local.',
+                              )
+                            : translateMessage(
+                                  'Codex necesita iniciar sesión. Ejecuta codex login y elige tu cuenta de ChatGPT.',
+                              ),
                         503,
                     ),
                 );
             finish(
                 new AppError(
-                    'Codex no ha podido completar la consulta. Comprueba la sesión y el modelo configurado y vuelve a intentarlo.',
+                    translateMessage(
+                        'Codex no ha podido completar la consulta. Comprueba la sesión y el modelo configurado y vuelve a intentarlo.',
+                    ),
                     502,
                 ),
             );
@@ -315,12 +363,19 @@ export async function codexStatus() {
     try {
         const message = await runProcess(['login', 'status'], '', 10_000);
         return /logged in using chatgpt/i.test(message)
-            ? { codex: true, codexMessage: 'Conectado con ChatGPT' }
+            ? {
+                  codex: true,
+                  codexMessage: translateMessage('Conectado con ChatGPT'),
+              }
             : {
                   codex: false,
                   codexMessage: process.env.NEXTPLAY_INSTALLED
-                      ? 'Conecta ChatGPT desde Configurar cuentas y aplicación.'
-                      : 'Ejecuta codex login y selecciona ChatGPT.',
+                      ? translateMessage(
+                            'Conecta ChatGPT desde Configurar cuentas y aplicación.',
+                        )
+                      : translateMessage(
+                            'Ejecuta codex login y selecciona ChatGPT.',
+                        ),
               };
     } catch (e) {
         return { codex: false, codexMessage: (e as Error).message };
@@ -406,7 +461,7 @@ export function buildPrompt(
 ) {
     const names = new Map(state.games.map((g) => [g.appId, g.name]));
     return (
-        `${filters.comfortZone && conversationMode === 'direct' ? 'Modo zona de confort: devuelve exactamente los appIds de comfortZone.games, conservando las conexiones y diferencias de comfortZone.reasons. Si solo hay una opción, explica que faltan datos para una alternativa; no añadas otros juegos.\n' : ''}Eres el asesor de videojuegos de Next Play. Responde en español y exclusivamente con el JSON solicitado.
+        `${filters.comfortZone && conversationMode === 'direct' ? 'Modo zona de confort: devuelve exactamente los appIds de comfortZone.games, conservando las conexiones y diferencias de comfortZone.reasons. Si solo hay una opción, explica que faltan datos para una alternativa; no añadas otros juegos.\n' : ''}Eres el asesor de videojuegos de Next Play. Responde en ${requestLanguage() === 'en' ? 'inglés' : 'español'} y exclusivamente con el JSON solicitado.
 Devuelve en la lista "owned" hasta 3 juegos de la biblioteca: owned=true (propios) O shared=true (prestados por Steam Families). El primero es la recomendación principal. En "discoveries" devuelve hasta 2 candidatos con owned=false Y shared=false. No añadas juegos fuera del catálogo consultable ni cambies propiedad.
 Tienes la herramienta query_games para consultar la base de datos SQLite completa de candidatos elegibles. query busca también en las etiquetas comunitarias de Steam (name en español y englishName en inglés); tag filtra por nombre exacto en español o inglés y tagIds por IDs (coincide cualquiera de los IDs). candidates es solo una muestra inicial, no el catálogo completo. Consulta siempre query_games antes de recomendar: busca según la petición y prueba distintas consultas, etiquetas, filtros y páginas (offset=nextOffset) si hace falta. Una página no representa toda la biblioteca. Comprueba las fichas de tus propuestas con appIds. Si no has recorrido todos los resultados, no afirmes haber evaluado toda la biblioteca. No impongas un límite total de 60 juegos.
 catalog.index ofrece una vista compacta de los candidatos ya filtrados: cada fila de games sigue columns. tagIndexes contiene posiciones desde 0 en index.tags, no IDs de Steam; cada entrada del diccionario conserva su id si existe. Solo resume hasta cuatro etiquetas por juego; su ausencia no prueba que un juego carezca de ellas. Los estados, favoritos y opiniones están en preferences por appId; sin preferencia registrada, el estado es pending. Revisa el índice para ampliar opciones más allá de candidates y consulta sus fichas con query_games antes de recomendar; el índice no sustituye los detalles ni permite inventar características por el título. Si nextOffset es null, están todos los títulos elegibles, no necesariamente todas sus fichas leídas. Si nextOffset es un número, quedan títulos por consultar con query_games usando ese offset, source=all y sort=relevance sin otros filtros; también puedes buscar directamente por lo pedido. En bibliotecas grandes el índice puede omitir duración y etiquetas para conservar más títulos; comprueba columns y no interpretes campos ausentes como cero o falsos.
@@ -434,8 +489,9 @@ DATOS_JSON:\n` +
             ...(filters.comfortZone && conversationMode === 'direct'
                 ? {
                       comfortZone: {
-                          instruction:
+                          instruction: translateMessage(
                               'Devuelve exactamente las opciones de esta selección, una afín y una distinta si existe. Conserva la conexión y diferencia justificadas en reasons. Si falta alternativa, dilo honestamente. No confundas ausencia de metadatos con novedad. No añadas otros juegos.',
+                          ),
                           ...comfortSelection(state, candidates),
                           games: comfortSelection(state, candidates).games.map(
                               (g) => g.appId,
@@ -458,8 +514,9 @@ DATOS_JSON:\n` +
             ].map(([appId, penalty]) => ({ appId, penalty })),
             reference: reference
                 ? {
-                      purpose:
+                      purpose: translateMessage(
                           'Solo referencia de afinidad, nunca recomendar este juego. Usa los datos disponibles para conservar o cambiar lo solicitado; no inventes características. Mantén los filtros actuales.',
+                      ),
                       game: catalogGame(reference, state),
                   }
                 : undefined,
@@ -603,7 +660,9 @@ export async function askCodex(
             result = JSON.parse(await readFile(resultPath, 'utf8'));
         } catch {
             throw new AppError(
-                'Codex no devolvió un JSON válido. Reintenta la consulta.',
+                translateMessage(
+                    'Codex no devolvió un JSON válido. Reintenta la consulta.',
+                ),
                 502,
             );
         }

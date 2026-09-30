@@ -1,11 +1,11 @@
 export const DEFAULT_THEME = 'cinema' as const;
 
 export const THEMES = [
-    { id: 'cinema', label: 'Inmersivo' },
-    { id: 'default', label: 'Legacy' },
-    { id: 'steam', label: 'Steam' },
-    { id: 'ps5', label: 'PS5' },
-    { id: 'switch2', label: 'Switch 2' },
+    { id: 'cinema', label: 'Menta' },
+    { id: 'cinema-ocean', label: 'Océano' },
+    { id: 'cinema-violet', label: 'Violeta' },
+    { id: 'cinema-amber', label: 'Ámbar' },
+    { id: 'cinema-rose', label: 'Rosa' },
 ] as const;
 
 export const THEME_STORAGE_KEY = 'nextplay-theme';

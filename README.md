@@ -1,6 +1,246 @@
 # Next Play
 
-Web personal en español para elegir qué jugar de tu biblioteca de Steam. Puedes usar el algoritmo local sin IA o tu sesión de **Codex con ChatGPT**, sin configurar la API de OpenAI. Cada persona instala la app en su ordenador y utiliza sus propias cuentas y claves.
+[🇬🇧 English](#english) · [🇪🇸 Español](#espanol)
+
+<a id="english"></a>
+
+## English
+
+A personal app for choosing what to play from your Steam library. Switch between **English 🇬🇧 and Spanish 🇪🇸** in the top corner; your browser remembers the language. Use the local algorithm without AI, or your **Codex session with ChatGPT**, without an OpenAI API key. Each person installs the app on their own computer and connects their own accounts.
+
+### Install on Windows
+
+[**Download Next Play for Windows x64**](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest)
+
+1. Download **NextPlay-Setup-…-x64.exe**, run it, and open the **Next Play** shortcut.
+2. The wizard lets you add your Steam profile and API key and import your games. Steam Families, IGDB, and ChatGPT are optional; the local algorithm works without AI.
+3. If you have an earlier installation, close it and select **Import previous installation** before configuring the new one. Originals are kept; reconnect ChatGPT through the wizard.
+
+After setup, an optional tutorial reviews up to five played games and your tastes. Each confirmed step is saved; **Finish later** keeps those answers. Resume it through **Settings → Tutorial & initial preferences**. Reviewing earlier game statuses does not invent gaming history dates.
+
+The installer includes Node, Codex, and Python with HowLongToBeat. You do not need Git, a terminal, or additional tools. Requires 64-bit Windows 10/11. The distribution is not code-signed, so Windows may warn about or block it.
+
+#### Open, close, and update
+
+The shortcut starts Next Play and opens your browser. Opening it again reuses the running instance. Closing the tab leaves the app running; choose **Exit** from its tray icon to stop it completely.
+
+In **Settings → Set up accounts and app**, save connections, connect or cancel official ChatGPT sign-in, check for updates, and optionally enable Windows startup. **Update and restart** downloads the public release, checks SHA-256, and creates a backup before installation. Finish active operations first. Automatic update checks are limited to once a day.
+
+Access initially stays on your PC. **Allow access from my local network** requests Windows permission, restarts Next Play, and shows the address for your phone. Its firewall rule is limited to the program, private networks, and the local subnet. Managing credentials, authentication, updates, and processes remains restricted to the PC through the actual connection and HTTP origin.
+
+#### Data and privacy
+
+The program lives in `%LOCALAPPDATA%\Programs\NextPlay`; your library, settings, Codex session, and backups live in `%LOCALAPPDATA%\NextPlay`. Credentials stay local; the API only reports whether they are configured. Omitting a key keeps its value; removal requires an explicit action. Uninstalling keeps your data. For a manual backup, exit Next Play and copy the entire data folder.
+
+Source and development history are in the public **ivangonzalezsp/nextplay** repository. Public installers and release notes are in **ivangonzalezsp/nextplay-releases**. Personal data and credentials must never be published. See [Windows build and release](docs/windows-release.md).
+
+### License
+
+Original Next Play code is distributed under the [GNU General Public License, version 3](LICENSE). Dependencies, data, covers, logos, and third-party services retain their own licenses and terms. The **Next Play** name and logo are not granted under this license.
+
+### Develop from source
+
+For everyday use, choose the Windows installer. For development, use:
+
+- **Node.js 24 or newer**, with npm. SQLite is built into Node; no database server is needed.
+- **A Steam account and Steam Web API key** to import your library. Your profile and game details must be public.
+- **Git** to clone, or a source ZIP.
+- Optionally **Codex CLI and a ChatGPT account with Codex access** for AI recommendations.
+- Optionally **Twitch/IGDB credentials** for genres, modes, and discoveries.
+- Optionally **Python 3.12**, the tested version for HowLongToBeat.
+
+These commands use Windows PowerShell. Internet is needed for dependencies, source synchronization, and Codex; the local algorithm uses saved data.
+
+#### Get the project and install dependencies
+
+Extract the source ZIP and open a terminal beside `package.json`, or clone:
+
+```powershell
+git clone https://github.com/ivangonzalezsp/nextplay.git next-play
+cd next-play
+node --version
+npm ci
+Copy-Item .env.example .env.local
+```
+
+Node must report `v24` or newer. Copy `.env.example` only on first setup to avoid overwriting keys; on macOS/Linux use `cp .env.example .env.local`. Fill at least `STEAM_API_KEY` in `.env.local`; optional credentials can remain empty. **No `OPENAI_API_KEY` is required.**
+
+#### First launch
+
+```powershell
+npm run dev
+```
+
+1. Open [Next Play](http://127.0.0.1:3000).
+2. Open settings, then **Set up accounts and app**. Add your Steam profile link (`https://steamcommunity.com/id/your_user/` or `https://steamcommunity.com/profiles/YOUR_STEAMID64/`) and key.
+3. Under **Diagnostics**, click **Check connections**, then **Sync** under **Steam & Families**.
+4. Check **Your library**. To start without AI, choose **Local algorithm** under **Engine & AI**, adjust filters, and request a recommendation. Start with few filters while optional metadata is missing.
+
+Keep the terminal open. Stop with `Ctrl+C`; run `npm run dev` again to reopen. Data remains in `data/`. Development listens only on `127.0.0.1:3000`, so sharing this link does not grant access from another computer. Each person runs their own copy. The Codex desktop app need not stay open.
+
+#### Enable AI recommendations (optional)
+
+Install [Codex CLI using OpenAI's official instructions](https://learn.chatgpt.com/docs/codex/cli), then sign in with your own ChatGPT account:
+
+```powershell
+npm install -g @openai/codex@latest
+codex login
+codex login status
+npm run check:codex
+```
+
+The status must say **Logged in using ChatGPT**. Choose Codex in **Engine & AI**. Recommendations share your account's Codex allowance. The local algorithm works without Codex. Use `npm.cmd` or `codex.cmd` if PowerShell blocks `.ps1` launchers; do not change the global execution policy.
+
+#### Run a production build
+
+```powershell
+npm run build
+npm run start:production
+```
+
+This checkout server listens on the local network at `0.0.0.0:3001`. Use `http://127.0.0.1:3001` on the PC, or `http://<PC-IP>:3001` on your phone. Only use a trusted private network; do not expose it to the Internet. `npm start` remains available on port 3000. Rebuild after changing code. The installed app has its own startup and network controls.
+
+For checkout startup at Windows sign-in, after building:
+
+```powershell
+npm run startup:install
+```
+
+A hidden launcher is added to the sign-in startup folder. Remove it with `npm run startup:uninstall`. If you move the project, remove the old launcher and install it from the new location. Rebuild after code changes.
+
+### Connect your data
+
+Use your own keys in `.env.local`; `.env.example` contains placeholders:
+
+| Variable               | Where to get it                                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `STEAM_API_KEY`        | [Steam Web API](https://steamcommunity.com/dev/apikey); use `localhost` as your personal app's domain.                             |
+| `TWITCH_CLIENT_ID`     | [Twitch console](https://dev.twitch.tv/console/apps); register a **Confidential** app with `http://localhost` as its redirect URL. |
+| `TWITCH_CLIENT_SECRET` | The same Twitch app's management page.                                                                                             |
+
+Twitch's two values are optional and must be configured together. Never paste keys into chat or commit them. Next Play rereads `.env.local`; click **Check connections**, then **Sync**. The UI shows key presence; synchronization checks whether the source accepts it.
+
+Add your own profile before syncing. Your profile and **game details** must be public. If Steam cannot read them, the last library is kept and an error is shown; that differs from an accessible library with zero games. Steam passwords and cookies are not imported.
+
+IGDB is optional for reading your library, but needed for genres, modes, and discoveries. Strict metadata filters exclude games missing that information. Story length prefers HLTB, then IGDB's average time to credits when there are contributions. Story length is never session length; Steam hours do not prove liking or finishing a game.
+
+#### HowLongToBeat
+
+[howlongtobeatpy](https://github.com/ScrappyCocco/HowLongToBeat-PythonAPI) runs through a short-lived Python process started by Node. No other server or HLTB credentials are needed. The optional integration has been tested with Python 3.12:
+
+```powershell
+python -m venv .venv-hltb
+.venv-hltb\Scripts\python.exe -m pip install -r requirements-hltb.txt
+.venv-hltb\Scripts\python.exe tests/hltb_test.py
+```
+
+On macOS/Linux:
+
+```sh
+python3 -m venv .venv-hltb
+.venv-hltb/bin/python -m pip install -r requirements-hltb.txt
+.venv-hltb/bin/python tests/hltb_test.py
+```
+
+Then click **Check connections**. Without Python/HLTB, available IGDB lengths are used. `.venv-hltb` is detected by default; set `NEXTPLAY_PYTHON` to an absolute executable path for another environment. The process receives only game names and identifiers, without Steam/Twitch keys or Codex authentication.
+
+Each recommendation queries up to eight candidates without current cache data, including discoveries. Coverage grows through searches rather than scanning the entire library at once. A match requires an explicit primary or alternate Steam AppID; alternate editions may share estimates. The UI shows story, story plus extras, completionist length, link, and retrieval date. Estimates without contributions remain unknown.
+
+`data/hltb.json` caches reads for seven days. **Update library and data** also schedules HLTB refresh on the next recommendation. Blocking, rate limits, format changes, and failures preserve the last valid read, falling back to IGDB when HLTB story length is missing. This unofficial integration depends on the site's behavior.
+
+### Use Next Play
+
+#### Language and colors
+
+Use **🇬🇧 EN / 🇪🇸 ES** in the header to change language. Spanish is the initial fallback. The choice is saved in this browser and synchronized between its tabs. New recommendations and service messages use the selected language; personal notes, titles, and earlier AI conversations keep their original text. Steam tags use their English names when available.
+
+The app has one **immersive** layout with **Mint, Ocean, Violet, Amber, and Rose** palettes. **Color** changes the palette without changing navigation or cards. The choice persists after reload; old Legacy, Steam, PS5, and Switch 2 selections fall back to Mint.
+
+#### Steam Families
+
+Use `STEAM_FAMILY_TOKEN`, the `webapi_token` from [your official Steam session](https://store.steampowered.com/pointssummary/ajaxgetasyncconfig), alongside `STEAM_API_KEY`. They are different credentials. Next Play checks that the token belongs to the connected profile; it never returns it to the browser or sends it to Codex.
+
+Click **Check connections** and **Connect Steam Families**. Group libraries are imported automatically, including private profiles. Filter your own games, shared games, or each member's games in **Your library**. Duplicates merge by AppID and preferences are preserved. Imported playtime belongs to the connected profile, not copy owners.
+
+Steam determines which games can be borrowed. Excluded games and owner-private titles are not imported as shared. Family recommendations count among the three library choices, never as discoveries. Availability of a free copy at that moment is not checked.
+
+Family data refreshes after 24 hours when requesting recommendations, or through **Update Steam Families**. Expired tokens and failures keep the last read with a warning. If Steam confirms that you left the group, borrowed games are removed and preferences kept. This integration uses Steam Families services without a stable public contract.
+
+#### Steam tags
+
+Tags come from public Steam pages, without keys or AI classification. Spanish names, IDs, available English names, and retrieval dates are saved. [Steamworks tags](https://partner.steamgames.com/doc/store/tags) reflect developer and community input; the top twenty describe games but do not guarantee difficulty, content, or suitability.
+
+**Settings → Steam & Families → Load Steam tags** runs a resumable sync. It keeps progress when stopped or rate-limited. Library covers and filters use the same top four tags; selection also uses them as affinity signals. Tags remain distinct from IGDB genres.
+
+#### Recommendations and tastes
+
+- **For today** selects a session with an optional minutes target; available metadata cannot guarantee session length. **Next game** selects for several sessions with an optional story-hours limit.
+- Set favorites and statuses in **Your library**. Completed and abandoned games are excluded unless replaying is allowed. **Not interested** is always excluded.
+- **Local algorithm · No tokens** ranks the saved catalog using the same weights, returning up to three library games and two discoveries already in history. Card scores are explanations, not probabilities. It makes no AI or recommendation network calls, works without Codex, and ignores free-text mood, notes, and conversation. Use filters and editable affinities instead. Story length is a strict limit. The last engine selection is saved.
+- **History** keeps completed searches with date, engine, filters, message, cards, and warnings in SQLite. Open earlier results and change game statuses. The conversation present during migration is imported automatically; conversations deleted earlier cannot be recovered.
+
+**Your tastes** estimates affinities from played and favorite games with metadata: progression, challenge, action/combat, tactics, building/automation, combinations, puzzles, exploration, narrative, atmosphere, horror, replayability, survival, and cooperation. Rules live in `lib/tastes.ts`; Steam tags carry more weight than IGDB genres and descriptions. Hours have limited weight adjusted to story length when known, and recognized editions count once. Explicit opinions override favorites and hours; manual affinity corrections have priority. Negative opinions can yield negative weights. Weights describe evidence, not probabilities or confirmed completion.
+
+Exclude hours that do not represent your tastes without removing games from recommendations. Favorites still count. Persistent notes go to Codex; the local algorithm ignores them. Current filters and requests take priority over the inferred profile.
+
+Mark games as playing or paused and select continuing or starting in **For today**. The shortlist saves candidates and can limit searches to them. Opinions on completed or abandoned games adjust affinities and can be removed. Remove active filters individually and inspect the matching count, including shortlist restrictions. Recent recommendations receive a soft penalty across the last five searches; an explicit current request can repeat a game.
+
+**Something like this** prepares an editable Codex request based on a reference game, excluding the reference from results. **Comfort zone** selects a familiar option and an alternative with a known connection and a less represented trait; missing evidence is reported. Filter counts show candidates before choosing that pair. Guided chat asks questions until you choose **Recommend now**.
+
+### Data and Codex internals
+
+`data/library.sqlite` is the source of truth, using Node's native SQLite module. `games` stores synced games, owners, hours, and metadata with unique AppIDs; `app_state` stores profile, family, preferences, and conversation. Updates are transactional. First launch imports `data/state.json`, keeping it unchanged as a pre-migration copy. Editing that old JSON no longer updates the app. Corruption produces an error without replacing originals.
+
+`data/cache.json` keeps metadata for seven days and reviews for 24 hours. Recommendation requests refresh libraries older than 24 hours. **Update library and data** forces reads and marks reviews for refresh, preserving prior values on failure. There are no background library-refresh jobs. Stop the server and copy `data` for a complete manual backup.
+
+Codex receives a compact eligible-candidate index, eight initial records, and [read-only MCP](https://developers.openai.com/codex/mcp/) access through `query_games` to search, filter, and page the whole catalog. Index rows hold AppID, name, origin, known story length, and up to four Steam tags with shared name dictionaries. Statuses, favorites, and opinions are sent separately. The index is rebuilt from current filters and data on every request.
+
+The index budget is 160,000 characters, not tokens. Over budget, it preserves IDs, names, and origin first; if needed, `nextOffset` exposes the rest without hiding partial coverage. The searchable catalog is not capped at 40 library games or 20 discoveries. Queries support names/descriptions, ownership, family owners, genre, mode, length, favorites, unplayed games, and AppID lookups. Pages contain up to 50 games with `total` and `nextOffset`. AI must verify records before recommending; knowing all titles does not mean reading all details.
+
+Each query uses a temporary read-only SQLite catalog of eligible candidates, deleted afterward. AI receives owner names, never SteamIDs or keys. Commands, other connectors, and web search are disabled. Official Codex uses ChatGPT authentication, an ephemeral session, and JSON output validated against eligible candidates. Your Codex allowance is shared.
+
+Review refreshes are limited to 40 library games and 20 discoveries per request; this only limits network work. HLTB updates up to eight games incrementally. Logs `recommendations:database:ready`, `recommendations:codex:start`, and `codex:catalog:query` report catalog counts and AI queries.
+
+The initial model is `gpt-5.6-luna`. Choose model and reasoning effort in **Engine & AI**; **Save** applies draft selections. The last used selection is kept in SQLite. `NEXTPLAY_CODEX_MODEL` in `.env.local` can select another available model. For a nonstandard installation, set `NEXTPLAY_CODEX_BIN` to the absolute native executable path (`codex.exe` on Windows). If Codex cannot find your user folder, launch from a normal Windows terminal and check `codex login status`; do not copy authentication files or use another account.
+
+### Share and troubleshoot
+
+Share the [public downloads link](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest). No GitHub sign-in is needed to download or update. Each person connects their own accounts; do not send your development or personal-data folder.
+
+| Problem                                                  | Check                                                                                                                              |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `node` / `npm` is not recognized, or `node:sqlite` fails | Install Node 24+, open a new terminal, and check `node --version`.                                                                 |
+| PowerShell blocks `npm.ps1` / `codex.ps1`                | Use `npm.cmd` / `codex.cmd`, or CMD.                                                                                               |
+| Port 3000 is occupied                                    | Stop the other Next Play development instance in its terminal with `Ctrl+C`, or use another test port.                             |
+| Steam imports no games                                   | Check your key, profile link, and public game-details setting.                                                                     |
+| Codex is missing or the model needs a newer version      | Update with `npm install -g @openai/codex@latest`, check login, and rerun `npm run check:codex`; check `NEXTPLAY_CODEX_BIN` above. |
+| Missing lengths, genres, or results                      | Configure optional sources, check connections, and relax filters. Local mode does not download new metadata.                       |
+
+### Checks
+
+```powershell
+npm test
+npm run typecheck
+npm run build
+npm run check:codex -- --live
+npm run check:flow
+```
+
+The last two commands call Codex and consume allowance. The flow check covers both modes and a continuation with 124 synthetic games, including a shared game beyond the first 60. Other tests avoid external services and cover privacy, failures, filters, ownership, invented IDs, context, local access, SQLite migration/rollback/persistence, MCP pagination, language isolation, and palette persistence.
+
+The UI optionally exposes WebMCP tools to inspect state and request recommendations with the visible filters. Browsers without WebMCP work normally.
+
+Sources: [Steam Player Service](https://partner.steamgames.com/doc/webapi/IPlayerService), [Steam reviews](https://partner.steamgames.com/doc/store/getreviews), [IGDB](https://api-docs.igdb.com/), [Codex](https://learn.chatgpt.com/docs/codex-sdk).
+
+---
+
+<a id="espanol"></a>
+
+## Español
+
+[🇬🇧 English](#english) · [🇪🇸 Español](#espanol)
+
+Web personal en español e inglés para elegir qué jugar de tu biblioteca de Steam. Puedes usar el algoritmo local sin IA o tu sesión de **Codex con ChatGPT**, sin configurar la API de OpenAI. Cada persona instala la app en su ordenador y utiliza sus propias cuentas y claves.
 
 ## Instalar en Windows
 
@@ -26,7 +266,7 @@ El acceso empieza limitado al PC. **Permitir acceso desde mi red local** solicit
 
 El programa está en `%LOCALAPPDATA%\Programs\NextPlay`; la biblioteca, configuración, sesión de Codex y copias están en `%LOCALAPPDATA%\NextPlay`. Las credenciales se guardan localmente; la API solo devuelve si están configuradas. Omitir una clave conserva su valor y eliminarla requiere una acción explícita. La desinstalación conserva tus datos. Para una copia manual, sal de Next Play y copia la carpeta completa.
 
-El código y el historial permanecen en **ivangonzalezsp/nextplay**, privado. Los instaladores y notas se publican en **ivangonzalezsp/nextplay-releases**, público. Parte del código distribuido se puede inspeccionar. Consulta [compilación y publicación](docs/windows-release.md) para mantener este reparto.
+El código y el historial permanecen en **ivangonzalezsp/nextplay**, público. Los instaladores y notas se publican en **ivangonzalezsp/nextplay-releases**, público. Parte del código distribuido se puede inspeccionar. Consulta [compilación y publicación](docs/windows-release.md) para mantener este reparto.
 
 ## Licencia
 
@@ -36,7 +276,7 @@ El nombre y el logotipo **Next Play** no se conceden bajo esta licencia.
 
 ## Desarrollo desde el código fuente
 
-Las siguientes instrucciones son para quienes tienen acceso al repositorio privado. Para uso normal, utiliza el instalador de Windows.
+Las siguientes instrucciones son para desarrollar desde el repositorio público. Para uso normal, utiliza el instalador de Windows.
 
 ### Requisitos de desarrollo
 
@@ -172,6 +412,12 @@ Cada recomendación consulta hasta ocho candidatos sin caché vigente, incluyend
 
 ## Uso
 
+### Idioma y colores
+
+Usa **🇬🇧 EN / 🇪🇸 ES** en la cabecera para cambiar de idioma. Español es el idioma inicial. La elección se guarda en este navegador y se sincroniza entre sus pestañas. Las nuevas recomendaciones y los mensajes de servicios usan el idioma elegido; las notas personales, títulos y conversaciones anteriores conservan su texto original. Las etiquetas de Steam usan su nombre inglés cuando está disponible.
+
+Solo se conserva el diseño **Inmersivo**, con las paletas **Menta, Océano, Violeta, Ámbar y Rosa**. El selector **Color** cambia la paleta sin cambiar las tarjetas ni la navegación. Las selecciones antiguas de Legacy, Steam, PS5 y Switch 2 vuelven a Menta.
+
 ### Steam Families
 
 La conexión familiar utiliza `STEAM_FAMILY_TOKEN`, el valor `webapi_token` de [tu sesión oficial de Steam](https://store.steampowered.com/pointssummary/ajaxgetasyncconfig). Guárdalo en `.env.local` junto a `STEAM_API_KEY`. Son credenciales distintas. La app comprueba que el token corresponde al perfil conectado; nunca lo devuelve al navegador ni lo envía a Codex.
@@ -236,7 +482,7 @@ Si aparece «no puede localizar tu carpeta de usuario», ejecuta la aplicación 
 
 ## Compartir Next Play
 
-Comparte el [enlace público de descargas](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest). Tus conocidos no necesitan acceso al repositorio privado ni autenticarse en GitHub para descargar o actualizar. Cada persona usa sus propias cuentas desde el asistente. No envíes la carpeta de desarrollo ni tu carpeta de datos personales.
+Comparte el [enlace público de descargas](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest). Tus conocidos no necesitan clonar el repositorio ni autenticarse en GitHub para descargar o actualizar. Cada persona usa sus propias cuentas desde el asistente. No envíes la carpeta de desarrollo ni tu carpeta de datos personales.
 
 ## Problemas frecuentes
 

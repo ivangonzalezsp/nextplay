@@ -1,5 +1,8 @@
 'use client';
 
+import { translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import * as React from 'react';
 import { Dialog as DialogPrimitive } from '@base-ui/react/dialog';
 
@@ -47,6 +50,7 @@ function DialogContent({
 }: DialogPrimitive.Popup.Props & {
     showCloseButton?: boolean;
 }) {
+    useLanguage();
     return (
         <DialogPortal>
             <DialogOverlay />
@@ -71,7 +75,7 @@ function DialogContent({
                         }
                     >
                         <XIcon />
-                        <span className="sr-only">Close</span>
+                        <span className="sr-only">{t('Cerrar')}</span>
                     </DialogPrimitive.Close>
                 )}
             </DialogPrimitive.Popup>
@@ -97,6 +101,7 @@ function DialogFooter({
 }: React.ComponentProps<'div'> & {
     showCloseButton?: boolean;
 }) {
+    useLanguage();
     return (
         <div
             data-slot="dialog-footer"
@@ -109,7 +114,7 @@ function DialogFooter({
             {children}
             {showCloseButton && (
                 <DialogPrimitive.Close render={<Button variant="outline" />}>
-                    Close
+                    {t('Cerrar')}
                 </DialogPrimitive.Close>
             )}
         </div>

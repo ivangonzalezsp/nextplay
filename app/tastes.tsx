@@ -1,4 +1,7 @@
 'use client';
+
+import { translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
 import { useMemo, useState } from 'react';
 import type { Snapshot, TasteChoice, TasteSettings } from '../lib/model';
 import { OPINION_LABELS } from '../lib/model';
@@ -22,13 +25,14 @@ export default function Tastes({
     busy: boolean;
     onSave: (settings: TasteSettings) => Promise<void>;
 }) {
+    const language = useLanguage();
     const [draft, setDraft] = useState<TasteSettings>(() =>
         structuredClone(state.tastes ?? EMPTY_TASTES),
     );
     const [search, setSearch] = useState('');
     const profile = useMemo(
-        () => buildTasteProfile({ ...state, tastes: draft }),
-        [state, draft],
+        () => buildTasteProfile({ ...state, tastes: draft }, language),
+        [state, draft, language],
     );
     const changed =
         JSON.stringify(draft) !== JSON.stringify(state.tastes ?? EMPTY_TASTES);
@@ -51,36 +55,31 @@ export default function Tastes({
                 void onSave(draft);
             }}
         >
-            <h2>Tus gustos</h2>
+            <h2>{t('Tus gustos')}</h2>
             <p>
-                Afinidades basadas en todo tu historial con datos disponibles.
-                Las etiquetas de Steam pesan más que los géneros y las
-                descripciones de IGDB. Tus opiniones explícitas prevalecen sobre
-                favoritos y horas; tus correcciones de afinidad tienen
-                prioridad.
+                {t(
+                    'Afinidades basadas en todo tu historial con datos disponibles. Las etiquetas de Steam pesan más que los géneros y las descripciones de IGDB. Tus opiniones explícitas prevalecen sobre favoritos y horas; tus correcciones de afinidad tienen prioridad. ',
+                )}
             </p>
             <p className="small-note">
-                Las horas tienen un peso limitado y se ajustan a la duración de
-                la historia cuando se conoce, para dar espacio a los juegos
-                cortos. Las ediciones reconocibles cuentan una vez. El peso
-                refleja la presencia de cada afinidad en tu historial, no una
-                probabilidad de que te guste ni una confirmación de que
-                terminaste un juego. Las opiniones negativas pueden dar pesos
-                negativos. Puedes guardar tu opinión desde las tarjetas de
-                juegos terminados o abandonados.
+                {t(
+                    'Las horas tienen un peso limitado y se ajustan a la duración de la historia cuando se conoce, para dar espacio a los juegos cortos. Las ediciones reconocibles cuentan una vez. El peso refleja la presencia de cada afinidad en tu historial, no una probabilidad de que te guste ni una confirmación de que terminaste un juego. Las opiniones negativas pueden dar pesos negativos. Puedes guardar tu opinión desde las tarjetas de juegos terminados o abandonados. ',
+                )}
             </p>
             <fieldset disabled={busy}>
-                <legend className="sr-only">Corregir tus afinidades</legend>
+                <legend className="sr-only">
+                    {t('Corregir tus afinidades')}
+                </legend>
                 <div className="taste-grid">
                     {profile.map((a) => (
                         <section className="taste-card" key={a.id}>
                             <h3>
-                                <span>{a.label}</span>
+                                <span>{t(a.label)}</span>
                                 <Tooltip>
                                     <TooltipTrigger
                                         type="button"
                                         className="taste-info"
-                                        aria-label={`Qué significa ${a.label}`}
+                                        aria-label={`${t('Qué significa ')}${a.label}`}
                                     >
                                         <CircleHelp
                                             aria-hidden="true"
@@ -88,16 +87,19 @@ export default function Tastes({
                                         />
                                     </TooltipTrigger>
                                     <TooltipContent side="top" align="start">
-                                        {a.description}
+                                        {t(a.description)}
                                     </TooltipContent>
                                 </Tooltip>
                             </h3>
                             <p className="small-note">
-                                Peso histórico: {Math.round(a.inferred * 100)}
-                                /100 · {a.evidenceCount} juegos de referencia
+                                {t('Peso histórico: ')}
+                                {Math.round(a.inferred * 100)}
+                                /100 · {a.evidenceCount}{' '}
+                                {t('juegos de referencia ')}
                             </p>
                             <label htmlFor={'taste-' + a.id}>
-                                Tu preferencia: {a.label}
+                                {t('Tu preferencia: ')}
+                                {t(a.label)}
                             </label>
                             <select
                                 id={'taste-' + a.id}
@@ -115,16 +117,16 @@ export default function Tastes({
                                 }
                             >
                                 <option value="auto">
-                                    Usar la hipótesis del historial
+                                    {t('Usar la hipótesis del historial ')}
                                 </option>
                                 <option value="like">
-                                    Me gusta · priorizar
+                                    {t('Me gusta · priorizar ')}
                                 </option>
                                 <option value="neutral">
-                                    Neutral · no usar esta afinidad
+                                    {t('Neutral · no usar esta afinidad ')}
                                 </option>
                                 <option value="dislike">
-                                    Me atrae poco · reducir prioridad
+                                    {t('Me atrae poco · reducir prioridad ')}
                                 </option>
                             </select>
                             {a.evidence.length ? (
@@ -132,16 +134,17 @@ export default function Tastes({
                                     {a.evidence.map((e) => (
                                         <li key={e.appId}>
                                             {e.name} ·{' '}
-                                            {e.hours.toLocaleString('es')} h
+                                            {e.hours.toLocaleString(locale())} h
                                             {e.favorite
-                                                ? ' · favorito explícito'
+                                                ? t(' · favorito explícito')
                                                 : ''}
                                             {e.opinion
-                                                ? ` · ${OPINION_LABELS[e.opinion]}`
+                                                ? ` · ${t(OPINION_LABELS[e.opinion])}`
                                                 : ''}
                                             {e.opinionReason && (
                                                 <p className="small-note">
-                                                    Tu motivo: {e.opinionReason}
+                                                    {t('Tu motivo: ')}
+                                                    {e.opinionReason}
                                                 </p>
                                             )}
                                             <p className="small-note">
@@ -154,35 +157,36 @@ export default function Tastes({
                                 </ul>
                             ) : (
                                 <p className="small-note">
-                                    Sin evidencia suficiente. Puedes indicar tu
-                                    preferencia igualmente.
+                                    {t(
+                                        'Sin evidencia suficiente. Puedes indicar tu preferencia igualmente. ',
+                                    )}
                                 </p>
                             )}
                             {a.evidenceCount > a.evidence.length && (
                                 <p className="small-note">
-                                    Se muestran los {a.evidence.length} juegos
-                                    con más peso.
+                                    {t('Se muestran los ')}
+                                    {a.evidence.length}{' '}
+                                    {t('juegos con más peso. ')}
                                 </p>
                             )}
                         </section>
                     ))}
                 </div>
                 <section className="taste-card">
-                    <h3>Horas que no representan tus gustos</h3>
+                    <h3>{t('Horas que no representan tus gustos')}</h3>
                     <p>
-                        Por ejemplo, un juego al que entrabas por tus amigos.
-                        Excluir sus horas no lo elimina de las recomendaciones.
-                        Si lo marcas como favorito, esa preferencia sigue
-                        contando.
+                        {t(
+                            'Por ejemplo, un juego al que entrabas por tus amigos. Excluir sus horas no lo elimina de las recomendaciones. Si lo marcas como favorito, esa preferencia sigue contando. ',
+                        )}
                     </p>
                     <label htmlFor="taste-search">
-                        Buscar un juego para excluir sus horas
+                        {t('Buscar un juego para excluir sus horas ')}
                     </label>
                     <Input
                         id="taste-search"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        placeholder="Ejemplo: Rust"
+                        placeholder={t('Ejemplo: Rust')}
                     />
                     <div className="taste-hours">
                         {games.map((g) => (
@@ -194,15 +198,16 @@ export default function Tastes({
                                     )}
                                     onChange={() => toggle(g.appId)}
                                 />
-                                Excluir horas de {g.name} ·{' '}
+                                {t('Excluir horas de ')}
+                                {g.name} ·{' '}
                                 {Math.round((g.playtimeMinutes ?? 0) / 60)} h
                             </label>
                         ))}
                     </div>
-                    {!games.length && <p>Sin coincidencias.</p>}
+                    {!games.length && <p>{t('Sin coincidencias.')}</p>}
                     {!!draft.ignoredHours.length && (
                         <div>
-                            <h4>Horas excluidas</h4>
+                            <h4>{t('Horas excluidas')}</h4>
                             {draft.ignoredHours.map((id) => (
                                 <Button
                                     type="button"
@@ -210,7 +215,7 @@ export default function Tastes({
                                     key={id}
                                     onClick={() => toggle(id)}
                                 >
-                                    Volver a usar:{' '}
+                                    {t('Volver a usar:')}{' '}
                                     {state.games.find((g) => g.appId === id)
                                         ?.name ?? `Steam ${id}`}
                                 </Button>
@@ -220,7 +225,7 @@ export default function Tastes({
                 </section>
                 <section className="taste-card">
                     <label htmlFor="taste-notes">
-                        Lo que quieres que Codex recuerde de tus gustos
+                        {t('Lo que quieres que Codex recuerde de tus gustos ')}
                     </label>
                     <Textarea
                         id="taste-notes"
@@ -229,22 +234,27 @@ export default function Tastes({
                         onChange={(e) =>
                             setDraft({ ...draft, notes: e.target.value })
                         }
-                        placeholder="Rust lo jugaba por mis amigos. Me gusta explorar, pero prefiero evitar repetir combates."
+                        placeholder={t(
+                            'Rust lo jugaba por mis amigos. Me gusta explorar, pero prefiero evitar repetir combates.',
+                        )}
                     />
                     <p className="small-note">
-                        Estas notas llegan a Codex en cada búsqueda. Para
-                        cambiar los pesos de la preselección, usa las afinidades
-                        y la exclusión de horas de arriba. Tus filtros y la
-                        petición actual tienen prioridad.
+                        {t(
+                            'Estas notas llegan a Codex en cada búsqueda. Para cambiar los pesos de la preselección, usa las afinidades y la exclusión de horas de arriba. Tus filtros y la petición actual tienen prioridad. ',
+                        )}
                     </p>
                 </section>
                 <Button type="submit" disabled={busy || !changed}>
-                    Guardar mis gustos
+                    {t('Guardar mis gustos ')}
                 </Button>
                 <output className="small-note">
                     {changed
-                        ? 'Cambios sin guardar. Al guardar se reinician las propuestas anteriores.'
-                        : 'Perfil al día. Tus correcciones guardadas se conservan entre búsquedas y reinicios.'}
+                        ? t(
+                              'Cambios sin guardar. Al guardar se reinician las propuestas anteriores.',
+                          )
+                        : t(
+                              'Perfil al día. Tus correcciones guardadas se conservan entre búsquedas y reinicios.',
+                          )}
                 </output>
             </fieldset>
         </form>

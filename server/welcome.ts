@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { type State } from '../lib/model.ts';
 import { EMPTY_TASTES } from '../lib/tastes.ts';
 import { parsePreference, parseTastes } from './selection.ts';
@@ -20,7 +21,9 @@ export function applyWelcome(state: State, payload: Record<string, unknown>) {
                 payload[key] !== undefined && typeof payload[key] !== 'boolean',
         )
     )
-        throw new AppError('Revisa las respuestas de la bienvenida.');
+        throw new AppError(
+            translateMessage('Revisa las respuestas de la bienvenida.'),
+        );
     let preference;
     if (payload.appId !== undefined) {
         if (
@@ -33,7 +36,9 @@ export function applyWelcome(state: State, payload: Record<string, unknown>) {
                     g.isGame !== false,
             )
         )
-            throw new AppError('Ese juego no pertenece a tu biblioteca.');
+            throw new AppError(
+                translateMessage('Ese juego no pertenece a tu biblioteca.'),
+            );
         if (payload.preference !== undefined) {
             const patch = payload.preference as Record<string, unknown>;
             if (
@@ -46,7 +51,9 @@ export function applyWelcome(state: State, payload: Record<string, unknown>) {
                 )
             )
                 throw new AppError(
-                    'La opinión o el estado del juego no es válido.',
+                    translateMessage(
+                        'La opinión o el estado del juego no es válido.',
+                    ),
                 );
             preference = parsePreference({
                 ...(state.preferences[String(payload.appId)] ?? {
@@ -63,7 +70,9 @@ export function applyWelcome(state: State, payload: Record<string, unknown>) {
             });
         }
     } else if (payload.preference !== undefined) {
-        throw new AppError('Selecciona un juego de tu biblioteca.');
+        throw new AppError(
+            translateMessage('Selecciona un juego de tu biblioteca.'),
+        );
     }
     const tastes =
         payload.overrides === undefined

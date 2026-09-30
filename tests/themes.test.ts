@@ -8,12 +8,9 @@ import {
     resolveTheme,
 } from '../lib/themes.ts';
 
-void test('immersive is the fallback while saved themes, including legacy, persist', () => {
+void test('immersive palettes persist and removed themes fall back safely', () => {
     assert.equal(THEMES[0].id, DEFAULT_THEME);
-    assert.equal(
-        THEMES.find((theme) => theme.id === 'default')?.label,
-        'Legacy',
-    );
+    assert.ok(THEMES.every((theme) => theme.id.startsWith('cinema')));
 
     for (const saved of THEMES.map((theme) => theme.id)) {
         const document = { documentElement: { dataset: { theme: '' } } };
@@ -27,7 +24,15 @@ void test('immersive is the fallback while saved themes, including legacy, persi
         );
     }
 
-    for (const saved of [null, 'removed-theme', '<script>']) {
+    for (const saved of [
+        null,
+        'default',
+        'steam',
+        'ps5',
+        'switch2',
+        'removed-theme',
+        '<script>',
+    ]) {
         const document = { documentElement: { dataset: { theme: '' } } };
         runInNewContext(THEME_INIT_SCRIPT, {
             document,

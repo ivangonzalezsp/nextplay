@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 
 export const STEAM_TAG_SOURCE = 'steam-apphoverpublic:english';
@@ -108,13 +109,13 @@ function key(value: string) {
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/\s+/g, ' ')
         .trim()
-        .toLocaleLowerCase('en');
+        .toLocaleLowerCase(translateMessage('en'));
 }
 
 function rows(value: unknown, language: string): TagRow[] {
     if (!Array.isArray(value))
         throw new SteamTagsError(
-            `Steam devolvió un diccionario ${language} inválido.`,
+            `${translateMessage('Steam devolvió un diccionario ')}${language}${translateMessage(' inválido.')}`,
         );
     const result: TagRow[] = [];
     for (const raw of value) {
@@ -130,7 +131,7 @@ function rows(value: unknown, language: string): TagRow[] {
     }
     if (!result.length)
         throw new SteamTagsError(
-            `Steam devolvió un diccionario ${language} vacío.`,
+            `${translateMessage('Steam devolvió un diccionario ')}${language}${translateMessage(' vacío.')}`,
         );
     return result;
 }
@@ -139,8 +140,8 @@ export function createTagDictionaries(
     englishValue: unknown,
     spanishValue: unknown,
 ): TagDictionaries {
-    const english = rows(englishValue, 'inglés');
-    const spanish = rows(spanishValue, 'español');
+    const english = rows(englishValue, translateMessage('inglés'));
+    const spanish = rows(spanishValue, translateMessage('español'));
     const englishByName = new Map<string, number[]>();
     const englishById = new Map<number, string>();
     const spanishById = new Map<number, string>();
@@ -160,7 +161,9 @@ function rootContent(html: string, appId: number) {
         'i',
     ).exec(html);
     if (!open)
-        throw new SteamTagsError('Steam no devolvió el contenedor del AppID.');
+        throw new SteamTagsError(
+            translateMessage('Steam no devolvió el contenedor del AppID.'),
+        );
     let depth = 1;
     const tokens = /<\/?div\b[^>]*>/gi;
     tokens.lastIndex = open.index + open[0].length;
@@ -171,7 +174,9 @@ function rootContent(html: string, appId: number) {
         if (depth === 0)
             return html.slice(open.index + open[0].length, match.index);
     }
-    throw new SteamTagsError('Steam devolvió un HTML incompleto.');
+    throw new SteamTagsError(
+        translateMessage('Steam devolvió un HTML incompleto.'),
+    );
 }
 
 export function parseHoverTags(
@@ -180,7 +185,7 @@ export function parseHoverTags(
     dictionaries?: TagDictionaries,
 ): SteamTag[] {
     if (!Number.isSafeInteger(appId) || appId <= 0)
-        throw new SteamTagsError('El AppID no es válido.');
+        throw new SteamTagsError(translateMessage('El AppID no es válido.'));
     const content = rootContent(html, appId);
     const result: SteamTag[] = [];
     const seen = new Set<string>();
@@ -242,7 +247,9 @@ export function createSteamTagClient(options: SteamTagClientOptions = {}) {
                     continue;
                 }
                 throw new SteamTagsError(
-                    'Steam no respondió a tiempo o rechazó la conexión.',
+                    translateMessage(
+                        'Steam no respondió a tiempo o rechazó la conexión.',
+                    ),
                     { retryable: true },
                 );
             }
@@ -255,7 +262,7 @@ export function createSteamTagClient(options: SteamTagClientOptions = {}) {
                         finalUrl.pathname !== requested.pathname
                     )
                         throw new SteamTagsError(
-                            'Steam redirigió la consulta.',
+                            translateMessage('Steam redirigió la consulta.'),
                             {
                                 retryable: false,
                             },
@@ -263,16 +270,19 @@ export function createSteamTagClient(options: SteamTagClientOptions = {}) {
                 } catch (error) {
                     if (error instanceof SteamTagsError) throw error;
                     throw new SteamTagsError(
-                        'Steam devolvió una URL inválida.',
+                        translateMessage('Steam devolvió una URL inválida.'),
                     );
                 }
             }
             if (response.status === 429) {
                 if (attempt >= maxAttempts)
-                    throw new SteamTagsError('Steam ha limitado la consulta.', {
-                        status: 429,
-                        retryable: true,
-                    });
+                    throw new SteamTagsError(
+                        translateMessage('Steam ha limitado la consulta.'),
+                        {
+                            status: 429,
+                            retryable: true,
+                        },
+                    );
                 await sleep(
                     retryAfterMilliseconds(
                         response.headers.get('retry-after'),
@@ -282,7 +292,7 @@ export function createSteamTagClient(options: SteamTagClientOptions = {}) {
             }
             if (!response.ok)
                 throw new SteamTagsError(
-                    `Steam respondió con HTTP ${response.status}.`,
+                    `${translateMessage('Steam respondió con HTTP ')}${response.status}.`,
                     {
                         status: response.status,
                     },
@@ -291,13 +301,16 @@ export function createSteamTagClient(options: SteamTagClientOptions = {}) {
                 return await response.text();
             } catch {
                 throw new SteamTagsError(
-                    'Steam devolvió una respuesta ilegible.',
+                    translateMessage('Steam devolvió una respuesta ilegible.'),
                 );
             }
         }
-        throw new SteamTagsError('No se pudo consultar Steam.', {
-            retryable: true,
-        });
+        throw new SteamTagsError(
+            translateMessage('No se pudo consultar Steam.'),
+            {
+                retryable: true,
+            },
+        );
     }
 
     return {

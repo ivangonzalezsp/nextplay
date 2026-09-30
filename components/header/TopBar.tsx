@@ -1,7 +1,11 @@
 'use client';
 
+import { translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import Link from 'next/link';
 import { ThemeSelector } from './ThemeSelector';
+import { LanguageSelector } from './LanguageSelector';
 import {
     Gamepad2,
     Settings,
@@ -26,6 +30,7 @@ export function TopBar({
     onSync: () => void;
     busy: string;
 }) {
+    useLanguage();
     const gamesCount = state?.games?.length ?? 0;
     const familyCount = state?.games?.filter((g) => g.shared)?.length ?? 0;
 
@@ -35,7 +40,7 @@ export function TopBar({
                 <Link
                     className="hud-brand"
                     href="/"
-                    aria-label="Next Play, inicio"
+                    aria-label={t('Next Play, inicio')}
                 >
                     <div className="hud-brand-icon">
                         <Gamepad2 className="hud-controller-icon" />
@@ -54,8 +59,8 @@ export function TopBar({
                     className="hud-pill"
                     title={
                         state?.syncedAt
-                            ? `Última sincronización: ${new Date(state.syncedAt).toLocaleString('es')}`
-                            : 'Tu biblioteca'
+                            ? `${t('Última sincronización: ')}${new Date(state.syncedAt).toLocaleString(locale())}`
+                            : t('Tu biblioteca')
                     }
                 >
                     <span
@@ -65,10 +70,10 @@ export function TopBar({
                     <span>
                         {gamesCount > 0 ? (
                             <>
-                                <strong>{gamesCount}</strong> juegos
+                                <strong>{gamesCount}</strong> {t('juegos ')}
                             </>
                         ) : (
-                            'Steam sin conectar'
+                            t('Steam sin conectar')
                         )}
                     </span>
                     {state?.profile && (
@@ -77,8 +82,8 @@ export function TopBar({
                             className="hud-pill-refresh"
                             onClick={onSync}
                             disabled={!!busy}
-                            aria-label="Actualizar biblioteca"
-                            title="Actualizar biblioteca"
+                            aria-label={t('Actualizar biblioteca')}
+                            title={t('Actualizar biblioteca')}
                         >
                             <RefreshCw
                                 size={11}
@@ -91,14 +96,14 @@ export function TopBar({
                 {state?.family && (
                     <div
                         className="hud-pill family"
-                        title={`${state.family.name} (${state.family.members.length} miembros)`}
+                        title={`${state.family.name} (${state.family.members.length}${t(' miembros)')}`}
                     >
                         <Users
                             size={14}
                             className="hud-pill-icon text-cyan-400"
                         />
                         <span>
-                            <strong>{familyCount}</strong> compartidos
+                            <strong>{familyCount}</strong> {t('compartidos ')}
                         </span>
                     </div>
                 )}
@@ -109,23 +114,24 @@ export function TopBar({
                         className="hud-pill-icon text-emerald-400"
                     />
                     <span className="hud-engine-label">
-                        {engine === 'codex' ? 'Codex IA' : 'Motor local'}
+                        {engine === 'codex' ? t('Codex IA') : t('Motor local')}
                     </span>
                 </div>
             </div>
 
             <div className="hud-actions-group">
                 <ThemeSelector />
+                <LanguageSelector />
                 <Button
                     variant="outline"
                     size="sm"
                     className="hud-settings-btn"
                     onClick={onOpenSettings}
-                    aria-label="Abrir configuración y conexiones"
+                    aria-label={t('Abrir configuración y conexiones')}
                 >
                     <Settings size={15} className="hud-settings-icon" />
                     <span className="hidden sm:inline">
-                        Ajustes & Conexiones
+                        {t('Ajustes & Conexiones ')}
                     </span>
                 </Button>
 
@@ -143,7 +149,7 @@ export function TopBar({
                         </div>
                     )}
                     <span className="hud-user-name">
-                        {state?.profile?.name ?? 'Tu perfil'}
+                        {state?.profile?.name ?? t('Tu perfil')}
                     </span>
                 </div>
             </div>

@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { spawn, execFile, type ChildProcess } from 'node:child_process';
 import { promisify, parseEnv } from 'node:util';
 import { access, cp, mkdir, readFile, rm } from 'node:fs/promises';
@@ -50,20 +51,24 @@ let login: AppStatus['login'] = { state: 'idle', message: '' };
 function requireInstalled() {
     if (process.env.NEXTPLAY_INSTALLED !== '1')
         throw new AppError(
-            'Esta opción está disponible en la versión instalada de Next Play.',
+            translateMessage(
+                'Esta opción está disponible en la versión instalada de Next Play.',
+            ),
             409,
         );
 }
 export async function cancelLogin() {
     const child = loginChild;
-    login = { state: 'idle', message: 'Conexión cancelada.' };
+    login = { state: 'idle', message: translateMessage('Conexión cancelada.') };
     if (child && child.exitCode === null && child.signalCode === null) {
         await new Promise<void>((done, fail) => {
             const timer = setTimeout(
                 () =>
                     fail(
                         new AppError(
-                            'No se ha podido cerrar el inicio de sesión. Cierra Next Play y vuelve a abrirla.',
+                            translateMessage(
+                                'No se ha podido cerrar el inicio de sesión. Cierra Next Play y vuelve a abrirla.',
+                            ),
                             409,
                         ),
                     ),
@@ -84,7 +89,9 @@ async function startLogin() {
     const binary = await codexBinary();
     login = {
         state: 'pending',
-        message: 'Completa el inicio de sesión en la ventana del navegador.',
+        message: translateMessage(
+            'Completa el inicio de sesión en la ventana del navegador.',
+        ),
     };
     const child = trackCodexProcess(
         spawn(binary, ['login'], {
@@ -101,8 +108,9 @@ async function startLogin() {
         await cancelLogin().catch(() => {});
         login = {
             state: 'error',
-            message:
+            message: translateMessage(
                 'El inicio de sesión ha caducado. Vuelve a conectar ChatGPT.',
+            ),
         };
     }, 300_000);
     child.once('error', () => {
@@ -111,7 +119,9 @@ async function startLogin() {
         loginChild = undefined;
         login = {
             state: 'error',
-            message: 'No se ha podido abrir el inicio de sesión de ChatGPT.',
+            message: translateMessage(
+                'No se ha podido abrir el inicio de sesión de ChatGPT.',
+            ),
         };
     });
     child.once('close', async (code) => {
@@ -121,11 +131,15 @@ async function startLogin() {
         if (loginChild !== child) return;
         loginChild = undefined;
         login = status?.codex
-            ? { state: 'complete', message: 'ChatGPT conectado.' }
+            ? {
+                  state: 'complete',
+                  message: translateMessage('ChatGPT conectado.'),
+              }
             : {
                   state: 'error',
-                  message:
+                  message: translateMessage(
                       'No se ha completado la conexión. Puedes volver a intentarlo.',
+                  ),
               };
     });
 }
@@ -154,7 +168,9 @@ async function integration(action: string, enabled?: boolean) {
         return stdout.trim();
     } catch {
         throw new AppError(
-            'No se ha completado el cambio en Windows. Comprueba el permiso solicitado y vuelve a intentarlo.',
+            translateMessage(
+                'No se ha completado el cambio en Windows. Comprueba el permiso solicitado y vuelve a intentarlo.',
+            ),
             409,
         );
     }
@@ -228,8 +244,10 @@ async function requestExit(
         restarting: action !== 'exit',
         message:
             action === 'update'
-                ? 'Instalando la actualización. Next Play volverá a abrirse automáticamente.'
-                : 'Cambio guardado.',
+                ? translateMessage(
+                      'Instalando la actualización. Next Play volverá a abrirse automáticamente.',
+                  )
+                : translateMessage('Cambio guardado.'),
     };
 }
 export async function importInstallation(source: string) {
@@ -246,7 +264,9 @@ export async function importInstallation(source: string) {
         Object.keys(settings.connections ?? {}).length
     )
         throw new AppError(
-            'La importación solo está disponible en una instalación nueva, antes de configurar tus cuentas.',
+            translateMessage(
+                'La importación solo está disponible en una instalación nueva, antes de configurar tus cuentas.',
+            ),
             409,
         );
     const original = resolve(source);
@@ -259,7 +279,9 @@ export async function importInstallation(source: string) {
         original === resolve(userDir())
     )
         throw new AppError(
-            'Selecciona la carpeta de tu instalación anterior de Next Play.',
+            translateMessage(
+                'Selecciona la carpeta de tu instalación anterior de Next Play.',
+            ),
             400,
         );
     const stage = join(userDir(), '.import-' + randomUUID());
@@ -285,7 +307,9 @@ export async function importInstallation(source: string) {
                     )[0] !== 'ok'
                 )
                     throw new AppError(
-                        'La biblioteca anterior está dañada. Se han conservado los originales.',
+                        translateMessage(
+                            'La biblioteca anterior está dañada. Se han conservado los originales.',
+                        ),
                     );
                 validState(loadState(db)!);
                 backupDatabase(db, join(stagedData, 'library.sqlite'));
@@ -313,7 +337,9 @@ export async function importInstallation(source: string) {
             if (value !== null) {
                 if (typeof value !== 'object' || Array.isArray(value))
                     throw new AppError(
-                        'Una caché anterior tiene un formato inválido.',
+                        translateMessage(
+                            'Una caché anterior tiene un formato inválido.',
+                        ),
                     );
                 await atomicJson(join(stagedData, file), value);
             }
@@ -364,7 +390,9 @@ export async function manageApp(
 ) {
     if (!canManage(request))
         throw new AppError(
-            'Gestiona las conexiones y la aplicación desde el PC donde está instalada.',
+            translateMessage(
+                'Gestiona las conexiones y la aplicación desde el PC donde está instalada.',
+            ),
             403,
         );
     const path = new URL(request.url).pathname;
@@ -381,7 +409,7 @@ export async function manageApp(
                     !['lan', 'startup', 'onboardingComplete'].includes(key) ||
                     typeof value !== 'boolean'
                 )
-                    throw new AppError('Ajuste no válido.');
+                    throw new AppError(translateMessage('Ajuste no válido.'));
             const settings = await userSettings();
             if ('lan' in payload && payload.lan !== !!settings.lan)
                 await integration('Firewall', payload.lan as boolean);
@@ -394,7 +422,10 @@ export async function manageApp(
         });
     }
     if (request.method !== 'POST' || Object.keys(payload).length)
-        throw new AppError('Esta operación no acepta parámetros.', 400);
+        throw new AppError(
+            translateMessage('Esta operación no acepta parámetros.'),
+            400,
+        );
     if (path === '/api/app/login') {
         return exclusive(async () => {
             await startLogin();
@@ -415,7 +446,9 @@ export async function manageApp(
         return exclusive(async () => {
             if (loginChild)
                 throw new AppError(
-                    'Termina o cancela primero el inicio de sesión.',
+                    translateMessage(
+                        'Termina o cancela primero el inicio de sesión.',
+                    ),
                     409,
                 );
             const update = await prepareUpdate();
@@ -430,12 +463,13 @@ export async function manageApp(
     if (path === '/api/app/import') {
         return exclusive(async () => {
             const folder = await integration('ImportFolder');
-            if (!folder) throw new AppError('Importación cancelada.');
+            if (!folder)
+                throw new AppError(translateMessage('Importación cancelada.'));
             return importInstallation(folder);
         });
     }
     if (path === '/api/app/exit') return exclusive(() => requestExit('exit'));
     if (path === '/api/app/restart')
         return exclusive(() => requestExit('restart'));
-    throw new AppError('Esta operación no existe.', 404);
+    throw new AppError(translateMessage('Esta operación no existe.'), 404);
 }

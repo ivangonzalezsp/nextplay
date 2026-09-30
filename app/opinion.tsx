@@ -1,4 +1,7 @@
 'use client';
+
+import { translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
 import { useId, useState } from 'react';
 import { OPINION_LABELS } from '../lib/model';
 import type { Game, Opinion, Preference } from '../lib/model';
@@ -16,6 +19,7 @@ export default function GameOpinion({
     busy?: boolean;
     onSave: (change: Partial<Preference>) => void;
 }) {
+    useLanguage();
     const reasonId = useId();
     const [opinion, setOpinion] = useState<Opinion | ''>(
         preference?.opinion ?? '',
@@ -33,13 +37,16 @@ export default function GameOpinion({
         <details className="mt-3 rounded-md border p-3">
             <summary className="cursor-pointer">
                 {preference?.opinion
-                    ? `Tu opinión: ${OPINION_LABELS[preference.opinion]}`
-                    : '¿Qué te pareció?'}
+                    ? `${t('Tu opinión: ')}${t(OPINION_LABELS[preference.opinion])}`
+                    : t('¿Qué te pareció?')}
             </summary>
             <fieldset className="mt-3 grid gap-3" disabled={busy}>
-                <legend className="sr-only">Opinión sobre {game.name}</legend>
+                <legend className="sr-only">
+                    {t('Opinión sobre ')}
+                    {game.name}
+                </legend>
                 <label className="grid gap-1">
-                    Tu opinión
+                    {t('Tu opinión ')}
                     <select
                         className="choice"
                         value={opinion}
@@ -48,18 +55,18 @@ export default function GameOpinion({
                             if (!e.target.value) setReason('');
                         }}
                     >
-                        <option value="">Sin opinión</option>
+                        <option value="">{t('Sin opinión')}</option>
                         {Object.entries(OPINION_LABELS).map(
                             ([value, label]) => (
                                 <option key={value} value={value}>
-                                    {label}
+                                    {t(label)}
                                 </option>
                             ),
                         )}
                     </select>
                 </label>
                 <label className="grid gap-1" htmlFor={reasonId}>
-                    Motivo opcional
+                    {t('Motivo opcional ')}
                     <Textarea
                         id={reasonId}
                         value={reason}
@@ -69,8 +76,9 @@ export default function GameOpinion({
                     />
                 </label>
                 <p className="small-note">
-                    Terminar o abandonar no indica si te gustó. Tu opinión
-                    ajusta tus afinidades; Codex también recibe el motivo.
+                    {t(
+                        'Terminar o abandonar no indica si te gustó. Tu opinión ajusta tus afinidades; Codex también recibe el motivo. ',
+                    )}
                 </p>
                 <Button
                     type="button"
@@ -82,14 +90,14 @@ export default function GameOpinion({
                         })
                     }
                 >
-                    Guardar opinión
+                    {t('Guardar opinión ')}
                 </Button>
                 <output className="small-note">
                     {changed
-                        ? 'Cambios sin guardar'
+                        ? t('Cambios sin guardar')
                         : preference?.opinion
-                          ? 'Opinión guardada'
-                          : 'Sin opinión guardada'}
+                          ? t('Opinión guardada')
+                          : t('Sin opinión guardada')}
                 </output>
             </fieldset>
         </details>

@@ -7,7 +7,7 @@ Instrucciones para trabajar en todo este repositorio. Consulta [README.md](READM
 - Antes de editar, revisa `git status --short`, el diff existente y las instrucciones adicionales de la carpeta afectada. Conserva el trabajo ajeno y limita los cambios al alcance solicitado.
 - Sigue el flujo completo antes de corregir un fallo: interfaz, API, lógica compartida y persistencia. Busca todos los llamadores de la función que vas a cambiar; corrige la causa donde se comparte.
 - Reutiliza funciones, tipos y componentes existentes. Prefiere las APIs nativas y las dependencias instaladas; no añadas abstracciones, dependencias o refactorizaciones para necesidades hipotéticas.
-- Mantén la interfaz y sus mensajes en español, el comportamiento predeterminado y la accesibilidad por teclado. Los cambios visuales deben respetar los demás temas y tamaños de pantalla.
+- Mantén la interfaz y sus mensajes en español e inglés, el comportamiento predeterminado y la accesibilidad por teclado. Reutiliza `lib/i18n.ts` y el selector de idioma; conserva los identificadores internos y los textos personales. Los cambios visuales deben respetar las paletas del tema Inmersivo y los tamaños de pantalla.
 - Cuando un cambio visible para el usuario entra en un PR o commit, añade una entrada en `CHANGELOG.md` bajo `## [Unreleased]`, dentro de `### Features` o `### Correcciones de errores`, sin borrar entradas de otros agentes. Sustituye `- Ninguno.` solo en la categoría que corresponda; no incluyas secretos ni datos personales. Los cambios internos sin efecto para el usuario no necesitan entrada.
 - Comunica qué cambió, cómo se comprobó y qué quedó pendiente. No presentes resultados históricos como verificaciones de la tarea actual.
 
@@ -54,7 +54,7 @@ Reutiliza el servidor existente si corresponde a la prueba. Si un puerto está o
 ## Comportamientos que deben conservarse
 
 - **Motor & IA:** en `components/settings/SettingsModal.tsx`, los controles editan borradores. Solo **Guardar** aplica motor, modelo y esfuerzo; cerrar o cancelar descarta los cambios. Conserva la validación de `codexEffortsForModel`.
-- **Temas:** Inmersivo es el tema inicial; `Legacy` conserva el diseño original. Añade temas como módulos siguiendo [app/themes/README.md](app/themes/README.md), incluyendo modales y portales; no reemplaces estilos globales para introducir una opción.
+- **Temas:** Inmersivo es el único diseño, con paletas de color persistentes. Amplía sus variables siguiendo [app/themes/README.md](app/themes/README.md), incluyendo modales y portales; no añadas diseños alternativos al cambiar colores.
 - **Filtros:** reutiliza `DEFAULT_FILTERS`, `clearFilters` y la elegibilidad compartida. Limpiar filtros conserva `replay: false`; los ignorados se excluyen siempre y los completados/abandonados requieren permitir rejugar. Comprueba tanto el recuento como la selección final.
 - **Etiquetas:** las portadas de la biblioteca muestran hasta cuatro en la parte inferior. El filtro de biblioteca debe corresponder a las etiquetas visibles; conserva la búsqueda, selección por clic/Enter y chips extraíbles donde se admiten varias. Usa `steamTagKey` para la identidad, sin confundir etiquetas de Steam con géneros de IGDB.
 - **Juegos manuales:** usan `appId` negativo e identidad de IGDB; cero no es válido. Deben sobrevivir a la sincronización propia/familiar y quedar fuera de consultas exclusivas de Steam. Usa `gameUrl` para sus enlaces e `inLibrary` para incluir juegos propios y compartidos.

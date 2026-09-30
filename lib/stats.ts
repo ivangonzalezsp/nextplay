@@ -25,7 +25,10 @@ const PLAYTIME_BANDS = [
     { label: '100+ h', maxMinutes: Infinity },
 ];
 
-export function libraryStats(state: Pick<State, 'games' | 'preferences'>) {
+export function libraryStats(
+    state: Pick<State, 'games' | 'preferences'>,
+    language: 'es' | 'en' = 'es',
+) {
     const games = state.games.filter(inLibrary);
     const statusCounts = Object.fromEntries(
         STATS_STATUS_ORDER.map((status) => [status, 0]),
@@ -87,7 +90,8 @@ export function libraryStats(state: Pick<State, 'games' | 'preferences'>) {
             if (seenTags.has(key)) continue;
             seenTags.add(key);
             const current = tags.get(key) ?? {
-                name: tag.name,
+                name:
+                    language === 'en' ? tag.englishName || tag.name : tag.name,
                 count: 0,
                 minutes: 0,
                 games: [],

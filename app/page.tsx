@@ -1,5 +1,13 @@
 'use client';
 
+import {
+    steamTagLabel,
+    languageHeaders,
+    translate as t,
+    locale,
+} from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/components/header/ThemeSelector';
 import { flushSync } from 'react-dom';
@@ -95,10 +103,13 @@ async function api(path: string, body?: unknown, method = 'POST') {
         response = await fetch(
             request.path,
             body === undefined
-                ? undefined
+                ? { headers: languageHeaders() }
                 : {
                       method,
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: {
+                          ...languageHeaders(),
+                          'Content-Type': 'application/json',
+                      },
                       body: JSON.stringify(body),
                   },
         );
@@ -122,7 +133,7 @@ async function api(path: string, body?: unknown, method = 'POST') {
     }
     if (!response.ok) {
         const error = new Error(
-            data.error || 'No se ha podido completar la solicitud.',
+            data.error || t('No se ha podido completar la solicitud.'),
         );
         logError('browser', 'api:failed', error, {
             ...request,
@@ -155,12 +166,15 @@ async function streamRecommendations(
     try {
         response = await fetch(path, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                ...languageHeaders(),
+                'Content-Type': 'application/json',
+            },
             body: JSON.stringify(body),
             signal,
         });
         if (!response.body)
-            throw new Error('Next Play no ha devuelto actividad de la IA.');
+            throw new Error(t('Next Play no ha devuelto actividad de la IA.'));
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
@@ -192,7 +206,9 @@ async function streamRecommendations(
             reader.releaseLock();
         }
         if (!result)
-            throw new Error('La IA no ha devuelto una recomendación válida.');
+            throw new Error(
+                t('La IA no ha devuelto una recomendación válida.'),
+            );
         log('browser', 'api:stream:complete', {
             method: 'POST',
             path,
@@ -215,14 +231,15 @@ async function streamRecommendations(
 
 function formatHours(value: number | null | undefined) {
     return value == null
-        ? 'sin datos'
-        : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
+        ? t('sin datos')
+        : value.toLocaleString(locale(), { maximumFractionDigits: 1 }) + ' h';
 }
 type HltbSyncResponse = Snapshot & {
     hltbSync: { remaining: number; stopped: boolean };
 };
 
 export default function Home() {
+    useLanguage();
     const theme = useTheme();
     const [state, setState] = useState<Snapshot | null>(null);
     const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
@@ -423,7 +440,7 @@ export default function Home() {
                     typeof input !== 'object' ||
                     Object.keys(input).length
                 )
-                    throw new Error('Este comando no acepta parámetros.');
+                    throw new Error(t('Este comando no acepta parámetros.'));
                 const next: Snapshot = await api('state');
                 log('browser', 'webmcp:tool:complete', {
                     name: 'get_library_summary',
@@ -460,7 +477,7 @@ export default function Home() {
                     Object.keys(data).some((k) => k !== 'message')
                 )
                     throw new Error(
-                        'Indica un mensaje de hasta 2000 caracteres.',
+                        t('Indica un mensaje de hasta 2000 caracteres.'),
                     );
                 setBusy('recommend');
                 setActivity([]);
@@ -519,7 +536,7 @@ export default function Home() {
                 setError(
                     e instanceof Error
                         ? e.message
-                        : 'No se ha podido completar la solicitud.',
+                        : t('No se ha podido completar la solicitud.'),
                 );
         } finally {
             setBusy('');
@@ -629,7 +646,9 @@ export default function Home() {
                     if (next.hltbSync.stopped)
                         throw new Error(
                             next.warnings[0] ??
-                                'HowLongToBeat no ha podido continuar la búsqueda.',
+                                t(
+                                    'HowLongToBeat no ha podido continuar la búsqueda.',
+                                ),
                         );
                 } while (remaining > 0);
             } finally {
@@ -724,7 +743,7 @@ export default function Home() {
     function similar(game: Game) {
         setReference(game);
         setText(
-            `Busco algo como ${game.name}, pero…\nQuiero conservar: \nQuiero cambiar: `,
+            `${t('Busco algo como ')}${game.name}${t(', pero…\nQuiero conservar: \nQuiero cambiar: ')}`,
         );
         setTab('recommend');
         requestAnimationFrame(() =>
@@ -737,7 +756,9 @@ export default function Home() {
         const updatedFilters = { ...filters, comfortZone: true };
         setFilters(updatedFilters);
         void recommend(
-            '¡Elige un juego sorpresa de mi biblioteca para jugar ahora mismo!',
+            t(
+                '¡Elige un juego sorpresa de mi biblioteca para jugar ahora mismo!',
+            ),
             updatedFilters,
         );
     }
@@ -783,14 +804,11 @@ export default function Home() {
                     steamTagKey(tag),
                     {
                         value: steamTagKey(tag),
-                        label:
-                            tag.englishName && tag.englishName !== tag.name
-                                ? `${tag.name} · ${tag.englishName}`
-                                : tag.name,
+                        label: steamTagLabel(tag),
                     },
                 ]),
         ).values(),
-    ].sort((a, b) => a.label.localeCompare(b.label, 'es'));
+    ].sort((a, b) => a.label.localeCompare(b.label, locale()));
     const libraryTagKeys = new Set(
         games.flatMap((g) => (g.steamTags ?? []).slice(0, 4)).map(steamTagKey),
     );
@@ -879,11 +897,12 @@ export default function Home() {
                     <div>
                         <div className="section-heading">
                             <h3 className="text-base font-bold text-foreground">
-                                Otras buenas opciones de tu biblioteca
+                                {t('Otras buenas opciones de tu biblioteca ')}
                             </h3>
                             <span className="text-xs text-muted-foreground">
-                                Seleccionadas según tus gustos y el tiempo
-                                disponible
+                                {t(
+                                    'Seleccionadas según tus gustos y el tiempo disponible ',
+                                )}
                             </span>
                         </div>
 
@@ -931,11 +950,12 @@ export default function Home() {
                         <div className="section-heading">
                             <h3 className="text-base font-bold text-foreground flex items-center gap-2">
                                 <Sparkles size={16} className="text-cyan-400" />
-                                <span>Fuera de tu radar</span>
+                                <span>{t('Fuera de tu radar')}</span>
                             </h3>
                             <span className="text-xs text-muted-foreground">
-                                Juegos recomendados que aún no tienes en tu
-                                biblioteca
+                                {t(
+                                    'Juegos recomendados que aún no tienes en tu biblioteca ',
+                                )}
                             </span>
                         </div>
 
@@ -974,7 +994,7 @@ export default function Home() {
     return (
         <div className="app-shell">
             <a className="skip-link" href="#main">
-                Ir al contenido
+                {t('Ir al contenido ')}
             </a>
 
             {/* 1. HUD TOPBAR WITH LIVE INDICATORS & SETTINGS TRIGGER */}
@@ -1045,23 +1065,24 @@ export default function Home() {
                 <div className="page-heading">
                     <div>
                         <div className="eyebrow">
-                            CONSOLA NEXT PLAY · TU ESPACIO DE JUEGO
+                            {t('CONSOLA NEXT PLAY · TU ESPACIO DE JUEGO ')}
                         </div>
                         <h1>
-                            {theme === 'cinema'
+                            {theme.startsWith('cinema')
                                 ? ({
-                                      library: 'Tu biblioteca',
-                                      shortlist: 'Lista corta',
-                                      tastes: 'Tus gustos',
-                                      history: 'Historial',
-                                      year: 'Mi año',
-                                      stats: 'Estadísticas',
-                                  }[tab] ?? '¿Qué te apetece jugar?')
-                                : '¿Qué te apetece jugar hoy?'}
+                                      library: t('Tu biblioteca'),
+                                      shortlist: t('Lista corta'),
+                                      tastes: t('Tus gustos'),
+                                      history: t('Historial'),
+                                      year: t('Mi año'),
+                                      stats: t('Estadísticas'),
+                                  }[tab] ?? t('¿Qué te apetece jugar?'))
+                                : t('¿Qué te apetece jugar hoy?')}
                         </h1>
                         <p>
-                            Menos tiempo eligiendo, más tiempo disfrutando de tu
-                            catálogo.
+                            {t(
+                                'Menos tiempo eligiendo, más tiempo disfrutando de tu catálogo. ',
+                            )}
                         </p>
                     </div>
 
@@ -1070,19 +1091,20 @@ export default function Home() {
                         <div className="hud-pill">
                             <Library size={14} className="text-emerald-400" />
                             <span>
-                                <strong>{games.length}</strong> biblioteca
+                                <strong>{games.length}</strong>{' '}
+                                {t('biblioteca ')}
                             </span>
                         </div>
                         <div className="hud-pill">
                             <Clock3 size={14} className="text-amber-400" />
                             <span>
-                                <strong>{pending}</strong> pendientes
+                                <strong>{pending}</strong> {t('pendientes ')}
                             </span>
                         </div>
                         <div className="hud-pill">
                             <Star size={14} className="text-yellow-400" />
                             <span>
-                                <strong>{favorites}</strong> favoritos
+                                <strong>{favorites}</strong> {t('favoritos ')}
                             </span>
                         </div>
                     </div>
@@ -1100,7 +1122,7 @@ export default function Home() {
                                 if (!state) void action('reload', load);
                             }}
                         >
-                            Cerrar
+                            {t('Cerrar ')}
                         </Button>
                     </div>
                 )}
@@ -1108,47 +1130,56 @@ export default function Home() {
                 {/* 3. MAIN NAVIGATION TABS */}
                 <Tabs
                     className="app-navigation"
-                    orientation={theme === 'cinema' ? 'vertical' : 'horizontal'}
+                    orientation={
+                        theme.startsWith('cinema') ? 'vertical' : 'horizontal'
+                    }
                     value={tab}
                     onValueChange={(v) => setTab(String(v))}
                 >
                     <div className="view-navigation">
-                        <TabsList variant="line" aria-label="Vista principal">
+                        <TabsList
+                            variant="line"
+                            aria-label={t('Vista principal')}
+                        >
                             <TabsTrigger value="recommend">
-                                <Sparkles size={16} /> <span>Para ti</span>
+                                <Sparkles size={16} />{' '}
+                                <span>{t('Para ti')}</span>
                             </TabsTrigger>
                             <TabsTrigger value="library">
                                 <Library size={16} />
-                                <span>Tu biblioteca</span>
+                                <span>{t('Tu biblioteca')}</span>
                                 <span className="cinema-nav-count">
                                     {games.length}
                                 </span>
                             </TabsTrigger>
                             <TabsTrigger value="shortlist">
                                 <Bookmark size={16} />
-                                <span>Lista corta</span>
+                                <span>{t('Lista corta')}</span>
                                 <span className="cinema-nav-count">
                                     {savedGames.length}
                                 </span>
                             </TabsTrigger>
                             <TabsTrigger value="tastes">
-                                <Star size={16} /> <span>Tus gustos</span>
+                                <Star size={16} />{' '}
+                                <span>{t('Tus gustos')}</span>
                             </TabsTrigger>
                             <TabsTrigger value="history">
-                                <History size={16} /> <span>Historial</span>
+                                <History size={16} />{' '}
+                                <span>{t('Historial')}</span>
                             </TabsTrigger>
                             <TabsTrigger value="year">
-                                <Gamepad2 size={16} /> <span>Mi año</span>
+                                <Gamepad2 size={16} />{' '}
+                                <span>{t('Mi año')}</span>
                             </TabsTrigger>
                             <TabsTrigger value="stats">
                                 <ChartNoAxesCombined size={16} />
-                                <span>Estadísticas</span>
+                                <span>{t('Estadísticas')}</span>
                             </TabsTrigger>
                         </TabsList>
                         <span className="subtle-label">
-                            Experiencia Console & Steam Deck HUD
+                            {t('Experiencia Console & Steam Deck HUD ')}
                         </span>
-                        {theme === 'cinema' && (
+                        {theme.startsWith('cinema') && (
                             <div className="cinema-sidebar-footer">
                                 <Button
                                     variant="ghost"
@@ -1156,7 +1187,7 @@ export default function Home() {
                                     onClick={() => setSettingsOpen(true)}
                                 >
                                     <Settings size={16} aria-hidden="true" />
-                                    <span>Ajustes y conexiones</span>
+                                    <span>{t('Ajustes y conexiones')}</span>
                                 </Button>
                             </div>
                         )}
@@ -1225,13 +1256,14 @@ export default function Home() {
                                             className="text-emerald-400 fill-current"
                                         />
                                         <span>
-                                            Tus juegos en curso (
+                                            {t('Tus juegos en curso ( ')}
                                             {inProgress.length})
                                         </span>
                                     </h3>
                                     <span className="text-xs text-muted-foreground">
-                                        Marca "Estoy jugando" o "En pausa" para
-                                        tenerlos a mano
+                                        {t(
+                                            'Marca "Estoy jugando" o "En pausa" para tenerlos a mano ',
+                                        )}
                                     </span>
                                 </div>
 
@@ -1274,7 +1306,11 @@ export default function Home() {
                                                     )}
                                                     <div className="hud-card-overlay-badges">
                                                         <span className="hud-meta-badge source">
-                                                            {libraryLabel(game)}
+                                                            {t(
+                                                                libraryLabel(
+                                                                    game,
+                                                                ),
+                                                            )}
                                                         </span>
                                                         <span
                                                             className="hud-status-badge"
@@ -1282,11 +1318,11 @@ export default function Home() {
                                                                 currentStatus
                                                             }
                                                         >
-                                                            {
+                                                            {t(
                                                                 STATUS_LABELS[
                                                                     currentStatus
-                                                                ]
-                                                            }
+                                                                ],
+                                                            )}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -1299,7 +1335,9 @@ export default function Home() {
                                                             0 && (
                                                             <div
                                                                 className="hud-tags-row compact cinema-in-progress-tags"
-                                                                aria-label="Etiquetas"
+                                                                aria-label={t(
+                                                                    'Etiquetas',
+                                                                )}
                                                             >
                                                                 {game.steamTags
                                                                     .slice(0, 4)
@@ -1313,9 +1351,9 @@ export default function Home() {
                                                                                 )}
                                                                                 className="hud-tag-pill small"
                                                                             >
-                                                                                {
-                                                                                    tag.name
-                                                                                }
+                                                                                {steamTagLabel(
+                                                                                    tag,
+                                                                                )}
                                                                             </span>
                                                                         ),
                                                                     )}
@@ -1335,17 +1373,19 @@ export default function Home() {
                                                     >
                                                         <div className="cinema-in-progress-meter-header">
                                                             <span>
-                                                                {
+                                                                {t(
                                                                     STATUS_LABELS[
                                                                         currentStatus
-                                                                    ]
-                                                                }
+                                                                    ],
+                                                                )}
                                                             </span>
                                                             <span>
                                                                 {achievementPercent ===
                                                                 null
-                                                                    ? 'Sin datos de logros'
-                                                                    : `${achievementPercent}% logros`}
+                                                                    ? t(
+                                                                          'Sin datos de logros',
+                                                                      )
+                                                                    : `${achievementPercent}${t('% logros')}`}
                                                             </span>
                                                         </div>
                                                         <div
@@ -1371,15 +1411,21 @@ export default function Home() {
                                                                     game.appId,
                                                                 )}
                                                                 className="hud-steam-launch-link"
-                                                                aria-label="Jugar en Steam"
-                                                                title="Jugar en Steam"
+                                                                aria-label={t(
+                                                                    'Jugar en Steam',
+                                                                )}
+                                                                title={t(
+                                                                    'Jugar en Steam',
+                                                                )}
                                                             >
                                                                 <Play
                                                                     size={13}
                                                                     aria-hidden="true"
                                                                 />
                                                                 <span className="cinema-action-label">
-                                                                    Jugar
+                                                                    {t(
+                                                                        'Jugar ',
+                                                                    )}
                                                                 </span>
                                                             </a>
                                                         )}
@@ -1391,8 +1437,12 @@ export default function Home() {
                                                         >
                                                             <span>
                                                                 {game.appId > 0
-                                                                    ? 'Ver tienda'
-                                                                    : 'Ver en IGDB'}
+                                                                    ? t(
+                                                                          'Ver tienda',
+                                                                      )
+                                                                    : t(
+                                                                          'Ver en IGDB',
+                                                                      )}
                                                             </span>
                                                             <ExternalLink
                                                                 size={12}
@@ -1417,8 +1467,8 @@ export default function Home() {
                                                         >
                                                             {currentStatus ===
                                                             'playing'
-                                                                ? 'Pausar'
-                                                                : 'Reanudar'}
+                                                                ? t('Pausar')
+                                                                : t('Reanudar')}
                                                         </Button>
                                                     </div>
                                                     {game.appId > 0 && (
@@ -1445,7 +1495,7 @@ export default function Home() {
                         {loading ? (
                             <div className="empty-state">
                                 <LoaderCircle className="spin" size={36} />
-                                <h2>Abriendo tu espacio de juego…</h2>
+                                <h2>{t('Abriendo tu espacio de juego…')}</h2>
                             </div>
                         ) : result?.needsClarification ? null : !result ? (
                             <section className="empty-state">
@@ -1457,25 +1507,33 @@ export default function Home() {
                                 </span>
                                 <h2>
                                     {games.length
-                                        ? '¿Listo para encontrar tu siguiente aventura?'
-                                        : 'Añade juegos a tu biblioteca para comenzar.'}
+                                        ? t(
+                                              '¿Listo para encontrar tu siguiente aventura?',
+                                          )
+                                        : t(
+                                              'Añade juegos a tu biblioteca para comenzar.',
+                                          )}
                                 </h2>
                                 <p>
                                     {games.length
-                                        ? 'Ajusta el tiempo arriba, pulsa "Encuentra mi próximo juego" o déjate sorprender con la ruleta.'
-                                        : 'Usa Añadir un juego en Tu biblioteca o conecta Steam desde Ajustes y Conexiones.'}
+                                        ? t(
+                                              'Ajusta el tiempo arriba, pulsa "Encuentra mi próximo juego" o déjate sorprender con la ruleta.',
+                                          )
+                                        : t(
+                                              'Usa Añadir un juego en Tu biblioteca o conecta Steam desde Ajustes y Conexiones.',
+                                          )}
                                 </p>
                                 <div className="steps">
                                     <span>
-                                        <b>01</b> Biblioteca
+                                        <b>01</b> {t('Biblioteca ')}
                                     </span>
                                     <ArrowRight size={15} />
                                     <span>
-                                        <b>02</b> Tiempo y Vibra
+                                        <b>02</b> {t('Tiempo y Vibra ')}
                                     </span>
                                     <ArrowRight size={15} />
                                     <span>
-                                        <b>03</b> ¡A jugar!
+                                        <b>03</b> {t('¡A jugar! ')}
                                     </span>
                                 </div>
                             </section>
@@ -1532,12 +1590,13 @@ export default function Home() {
                             <div className="cinema-shortlist-header flex items-center justify-between flex-wrap gap-3">
                                 <div>
                                     <h3 className="text-base font-bold text-foreground">
-                                        Tus próximos candidatos (
+                                        {t('Tus próximos candidatos ( ')}
                                         {savedGames.length})
                                     </h3>
                                     <p className="text-xs text-muted-foreground">
-                                        Juegos guardados para decidir entre
-                                        ellos cuando quieras.
+                                        {t(
+                                            'Juegos guardados para decidir entre ellos cuando quieras. ',
+                                        )}
                                     </p>
                                 </div>
                                 <Button
@@ -1553,14 +1612,16 @@ export default function Home() {
                                         };
                                         setFilters(nextFilters);
                                         void recommend(
-                                            'Elige entre los juegos de mi lista corta.',
+                                            t(
+                                                'Elige entre los juegos de mi lista corta.',
+                                            ),
                                             nextFilters,
                                         );
                                     }}
                                     className="bg-emerald-500 hover:bg-emerald-600 text-black font-semibold"
                                 >
                                     <Sparkles size={15} className="mr-1.5" />
-                                    Elegir entre estos juegos
+                                    {t('Elegir entre estos juegos ')}
                                 </Button>
                             </div>
 
@@ -1571,11 +1632,12 @@ export default function Home() {
                                         className="text-muted-foreground mb-2"
                                     />
                                     <h3 className="text-sm font-semibold">
-                                        Tu lista corta está vacía
+                                        {t('Tu lista corta está vacía ')}
                                     </h3>
                                     <p className="text-xs text-muted-foreground">
-                                        Guarda juegos con el icono de marcador
-                                        desde "Para ti" o "Tu biblioteca".
+                                        {t(
+                                            'Guarda juegos con el icono de marcador desde "Para ti" o "Tu biblioteca". ',
+                                        )}
                                     </p>
                                 </div>
                             ) : (
@@ -1603,7 +1665,7 @@ export default function Home() {
                                                 )}
                                                 <div className="hud-card-overlay-badges">
                                                     <span className="hud-meta-badge source">
-                                                        {libraryLabel(game)}
+                                                        {t(libraryLabel(game))}
                                                     </span>
                                                 </div>
                                             </div>
@@ -1611,10 +1673,12 @@ export default function Home() {
                                                 <h4 className="hud-card-title">
                                                     {game.name}
                                                 </h4>
-                                                {theme === 'cinema' && (
+                                                {theme.startsWith('cinema') && (
                                                     <div
                                                         className="hud-tags-row"
-                                                        aria-label="Etiquetas"
+                                                        aria-label={t(
+                                                            'Etiquetas',
+                                                        )}
                                                     >
                                                         {game.steamTags
                                                             ?.slice(0, 4)
@@ -1625,7 +1689,9 @@ export default function Home() {
                                                                     )}
                                                                     className="hud-tag-pill"
                                                                 >
-                                                                    {tag.name}
+                                                                    {steamTagLabel(
+                                                                        tag,
+                                                                    )}
                                                                 </span>
                                                             ))}
                                                     </div>
@@ -1638,7 +1704,7 @@ export default function Home() {
                                                                 game.hltb
                                                                     .mainHours,
                                                             )}{' '}
-                                                            de historia
+                                                            {t('de historia ')}
                                                         </div>
                                                     )}
                                                     {game.durationHours && (
@@ -1663,7 +1729,7 @@ export default function Home() {
                                                             size={12}
                                                             className="mr-1 fill-current"
                                                         />
-                                                        Quitar
+                                                        {t('Quitar ')}
                                                     </Button>
                                                     {game.appId > 0 && (
                                                         <a
@@ -1671,15 +1737,19 @@ export default function Home() {
                                                                 game.appId,
                                                             )}
                                                             className="hud-steam-launch-link ml-auto"
-                                                            aria-label="Jugar en Steam"
-                                                            title="Jugar en Steam"
+                                                            aria-label={t(
+                                                                'Jugar en Steam',
+                                                            )}
+                                                            title={t(
+                                                                'Jugar en Steam',
+                                                            )}
                                                         >
                                                             <Play
                                                                 size={13}
                                                                 aria-hidden="true"
                                                             />
                                                             <span className="cinema-action-label">
-                                                                Jugar
+                                                                {t('Jugar ')}
                                                             </span>
                                                         </a>
                                                     )}
@@ -1691,8 +1761,12 @@ export default function Home() {
                                                     >
                                                         <span>
                                                             {game.appId > 0
-                                                                ? 'Ver tienda'
-                                                                : 'Ver en IGDB'}
+                                                                ? t(
+                                                                      'Ver tienda',
+                                                                  )
+                                                                : t(
+                                                                      'Ver en IGDB',
+                                                                  )}
                                                         </span>
                                                         <ExternalLink
                                                             size={12}
@@ -1737,12 +1811,12 @@ export default function Home() {
                     <TabsContent value="history">
                         <div className="results cinema-history space-y-4">
                             <p className="small-note cinema-history-intro">
-                                Cada consulta conserva sus filtros y resultados
-                                originales, incluso después de empezar otra
-                                búsqueda.
+                                {t(
+                                    'Cada consulta conserva sus filtros y resultados originales, incluso después de empezar otra búsqueda. ',
+                                )}
                             </p>
                             {!state?.history?.length && (
-                                <p>Aún no hay búsquedas guardadas.</p>
+                                <p>{t('Aún no hay búsquedas guardadas.')}</p>
                             )}
                             {state?.history?.toReversed().map((entry) => (
                                 <details
@@ -1751,45 +1825,45 @@ export default function Home() {
                                 >
                                     <summary>
                                         {entry.filters.mode === 'today'
-                                            ? 'Para hoy'
-                                            : 'Próximo juego'}
+                                            ? t('Para hoy')
+                                            : t('Próximo juego')}
                                         {' · '}
                                         {new Date(
                                             entry.result.at,
-                                        ).toLocaleString('es')}
+                                        ).toLocaleString(locale())}
                                         {' · '}
                                         {entry.result.engine === 'local'
-                                            ? 'Algoritmo local'
+                                            ? t('Algoritmo local')
                                             : 'Codex'}
                                     </summary>
                                     <p className="small-note">
                                         {entry.filters.mode === 'today'
                                             ? entry.filters.minutes === null
-                                                ? 'Sesión sin límite'
-                                                : `${entry.filters.minutes} min de sesión`
+                                                ? t('Sesión sin límite')
+                                                : `${entry.filters.minutes}${t(' min de sesión')}`
                                             : entry.filters.hours === null
-                                              ? 'Historia sin límite'
-                                              : `Historia de hasta ${entry.filters.hours} h`}
+                                              ? t('Historia sin límite')
+                                              : `${t('Historia de hasta ')}${entry.filters.hours} h`}
                                         {' · '}
                                         {entry.filters.mode === 'today' &&
                                             entry.filters.sessionIntent ===
                                                 'continue' &&
-                                            'Continuar partida o retomar · '}
+                                            t('Continuar partida o retomar · ')}
                                         {entry.filters.mode === 'today' &&
                                             entry.filters.sessionIntent ===
                                                 'start' &&
-                                            'Empezar un pendiente · '}
+                                            t('Empezar un pendiente · ')}
                                         {entry.filters.genre ||
-                                            'Cualquier género'}
+                                            t('Cualquier género')}
                                         {entry.filters.shortlistOnly &&
-                                            ' · Solo lista corta'}
+                                            t(' · Solo lista corta')}
                                         {entry.filters.comfortZone &&
-                                            ' · Zona de confort'}
+                                            t(' · Zona de confort')}
                                         {entry.filters.minReleaseDate &&
-                                            ` · Desde ${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString('es')}`}
+                                            `${t(' · Desde ')}${new Date(`${entry.filters.minReleaseDate}T00:00:00`).toLocaleDateString(locale())}`}
                                         {(entry.filters.tags ?? []).length >
                                             0 &&
-                                            ` · Etiquetas: ${(
+                                            `${t(' · Etiquetas: ')}${(
                                                 entry.filters.tags ?? []
                                             )
                                                 .map(
@@ -1874,7 +1948,7 @@ export default function Home() {
                             <Suspense
                                 fallback={
                                     <div className="stats-empty">
-                                        Cargando estadísticas…
+                                        {t('Cargando estadísticas… ')}
                                     </div>
                                 }
                             >
@@ -1888,11 +1962,12 @@ export default function Home() {
             {/* FOOTER */}
             <footer className="footer">
                 <span>
-                    nextplay. <span>Un juego para cada momento.</span>
+                    nextplay. <span>{t('Un juego para cada momento.')}</span>
                 </span>
                 <span>
-                    HUD Console Edition · Diseñado para disfrutar de tu
-                    biblioteca.
+                    {t(
+                        'HUD Console Edition · Diseñado para disfrutar de tu biblioteca. ',
+                    )}
                 </span>
             </footer>
         </div>

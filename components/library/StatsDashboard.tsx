@@ -1,6 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
+import { locale, translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import {
     Bar,
     BarChart,
@@ -27,15 +29,12 @@ import {
 import type { GameStatus, Snapshot } from '@/lib/model';
 import { libraryStats } from '@/lib/stats';
 
-const number = new Intl.NumberFormat('es-ES');
-const hours = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 1 });
 const formatHours = (minutes: number) =>
     minutes > 0 && minutes < 3
-        ? `${number.format(minutes)} min`
-        : `${hours.format(minutes / 60)} h`;
-const chartConfig = {
-    count: { label: 'Juegos', color: 'var(--stats-teal)' },
-} satisfies ChartConfig;
+        ? minutes.toLocaleString(locale()) + ' min'
+        : (minutes / 60).toLocaleString(locale(), {
+              maximumFractionDigits: 1,
+          }) + ' h';
 const bandColors = [
     'var(--stats-teal)',
     'var(--stats-blue)',
@@ -54,58 +53,86 @@ const statusColors: Record<GameStatus, string> = {
 };
 
 export function StatsDashboard({ state }: { state: Snapshot }) {
-    const stats = useMemo(() => libraryStats(state), [state]);
+    const language = useLanguage();
+    const number = new Intl.NumberFormat(locale());
+    const chartConfig = {
+        count: { label: t('Juegos'), color: 'var(--stats-teal)' },
+    } satisfies ChartConfig;
+    // ponytail: O(n) stats on rerender; memoize if measured with large libraries.
+    const stats = libraryStats(state, language);
     const completed =
         stats.statuses.find(({ status }) => status === 'completed')?.count ?? 0;
     const visibleStatuses = stats.statuses
         .filter(({ count }) => count > 0)
-        .map((status) => ({ ...status, fill: statusColors[status.status] }));
+        .map((status) => ({
+            ...status,
+            label: t(status.label),
+            fill: statusColors[status.status],
+        }));
     const playtimeBands = stats.playtimeBands.map((band, index) => ({
         ...band,
         fill: bandColors[index],
     }));
     const metrics = [
-        { label: 'En tu biblioteca', value: stats.totalGames, Icon: Gamepad2 },
-        { label: 'Con horas jugadas', value: stats.playedCount, Icon: Clock3 },
-        { label: 'Marcados terminados', value: completed, Icon: CheckCircle2 },
         {
-            label: 'Géneros identificados',
+            label: t('En tu biblioteca'),
+            value: stats.totalGames,
+            Icon: Gamepad2,
+        },
+        {
+            label: t('Con horas jugadas'),
+            value: stats.playedCount,
+            Icon: Clock3,
+        },
+        {
+            label: t('Marcados terminados'),
+            value: completed,
+            Icon: CheckCircle2,
+        },
+        {
+            label: t('Géneros identificados'),
             value: stats.genreCount,
             Icon: Layers3,
         },
     ];
     const rankings = [
         {
-            title: 'Etiquetas más presentes',
-            kicker: 'ETIQUETAS DE STEAM',
-            badge: `${number.format(stats.tagCount)} etiquetas`,
-            note: `Las cuatro etiquetas principales por juego, como en Biblioteca. ${number.format(stats.tagCoverage)} de ${number.format(stats.totalGames)} juegos tienen etiquetas.`,
-            empty: 'Aún no hay etiquetas de Steam cargadas.',
+            title: t('Etiquetas más presentes'),
+            kicker: t('ETIQUETAS DE STEAM'),
+            badge: `${number.format(stats.tagCount)}${t(' etiquetas')}`,
+            note: `${t('Las cuatro etiquetas principales por juego, como en Biblioteca. ')}${number.format(stats.tagCoverage)}${t(' de ')}${number.format(stats.totalGames)}${t(' juegos tienen etiquetas.')}`,
+            empty: t('Aún no hay etiquetas de Steam cargadas.'),
             items: stats.topTags,
             metric: 'count' as const,
         },
         {
-            title: 'Tus horas por etiqueta',
-            kicker: 'ETIQUETAS DE STEAM',
-            note: 'Tus horas jugadas en juegos con cada etiqueta. Pasa el cursor por una barra para ver qué juegos aportan horas. Un juego puede figurar en varias; no sumes las barras.',
-            empty: 'No hay horas jugadas en juegos con etiquetas.',
+            title: t('Tus horas por etiqueta'),
+            kicker: t('ETIQUETAS DE STEAM'),
+            note: t(
+                'Tus horas jugadas en juegos con cada etiqueta. Pasa el cursor por una barra para ver qué juegos aportan horas. Un juego puede figurar en varias; no sumes las barras.',
+            ),
+            empty: t('No hay horas jugadas en juegos con etiquetas.'),
             items: stats.topTagsByHours,
             metric: 'minutes' as const,
         },
         {
-            title: 'Géneros más presentes',
-            kicker: 'GÉNEROS DE IGDB',
-            badge: `${number.format(stats.genreCoverage)} con datos`,
-            note: 'Cada juego puede aparecer en varios géneros de IGDB.',
-            empty: 'No hay géneros identificados todavía.',
+            title: t('Géneros más presentes'),
+            kicker: t('GÉNEROS DE IGDB'),
+            badge: `${number.format(stats.genreCoverage)}${t(' con datos')}`,
+            note: t('Cada juego puede aparecer en varios géneros de IGDB.'),
+            empty: t('No hay géneros identificados todavía.'),
             items: stats.topGenres,
             metric: 'count' as const,
         },
         {
-            title: 'Tus horas por género',
-            kicker: 'GÉNEROS DE IGDB',
-            note: 'Tus horas jugadas en juegos de cada género. Pasa el cursor por una barra para ver qué juegos aportan horas. Un juego puede figurar en varios; no sumes las barras.',
-            empty: 'No hay horas jugadas en juegos con géneros identificados.',
+            title: t('Tus horas por género'),
+            kicker: t('GÉNEROS DE IGDB'),
+            note: t(
+                'Tus horas jugadas en juegos de cada género. Pasa el cursor por una barra para ver qué juegos aportan horas. Un juego puede figurar en varios; no sumes las barras.',
+            ),
+            empty: t(
+                'No hay horas jugadas en juegos con géneros identificados.',
+            ),
             items: stats.topGenresByHours,
             metric: 'minutes' as const,
         },
@@ -115,8 +142,12 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
         return (
             <section className="stats-empty">
                 <ChartNoAxesCombined size={32} />
-                <h2>Aún no hay estadísticas</h2>
-                <p>Añade juegos o conecta Steam para ver tu biblioteca aquí.</p>
+                <h2>{t('Aún no hay estadísticas')}</h2>
+                <p>
+                    {t(
+                        'Añade juegos o conecta Steam para ver tu biblioteca aquí.',
+                    )}
+                </p>
             </section>
         );
 
@@ -125,29 +156,32 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
             <section className="stats-hero" aria-labelledby="stats-heading">
                 <div className="stats-hero-copy">
                     <span className="stats-kicker">
-                        <ChartNoAxesCombined size={15} /> RESUMEN DE BIBLIOTECA
+                        <ChartNoAxesCombined size={15} />{' '}
+                        {t('RESUMEN DE BIBLIOTECA ')}
                     </span>
-                    <h2 id="stats-heading">Tu biblioteca en cifras</h2>
+                    <h2 id="stats-heading">{t('Tu biblioteca en cifras')}</h2>
                     <p>
-                        Tus horas jugadas, etiquetas, géneros y estado de tus
-                        juegos.
+                        {t(
+                            'Tus horas jugadas, etiquetas, géneros y estado de tus juegos. ',
+                        )}
                     </p>
                 </div>
                 <div className="stats-hero-total">
-                    <span>TUS HORAS JUGADAS</span>
+                    <span>{t('TUS HORAS JUGADAS')}</span>
                     <strong>{formatHours(stats.totalMinutes)}</strong>
                     <small>
-                        en {number.format(stats.playedCount)} juegos con tiempo
-                        jugado
+                        {t('en ')}
+                        {number.format(stats.playedCount)}{' '}
+                        {t('juegos con tiempo jugado ')}
                     </small>
                 </div>
             </section>
 
             <div className="stats-metrics">
                 {metrics.map(({ label, value, Icon }) => (
-                    <article className="stats-metric" key={label}>
+                    <article className="stats-metric" key={t(label)}>
                         <Icon aria-hidden="true" />
-                        <span>{label}</span>
+                        <span>{t(label)}</span>
                         <strong>{number.format(value)}</strong>
                     </article>
                 ))}
@@ -158,12 +192,12 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                     <div className="stats-panel-heading">
                         <div>
                             <span className="stats-panel-kicker">
-                                TIEMPO DE JUEGO
+                                {t('TIEMPO DE JUEGO ')}
                             </span>
-                            <h3>Juegos por horas acumuladas</h3>
+                            <h3>{t('Juegos por horas acumuladas')}</h3>
                         </div>
                         <span className="stats-panel-badge">
-                            {number.format(stats.playedCount)} juegos
+                            {number.format(stats.playedCount)} {t('juegos ')}
                         </span>
                     </div>
                     {stats.playedCount ? (
@@ -220,20 +254,25 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                 {stats.playtimeBands
                                     .map(
                                         (band) =>
-                                            `${band.label}: ${band.count} juegos`,
+                                            `${band.label}: ${band.count}${t(' juegos')}`,
                                     )
                                     .join('; ')}
                             </p>
                         </>
                     ) : (
                         <p className="stats-no-data">
-                            Aún no hay juegos con tiempo jugado registrado.
+                            {t(
+                                'Aún no hay juegos con tiempo jugado registrado. ',
+                            )}
                         </p>
                     )}
                     <p className="stats-panel-note">
-                        {number.format(stats.zeroTimeCount)} con 0 minutos ·{' '}
-                        {number.format(stats.unknownTimeCount)} sin dato de
-                        tiempo. Los rangos muestran juegos ya empezados.
+                        {number.format(stats.zeroTimeCount)}{' '}
+                        {t('con 0 minutos ·')}{' '}
+                        {number.format(stats.unknownTimeCount)}{' '}
+                        {t(
+                            'sin dato de tiempo. Los rangos muestran juegos ya empezados. ',
+                        )}
                     </p>
                 </section>
 
@@ -241,9 +280,9 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                     <div className="stats-panel-heading">
                         <div>
                             <span className="stats-panel-kicker">
-                                ESTADO ACTUAL
+                                {t('ESTADO ACTUAL ')}
                             </span>
-                            <h3>Tu biblioteca hoy</h3>
+                            <h3>{t('Tu biblioteca hoy')}</h3>
                         </div>
                     </div>
                     <div className="stats-status-body">
@@ -271,7 +310,7 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                 <strong>
                                     {number.format(stats.totalGames)}
                                 </strong>
-                                <span>juegos</span>
+                                <span>{t('juegos')}</span>
                             </div>
                         </div>
                         <ul className="stats-status-list">
@@ -284,15 +323,16 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                         }}
                                         aria-hidden="true"
                                     />
-                                    <span>{label}</span>
+                                    <span>{t(label)}</span>
                                     <strong>{number.format(count)}</strong>
                                 </li>
                             ))}
                         </ul>
                     </div>
                     <p className="stats-panel-note">
-                        Los estados son los que has marcado; las horas no
-                        indican que un juego esté terminado.
+                        {t(
+                            'Los estados son los que has marcado; las horas no indican que un juego esté terminado. ',
+                        )}
                     </p>
                 </section>
 
@@ -322,7 +362,7 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                                         <button
                                                             type="button"
                                                             className="stats-ranking-trigger"
-                                                            aria-label={`Ver juegos que aportan horas a ${item.name}`}
+                                                            aria-label={`${t('Ver juegos que aportan horas a ')}${item.name}`}
                                                         />
                                                     }
                                                     delay={150}
@@ -367,7 +407,7 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                                         {number.format(
                                                             item.games.length,
                                                         )}{' '}
-                                                        juegos aportan{' '}
+                                                        {t('juegos aportan')}{' '}
                                                         {formatHours(
                                                             item.minutes,
                                                         )}
@@ -398,8 +438,9 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                                         </ol>
                                                     ) : (
                                                         <p>
-                                                            Ningún juego tiene
-                                                            horas registradas.
+                                                            {t(
+                                                                'Ningún juego tiene horas registradas. ',
+                                                            )}
                                                         </p>
                                                     )}
                                                 </HoverCardContent>
@@ -419,14 +460,14 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                     <div className="stats-panel-heading">
                         <div>
                             <span className="stats-panel-kicker">
-                                TUS MÁS JUGADOS
+                                {t('TUS MÁS JUGADOS ')}
                             </span>
-                            <h3>Donde más tiempo has pasado</h3>
+                            <h3>{t('Donde más tiempo has pasado')}</h3>
                         </div>
                         {!!stats.topGames.length && (
                             <span className="stats-panel-badge">
-                                Top {stats.topGames.length} · {stats.topShare} %
-                                de horas
+                                Top {stats.topGames.length} · {stats.topShare}{' '}
+                                {t('% de horas ')}
                             </span>
                         )}
                     </div>
@@ -478,23 +519,23 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                         </ol>
                     ) : (
                         <p className="stats-no-data">
-                            Cuando haya tiempo de juego registrado, tus juegos
-                            más jugados aparecerán aquí.
+                            {t(
+                                'Cuando haya tiempo de juego registrado, tus juegos más jugados aparecerán aquí. ',
+                            )}
                         </p>
                     )}
                     <p className="stats-panel-note">
-                        El porcentaje indica la parte del tiempo total que
-                        concentran estos juegos.
+                        {t(
+                            'El porcentaje indica la parte del tiempo total que concentran estos juegos. ',
+                        )}
                     </p>
                 </section>
             </div>
 
             <p className="stats-source-note">
-                Son tus horas acumuladas en Steam: también en juegos compartidos
-                se cuenta el tiempo de tu perfil, no el del propietario. Los
-                juegos sin tiempo registrado no suman horas. Los estados son tus
-                marcas; los géneros proceden de IGDB y las etiquetas de Steam de
-                los metadatos sincronizados.
+                {t(
+                    'Son tus horas acumuladas en Steam: también en juegos compartidos se cuenta el tiempo de tu perfil, no el del propietario. Los juegos sin tiempo registrado no suman horas. Los estados son tus marcas; los géneros proceden de IGDB y las etiquetas de Steam de los metadatos sincronizados. ',
+                )}
             </p>
         </div>
     );

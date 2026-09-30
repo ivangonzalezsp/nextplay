@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { AppError } from './store.ts';
 import { json, syncSteam, DAY } from './sources.ts';
 import type { Game, State } from '../lib/model.ts';
@@ -35,7 +36,9 @@ export function familyGames(value: unknown, viewerId: string) {
     const data = (value as SharedResponse)?.response;
     if (!data || data.owner_steamid !== viewerId || !Array.isArray(data.apps))
         throw new AppError(
-            'Steam no devolvió una biblioteca familiar completa para tu cuenta. Se conserva la anterior.',
+            translateMessage(
+                'Steam no devolvió una biblioteca familiar completa para tu cuenta. Se conserva la anterior.',
+            ),
             502,
         );
     const games: Game[] = [];
@@ -54,7 +57,9 @@ export function familyGames(value: unknown, viewerId: string) {
             !app.owner_steamids.every(steamId)
         )
             throw new AppError(
-                'Steam devolvió un juego familiar incompleto o duplicado. Se conserva la biblioteca anterior.',
+                translateMessage(
+                    'Steam devolvió un juego familiar incompleto o duplicado. Se conserva la biblioteca anterior.',
+                ),
                 502,
             );
         seen.add(app.appid);
@@ -94,7 +99,9 @@ export async function syncFamily(
 ): Promise<FamilyResult> {
     if (!token)
         throw new AppError(
-            'Añade STEAM_FAMILY_TOKEN en .env.local para conectar Steam Families.',
+            translateMessage(
+                'Añade STEAM_FAMILY_TOKEN en .env.local para conectar Steam Families.',
+            ),
             503,
         );
     let account: unknown;
@@ -104,13 +111,17 @@ export async function syncFamily(
         ).sub;
     } catch {
         throw new AppError(
-            'STEAM_FAMILY_TOKEN no contiene un token de sesión válido de Steam.',
+            translateMessage(
+                'STEAM_FAMILY_TOKEN no contiene un token de sesión válido de Steam.',
+            ),
             401,
         );
     }
     if (!steamId(account) || account !== viewerId)
         throw new AppError(
-            'El token familiar corresponde a otra cuenta. Usa la sesión del perfil conectado.',
+            translateMessage(
+                'El token familiar corresponde a otra cuenta. Usa la sesión del perfil conectado.',
+            ),
             403,
         );
     const get = <T>(method: string, params: Record<string, string>) => {
@@ -127,7 +138,9 @@ export async function syncFamily(
             url,
             {},
             fetcher,
-            'La sesión de Steam Families ha caducado o no está autorizada. Renueva STEAM_FAMILY_TOKEN; se conserva la última biblioteca familiar.',
+            translateMessage(
+                'La sesión de Steam Families ha caducado o no está autorizada. Renueva STEAM_FAMILY_TOKEN; se conserva la última biblioteca familiar.',
+            ),
         );
     };
     const group = (
@@ -140,7 +153,9 @@ export async function syncFamily(
             games: [],
             family: null,
             warnings: [
-                'Steam indica que ya no perteneces a un grupo familiar. Se han retirado los juegos prestados; tus preferencias se conservan.',
+                translateMessage(
+                    'Steam indica que ya no perteneces a un grupo familiar. Se han retirado los juegos prestados; tus preferencias se conservan.',
+                ),
             ],
         };
     if (
@@ -151,7 +166,9 @@ export async function syncFamily(
         !group.family_group.members.every((m) => steamId(m.steamid))
     )
         throw new AppError(
-            'Steam no devolvió los miembros de tu grupo familiar. Se conserva la biblioteca anterior.',
+            translateMessage(
+                'Steam no devolvió los miembros de tu grupo familiar. Se conserva la biblioteca anterior.',
+            ),
             502,
         );
     const parsed = familyGames(
@@ -169,8 +186,8 @@ export async function syncFamily(
         steamId: m.steamid,
         name:
             m.steamid === viewerId
-                ? 'Tu biblioteca'
-                : 'Miembro · ' + m.steamid.slice(-4),
+                ? translateMessage('Tu biblioteca')
+                : translateMessage('Miembro · ') + m.steamid.slice(-4),
     }));
     const warnings: string[] = [];
     if (apiKey) {
@@ -196,7 +213,9 @@ export async function syncFamily(
             }
         } catch {
             warnings.push(
-                'No se han podido actualizar los nombres de los miembros. Sus juegos siguen disponibles.',
+                translateMessage(
+                    'No se han podido actualizar los nombres de los miembros. Sus juegos siguen disponibles.',
+                ),
             );
         }
     }
@@ -207,7 +226,7 @@ export async function syncFamily(
             name:
                 typeof group.family_group.name === 'string'
                     ? group.family_group.name.slice(0, 200)
-                    : 'Tu grupo de Steam',
+                    : translateMessage('Tu grupo de Steam'),
             members,
             syncedAt: Date.now(),
             excludedCount: parsed.excludedCount,
@@ -254,7 +273,9 @@ export async function refreshLibraries(
     fetcher: typeof fetch = fetch,
 ) {
     if (!state.profile)
-        throw new AppError('Conecta primero tu perfil de Steam.');
+        throw new AppError(
+            translateMessage('Conecta primero tu perfil de Steam.'),
+        );
     const next = { ...state };
     const warnings: string[] = [];
     let own = state.games.filter((g) => g.owned),
@@ -287,7 +308,9 @@ export async function refreshLibraries(
         (!credentials.familyToken || Date.now() - next.family.syncedAt >= DAY)
     ) {
         warnings.push(
-            'Se usa la última biblioteca familiar guardada. Actualiza Steam Families para comprobar el acceso actual.',
+            translateMessage(
+                'Se usa la última biblioteca familiar guardada. Actualiza Steam Families para comprobar el acceso actual.',
+            ),
         );
     }
     next.games = mergeLibraries(own, familyGames, state.profile.steamId);

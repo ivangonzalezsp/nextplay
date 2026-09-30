@@ -1,5 +1,8 @@
 'use client';
 
+import { steamTagLabel, translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useState } from 'react';
 import { useTheme } from '@/components/header/ThemeSelector';
 import { useGameVideoPreview } from '@/components/recommendations/useGameVideoPreview';
@@ -38,8 +41,8 @@ import {
 
 function formatHours(value: number | null | undefined) {
     return value == null
-        ? 'sin datos'
-        : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
+        ? t('sin datos')
+        : value.toLocaleString(locale(), { maximumFractionDigits: 1 }) + ' h';
 }
 
 export function GameCard({
@@ -71,11 +74,12 @@ export function GameCard({
     favorite?: boolean;
     onFavorite?: () => void;
 }) {
+    useLanguage();
     const { game } = pick;
     const theme = useTheme();
     const preview = useGameVideoPreview(
         game.appId,
-        videoPreview && theme === 'cinema' && game.appId > 0,
+        videoPreview && theme.startsWith('cinema') && game.appId > 0,
     );
     const [coverFailed, setCoverFailed] = useState(false);
     const steamUrl = steamLaunchUrl(game.appId);
@@ -117,7 +121,7 @@ export function GameCard({
                         <iframe
                             className={`cinema-card-preview cinema-preview-frame ${preview.revealed ? 'is-visible' : ''}`}
                             src={`https://www.youtube-nocookie.com/embed/${preview.videoId}?autoplay=1&mute=1&controls=0&disablekb=1&start=4&end=12&playsinline=1&rel=0`}
-                            title={`Tráiler de ${game.name}`}
+                            title={`${t('Tráiler de ')}${game.name}`}
                             tabIndex={-1}
                             allow="autoplay; encrypted-media; picture-in-picture"
                             onLoad={preview.onFrameLoad}
@@ -126,7 +130,9 @@ export function GameCard({
                 )}
                 <div className="hud-card-overlay-badges">
                     <span className="hud-meta-badge source">
-                        {isDiscovery ? 'Descubrimiento' : libraryLabel(game)}
+                        {isDiscovery
+                            ? t('Descubrimiento')
+                            : t(libraryLabel(game))}
                     </span>
 
                     {steamReviewScore !== null && (
@@ -144,7 +150,9 @@ export function GameCard({
                 {game.hltb?.mainHours && (
                     <div className="hud-card-bottom-badge">
                         <Clock size={11} className="mr-1 text-emerald-400" />
-                        <span>{formatHours(game.hltb.mainHours)} historia</span>
+                        <span>
+                            {formatHours(game.hltb.mainHours)} {t('historia')}
+                        </span>
                     </div>
                 )}
             </div>
@@ -163,7 +171,7 @@ export function GameCard({
                                 key={steamTagKey(tag)}
                                 className="hud-tag-pill small"
                             >
-                                {tag.name}
+                                {steamTagLabel(tag)}
                             </span>
                         ))}
                     </div>
@@ -174,7 +182,7 @@ export function GameCard({
 
                 {pick.caveat && (
                     <p className="hud-card-caveat">
-                        <strong>Ojo:</strong> {pick.caveat}
+                        <strong>{t('Ojo:')}</strong> {pick.caveat}
                     </p>
                 )}
 
@@ -184,11 +192,13 @@ export function GameCard({
                         <a
                             href={steamUrl}
                             className="hud-steam-launch-link"
-                            aria-label="Jugar en Steam"
-                            title="Jugar en Steam"
+                            aria-label={t('Jugar en Steam')}
+                            title={t('Jugar en Steam')}
                         >
                             <Play size={13} aria-hidden="true" />
-                            <span className="cinema-action-label">Jugar</span>
+                            <span className="cinema-action-label">
+                                {t('Jugar')}
+                            </span>
                         </a>
                     )}
                     <a
@@ -197,7 +207,9 @@ export function GameCard({
                         rel="noreferrer"
                         className="hud-card-steam-link"
                     >
-                        <span>{steamUrl ? 'Ver tienda' : 'Ver en IGDB'}</span>
+                        <span>
+                            {steamUrl ? t('Ver tienda') : t('Ver en IGDB')}
+                        </span>
                         <ExternalLink size={12} />
                     </a>
 
@@ -210,8 +222,8 @@ export function GameCard({
                             disabled={busy}
                             title={
                                 saved
-                                    ? 'Quitar de lista corta'
-                                    : 'Guardar en lista corta'
+                                    ? t('Quitar de lista corta')
+                                    : t('Guardar en lista corta')
                             }
                         >
                             <Bookmark
@@ -219,7 +231,7 @@ export function GameCard({
                                 className={saved ? 'fill-current' : ''}
                             />
                             <span className="cinema-action-label">
-                                {saved ? 'En lista' : 'Lista corta'}
+                                {saved ? t('En lista') : t('Lista corta')}
                             </span>
                         </Button>
                     )}
@@ -233,8 +245,8 @@ export function GameCard({
                             disabled={busy}
                             title={
                                 favorite
-                                    ? 'Quitar de favoritos'
-                                    : 'Marcar favorito'
+                                    ? t('Quitar de favoritos')
+                                    : t('Marcar favorito')
                             }
                         >
                             <Star
@@ -242,7 +254,7 @@ export function GameCard({
                                 className={favorite ? 'fill-current' : ''}
                             />
                             <span className="cinema-action-label">
-                                Favorito
+                                {t('Favorito ')}
                             </span>
                         </Button>
                     )}
@@ -253,7 +265,7 @@ export function GameCard({
                         className="h-7 text-xs text-muted-foreground hover:text-foreground ml-auto"
                         onClick={() => onSimilar(game)}
                         disabled={busy}
-                        title="Buscar algo similar a este título"
+                        title={t('Buscar algo similar a este título')}
                     >
                         <Sparkles size={12} className="mr-1 text-cyan-400" />
                         Similar
@@ -270,7 +282,7 @@ export function GameCard({
                             }
                             disabled={busy}
                             items={Object.entries(STATUS_LABELS).map(
-                                ([v, l]) => ({ value: v, label: l }),
+                                ([v, l]) => ({ value: v, label: t(l) }),
                             )}
                         >
                             <SelectTrigger className="h-7 text-[11px] bg-black/40 border-border/60">
@@ -284,7 +296,7 @@ export function GameCard({
                                             value={value}
                                             className="text-xs"
                                         >
-                                            {label}
+                                            {t(label)}
                                         </SelectItem>
                                     ),
                                 )}
@@ -307,7 +319,7 @@ export function GameCard({
                             }
                         >
                             <Check size={11} className="mr-0.5" />
-                            Jugado
+                            {t('Jugado ')}
                         </Button>
                     </div>
                 )}

@@ -1,5 +1,8 @@
 'use client';
 
+import { steamTagLabel, translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useEffect, useRef, useState } from 'react';
 import {
     Search,
@@ -54,11 +57,12 @@ import {
 
 function formatHours(value: number | null | undefined) {
     return value == null
-        ? 'sin datos'
-        : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
+        ? t('sin datos')
+        : value.toLocaleString(locale(), { maximumFractionDigits: 1 }) + ' h';
 }
 
 function HltbBreakdown({ game }: { game: Game }) {
+    useLanguage();
     if (!game.hltb) return null;
     return (
         <details className="mb-2 text-xs text-muted-foreground">
@@ -67,11 +71,11 @@ function HltbBreakdown({ game }: { game: Game }) {
                 HLTB: {formatHours(game.hltb.mainHours)}
             </summary>
             <dl className="mt-1 grid grid-cols-[1fr_auto] gap-x-2 gap-y-0.5 pl-4">
-                <dt>Historia principal</dt>
+                <dt>{t('Historia principal')}</dt>
                 <dd>{formatHours(game.hltb.mainHours)}</dd>
-                <dt>Historia + extras</dt>
+                <dt>{t('Historia + extras')}</dt>
                 <dd>{formatHours(game.hltb.extraHours)}</dd>
-                <dt>Completista</dt>
+                <dt>{t('Completista')}</dt>
                 <dd>{formatHours(game.hltb.completionHours)}</dd>
             </dl>
         </details>
@@ -87,6 +91,7 @@ export function AchievementProgress({
     busy: boolean;
     onRefresh?: (game: Game) => Promise<void>;
 }) {
+    useLanguage();
     const data = game.steamAchievements;
     const percent = data?.total
         ? Math.round((data.unlocked / data.total) * 100)
@@ -96,8 +101,8 @@ export function AchievementProgress({
             <summary className="flex cursor-pointer items-center gap-1.5 text-amber-300">
                 <Trophy size={13} />
                 {data
-                    ? `${data.unlocked}/${data.total} logros · ${percent}%`
-                    : 'Cargar progreso de logros'}
+                    ? `${data.unlocked}/${data.total}${t(' logros · ')}${percent}%`
+                    : t('Cargar progreso de logros')}
             </summary>
             <div className="mt-2 space-y-2 text-muted-foreground">
                 <Button
@@ -106,13 +111,13 @@ export function AchievementProgress({
                     className="h-7 px-2 text-[11px]"
                     disabled={busy || !onRefresh}
                     onClick={() => onRefresh && void onRefresh(game)}
-                    title="Actualizar ahora la lista de logros"
+                    title={t('Actualizar ahora la lista de logros')}
                 >
                     <RefreshCw
                         size={12}
                         className={busy ? 'mr-1 animate-spin' : 'mr-1'}
                     />
-                    Actualizar logros
+                    {t('Actualizar logros ')}
                 </Button>
                 {data && (
                     <div className="max-h-44 space-y-1 overflow-y-auto pr-1">
@@ -129,7 +134,7 @@ export function AchievementProgress({
                                     {achievement.achieved ? '✓' : '○'}
                                 </span>
                                 {achievement.hidden && !achievement.achieved
-                                    ? 'Logro oculto'
+                                    ? t('Logro oculto')
                                     : achievement.name}
                                 {achievement.description &&
                                     (achievement.achieved ||
@@ -141,7 +146,7 @@ export function AchievementProgress({
                             </div>
                         ))}
                         {!data.total && (
-                            <p>Este juego no tiene logros en Steam.</p>
+                            <p>{t('Este juego no tiene logros en Steam.')}</p>
                         )}
                     </div>
                 )}
@@ -199,6 +204,7 @@ export function LibraryView({
     onRefreshAchievements?: (game: Game) => Promise<void>;
     busy: string;
 }) {
+    useLanguage();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
     const [quickFilter, setQuickFilter] = useState<
         'all' | 'favorites' | 'playing' | 'pending' | 'shared' | 'short'
@@ -210,7 +216,7 @@ export function LibraryView({
         if (
             game.appId < 0 &&
             window.confirm(
-                `¿Borrar «${game.name}» de tu biblioteca? También se eliminarán su estado, lista corta y actividad.`,
+                `${t('¿Borrar «')}${game.name}${t('» de tu biblioteca? También se eliminarán su estado, lista corta y actividad.')}`,
             )
         )
             void onRemove(game);
@@ -258,7 +264,9 @@ export function LibraryView({
                             setSearch(e.target.value);
                             setLimit(36);
                         }}
-                        placeholder="Buscar por título, desarrollador o etiqueta…"
+                        placeholder={t(
+                            'Buscar por título, desarrollador o etiqueta…',
+                        )}
                         className="hud-search-input"
                     />
                     {search && (
@@ -266,7 +274,7 @@ export function LibraryView({
                             type="button"
                             className="hud-search-clear"
                             onClick={() => setSearch('')}
-                            aria-label="Borrar búsqueda"
+                            aria-label={t('Borrar búsqueda')}
                         >
                             <X size={14} />
                         </button>
@@ -288,8 +296,8 @@ export function LibraryView({
                             type="button"
                             className={`hud-view-mode-btn ${viewMode === 'grid' ? 'active' : ''}`}
                             onClick={() => setViewMode('grid')}
-                            title="Vista de cuadrícula (pósters)"
-                            aria-label="Vista cuadrícula"
+                            title={t('Vista de cuadrícula (pósters)')}
+                            aria-label={t('Vista cuadrícula')}
                         >
                             <LayoutGrid size={16} />
                         </button>
@@ -297,8 +305,8 @@ export function LibraryView({
                             type="button"
                             className={`hud-view-mode-btn ${viewMode === 'list' ? 'active' : ''}`}
                             onClick={() => setViewMode('list')}
-                            title="Vista de lista detallada"
-                            aria-label="Vista lista"
+                            title={t('Vista de lista detallada')}
+                            aria-label={t('Vista lista')}
                         >
                             <List size={16} />
                         </button>
@@ -311,12 +319,12 @@ export function LibraryView({
                 {/* Quick Chips */}
                 <div className="hud-library-chips">
                     {[
-                        { id: 'all', label: 'Todos' },
-                        { id: 'favorites', label: '⭐ Favoritos' },
-                        { id: 'playing', label: '🎮 En curso' },
-                        { id: 'pending', label: '⏳ Pendientes' },
-                        { id: 'shared', label: '👥 Compartidos' },
-                        { id: 'short', label: '⚡ Cortos (< 5h)' },
+                        { id: 'all', label: t('Todos') },
+                        { id: 'favorites', label: t('⭐ Favoritos') },
+                        { id: 'playing', label: t('🎮 En curso') },
+                        { id: 'pending', label: t('⏳ Pendientes') },
+                        { id: 'shared', label: t('👥 Compartidos') },
+                        { id: 'short', label: t('⚡ Cortos (< 5h)') },
                     ].map((chip) => (
                         <button
                             key={chip.id}
@@ -326,7 +334,7 @@ export function LibraryView({
                                 setQuickFilter(chip.id as typeof quickFilter)
                             }
                         >
-                            {chip.label}
+                            {t(chip.label)}
                         </button>
                     ))}
                 </div>
@@ -341,9 +349,9 @@ export function LibraryView({
                             setLimit(36);
                         }}
                         items={[
-                            { value: '', label: 'Todas las bibliotecas' },
-                            { value: 'own', label: 'Mis juegos propios' },
-                            { value: 'shared', label: 'Solo compartidos' },
+                            { value: '', label: t('Todas las bibliotecas') },
+                            { value: 'own', label: t('Mis juegos propios') },
+                            { value: 'shared', label: t('Solo compartidos') },
                             ...(state?.family?.members ?? [])
                                 .filter(
                                     (m) =>
@@ -351,22 +359,22 @@ export function LibraryView({
                                 )
                                 .map((m) => ({
                                     value: m.steamId,
-                                    label: `Biblioteca de ${m.name}`,
+                                    label: `${t('Biblioteca de ')}${m.name}`,
                                 })),
                         ]}
                     >
                         <SelectTrigger className="h-8 text-xs bg-black/40 min-w-[140px]">
-                            <SelectValue placeholder="Biblioteca" />
+                            <SelectValue placeholder={t('Biblioteca')} />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="">
-                                Todas las bibliotecas
+                                {t('Todas las bibliotecas ')}
                             </SelectItem>
                             <SelectItem value="own">
-                                Mis juegos propios
+                                {t('Mis juegos propios ')}
                             </SelectItem>
                             <SelectItem value="shared">
-                                Solo compartidos
+                                {t('Solo compartidos ')}
                             </SelectItem>
                             {(state?.family?.members ?? [])
                                 .filter(
@@ -378,7 +386,8 @@ export function LibraryView({
                                         key={m.steamId}
                                         value={m.steamId}
                                     >
-                                        Biblioteca de {m.name}
+                                        {t('Biblioteca de ')}
+                                        {m.name}
                                     </SelectItem>
                                 ))}
                         </SelectContent>
@@ -399,13 +408,13 @@ export function LibraryView({
                         <ComboboxInput
                             id="library-tag-filter"
                             className="min-w-[140px] bg-black/40 text-xs"
-                            placeholder="Etiqueta"
+                            placeholder={t('Etiqueta')}
                             autoComplete="off"
                             showClear
                         />
                         <ComboboxContent>
                             <ComboboxEmpty>
-                                No se encontraron etiquetas.
+                                {t('No se encontraron etiquetas. ')}
                             </ComboboxEmpty>
                             <ComboboxList>
                                 {(tag: (typeof steamTags)[number]) => (
@@ -425,70 +434,75 @@ export function LibraryView({
                             setLimit(36);
                         }}
                         items={[
-                            { value: 'original', label: 'Orden original' },
-                            { value: 'name', label: 'Nombre (A-Z)' },
+                            { value: 'original', label: t('Orden original') },
+                            { value: 'name', label: t('Nombre (A-Z)') },
                             {
                                 value: 'playtime-most',
-                                label: 'Más horas jugadas',
+                                label: t('Más horas jugadas'),
                             },
                             {
                                 value: 'playtime-least',
-                                label: 'Menos horas jugadas',
+                                label: t('Menos horas jugadas'),
                             },
                             {
                                 value: 'recent-most',
-                                label: 'Más actividad reciente',
+                                label: t('Más actividad reciente'),
                             },
                             {
                                 value: 'release-newest',
-                                label: 'Lanzamiento: más recientes',
+                                label: t('Lanzamiento: más recientes'),
                             },
                             {
                                 value: 'release-oldest',
-                                label: 'Lanzamiento: más antiguos',
+                                label: t('Lanzamiento: más antiguos'),
                             },
                             {
                                 value: 'duration-shortest',
-                                label: 'Duración: más cortos',
+                                label: t('Duración: más cortos'),
                             },
                             {
                                 value: 'duration-longest',
-                                label: 'Duración: más largos',
+                                label: t('Duración: más largos'),
                             },
-                            { value: 'favorite', label: 'Favoritos primero' },
+                            {
+                                value: 'favorite',
+                                label: t('Favoritos primero'),
+                            },
                         ]}
                     >
                         <SelectTrigger className="h-8 text-xs bg-black/40 min-w-[140px]">
-                            <SelectValue placeholder="Ordenar por" />
+                            <SelectValue placeholder={t('Ordenar por')} />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="original">
-                                Orden original
+                                {t('Orden original ')}
                             </SelectItem>
-                            <SelectItem value="name">Nombre (A-Z)</SelectItem>
+                            <SelectItem value="name">
+                                {t('Nombre (A-Z)')}
+                            </SelectItem>
                             <SelectItem value="playtime-most">
-                                Más horas jugadas
+                                {t('Más horas jugadas ')}
                             </SelectItem>
                             <SelectItem value="playtime-least">
-                                Menos horas jugadas
+                                {t('Menos horas jugadas ')}
                             </SelectItem>
                             <SelectItem value="recent-most">
-                                Más actividad reciente
+                                {t('Más actividad reciente ')}
                             </SelectItem>
                             <SelectItem value="release-newest">
-                                Lanzamiento: más recientes
+                                {t('Lanzamiento: más recientes ')}
                             </SelectItem>
                             <SelectItem value="release-oldest">
-                                Lanzamiento: más antiguos
+                                {t('Lanzamiento: más antiguos ')}
                             </SelectItem>
                             <SelectItem value="duration-shortest">
-                                Duración: más cortos
+                                {t('Duración: más cortos ')}
                             </SelectItem>
                             <SelectItem value="duration-longest">
-                                Duración: más largos
+                                {t('Duración: más largos ')}
                             </SelectItem>
                             <SelectItem value="favorite">
-                                Favoritos primero
+                                {t('Favoritos primero ')}
                             </SelectItem>
                         </SelectContent>
                     </Select>
@@ -498,11 +512,12 @@ export function LibraryView({
             {/* Results Count Summary */}
             <div className="hud-library-count-row">
                 <span>
-                    Mostrando{' '}
-                    <strong>{Math.min(limit, visibleGames.length)}</strong> de{' '}
-                    <strong>{visibleGames.length}</strong> juegos{' '}
+                    {t('Mostrando')}{' '}
+                    <strong>{Math.min(limit, visibleGames.length)}</strong>{' '}
+                    {t('de')} <strong>{visibleGames.length}</strong>{' '}
+                    {t('juegos')}{' '}
                     {visibleGames.length !== games.length &&
-                        `(de un catálogo de ${games.length})`}
+                        `${t('(de un catálogo de ')}${games.length})`}
                 </span>
             </div>
 
@@ -515,13 +530,17 @@ export function LibraryView({
                     />
                     <h3 className="text-base font-semibold">
                         {games.length === 0
-                            ? 'Tu biblioteca está vacía'
-                            : 'No se encontraron juegos'}
+                            ? t('Tu biblioteca está vacía')
+                            : t('No se encontraron juegos')}
                     </h3>
                     <p className="text-xs text-muted-foreground mt-1 mb-4">
                         {games.length === 0
-                            ? 'Conecta tu cuenta de Steam en Ajustes o añade tus primeros juegos manualmente.'
-                            : 'Prueba a cambiar los filtros o el texto de búsqueda.'}
+                            ? t(
+                                  'Conecta tu cuenta de Steam en Ajustes o añade tus primeros juegos manualmente.',
+                              )
+                            : t(
+                                  'Prueba a cambiar los filtros o el texto de búsqueda.',
+                              )}
                     </p>
                     {games.length === 0 && (
                         <AddGameDialog
@@ -569,7 +588,7 @@ export function LibraryView({
                                     {/* Top Overlay Badges */}
                                     <div className="hud-lib-overlay-top">
                                         <span className="hud-lib-origin-pill">
-                                            {libraryLabel(game)}
+                                            {t(libraryLabel(game))}
                                         </span>
                                         <button
                                             type="button"
@@ -579,7 +598,7 @@ export function LibraryView({
                                                     favorite: !pref.favorite,
                                                 })
                                             }
-                                            aria-label="Marcar favorito"
+                                            aria-label={t('Marcar favorito')}
                                         >
                                             <Star
                                                 size={14}
@@ -611,7 +630,7 @@ export function LibraryView({
                                             {!!game.steamTags?.length && (
                                                 <div
                                                     className="hud-cover-tags"
-                                                    aria-label="Etiquetas"
+                                                    aria-label={t('Etiquetas')}
                                                 >
                                                     {game.steamTags
                                                         .slice(0, 4)
@@ -622,7 +641,9 @@ export function LibraryView({
                                                                 )}
                                                                 className="hud-tag-pill small"
                                                             >
-                                                                {tag.name}
+                                                                {steamTagLabel(
+                                                                    tag,
+                                                                )}
                                                             </span>
                                                         ))}
                                                 </div>
@@ -643,18 +664,18 @@ export function LibraryView({
                                     <div className="hud-lib-meta-row">
                                         <span>
                                             {game.playtimeMinutes === null
-                                                ? 'Sin horas'
+                                                ? t('Sin horas')
                                                 : `${(
                                                       game.playtimeMinutes / 60
-                                                  ).toLocaleString('es', {
+                                                  ).toLocaleString(locale(), {
                                                       maximumFractionDigits: 1,
-                                                  })}h jugadas`}
+                                                  })}${t('h jugadas')}`}
                                         </span>
                                         <span
                                             className="hud-status-badge"
                                             data-status={pref.status}
                                         >
-                                            {STATUS_LABELS[pref.status]}
+                                            {t(STATUS_LABELS[pref.status])}
                                         </span>
                                     </div>
                                     <HltbBreakdown game={game} />
@@ -668,8 +689,8 @@ export function LibraryView({
                                             onClick={() => onShortlist(game)}
                                             title={
                                                 isSaved
-                                                    ? 'Quitar de lista corta'
-                                                    : 'Añadir a lista corta'
+                                                    ? t('Quitar de lista corta')
+                                                    : t('Añadir a lista corta')
                                             }
                                         >
                                             <Bookmark
@@ -682,8 +703,8 @@ export function LibraryView({
                                             />
                                             <span className="cinema-action-label">
                                                 {isSaved
-                                                    ? 'En lista'
-                                                    : 'Lista corta'}
+                                                    ? t('En lista')
+                                                    : t('Lista corta')}
                                             </span>
                                         </Button>
 
@@ -692,7 +713,7 @@ export function LibraryView({
                                             size="sm"
                                             className="h-7 text-[11px] text-muted-foreground hover:text-foreground"
                                             onClick={() => onSimilar(game)}
-                                            title="Buscar algo similar"
+                                            title={t('Buscar algo similar')}
                                         >
                                             <Sparkles
                                                 size={11}
@@ -707,15 +728,15 @@ export function LibraryView({
                                                     game.appId,
                                                 )}
                                                 className="hud-steam-launch-link ml-auto"
-                                                aria-label="Jugar en Steam"
-                                                title="Jugar en Steam"
+                                                aria-label={t('Jugar en Steam')}
+                                                title={t('Jugar en Steam')}
                                             >
                                                 <Play
                                                     size={13}
                                                     aria-hidden="true"
                                                 />
                                                 <span className="cinema-action-label">
-                                                    Jugar
+                                                    {t('Jugar ')}
                                                 </span>
                                             </a>
                                         )}
@@ -726,20 +747,20 @@ export function LibraryView({
                                             className="hud-lib-steam-link"
                                             aria-label={
                                                 game.appId > 0
-                                                    ? `Ver tienda de ${game.name}`
-                                                    : `Ver en IGDB: ${game.name}`
+                                                    ? `${t('Ver tienda de ')}${game.name}`
+                                                    : `${t('Ver en IGDB: ')}${game.name}`
                                             }
                                             title={
                                                 game.appId > 0
-                                                    ? 'Ver tienda'
-                                                    : 'Ver en IGDB'
+                                                    ? t('Ver tienda')
+                                                    : t('Ver en IGDB')
                                             }
                                         >
                                             <ExternalLink size={12} />
                                             <span className="cinema-action-label">
                                                 {game.appId > 0
-                                                    ? 'Ver tienda'
-                                                    : 'Ver en IGDB'}
+                                                    ? t('Ver tienda')
+                                                    : t('Ver en IGDB')}
                                             </span>
                                         </a>
                                         {game.appId < 0 && (
@@ -751,8 +772,10 @@ export function LibraryView({
                                                 onClick={() =>
                                                     confirmRemove(game)
                                                 }
-                                                title="Borrar de mi biblioteca"
-                                                aria-label={`Borrar ${game.name} de mi biblioteca`}
+                                                title={t(
+                                                    'Borrar de mi biblioteca',
+                                                )}
+                                                aria-label={`${t('Borrar ')}${game.name}${t(' de mi biblioteca')}`}
                                             >
                                                 <Trash2 size={13} />
                                             </Button>
@@ -773,7 +796,7 @@ export function LibraryView({
                                                 STATUS_LABELS,
                                             ).map(([v, l]) => ({
                                                 value: v,
-                                                label: l,
+                                                label: t(l),
                                             }))}
                                         >
                                             <SelectTrigger className="h-7 text-[11px] bg-black/40">
@@ -788,7 +811,7 @@ export function LibraryView({
                                                         value={value}
                                                         className="text-xs"
                                                     >
-                                                        {label}
+                                                        {t(label)}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -829,12 +852,12 @@ export function LibraryView({
                         <thead>
                             <tr>
                                 <th className="w-10"></th>
-                                <th>Juego</th>
-                                <th>Biblioteca</th>
-                                <th>Horas jugadas</th>
-                                <th>Duración HLTB</th>
-                                <th>Estado</th>
-                                <th className="text-right">Acciones</th>
+                                <th>{t('Juego')}</th>
+                                <th>{t('Biblioteca')}</th>
+                                <th>{t('Horas jugadas')}</th>
+                                <th>{t('Duración HLTB')}</th>
+                                <th>{t('Estado')}</th>
+                                <th className="text-right">{t('Acciones')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -857,7 +880,7 @@ export function LibraryView({
                                                             !pref.favorite,
                                                     })
                                                 }
-                                                aria-label="Favorito"
+                                                aria-label={t('Favorito')}
                                             >
                                                 <Star
                                                     size={14}
@@ -901,7 +924,9 @@ export function LibraryView({
                                                                 />
                                                                 {game.steamAchievements
                                                                     ? `${game.steamAchievements.unlocked}/${game.steamAchievements.total}`
-                                                                    : 'logros pendientes'}
+                                                                    : t(
+                                                                          'logros pendientes',
+                                                                      )}
                                                             </span>
                                                         )}
                                                 </div>
@@ -909,7 +934,7 @@ export function LibraryView({
                                         </td>
                                         <td>
                                             <span className="hud-lib-origin-pill text-[10px]">
-                                                {libraryLabel(game)}
+                                                {t(libraryLabel(game))}
                                             </span>
                                         </td>
                                         <td className="text-xs text-muted-foreground">
@@ -917,7 +942,7 @@ export function LibraryView({
                                                 ? '—'
                                                 : `${(
                                                       game.playtimeMinutes / 60
-                                                  ).toLocaleString('es', {
+                                                  ).toLocaleString(locale(), {
                                                       maximumFractionDigits: 1,
                                                   })} h`}
                                         </td>
@@ -933,7 +958,7 @@ export function LibraryView({
                                                 className="hud-status-badge"
                                                 data-status={pref.status}
                                             >
-                                                {STATUS_LABELS[pref.status]}
+                                                {t(STATUS_LABELS[pref.status])}
                                             </span>
                                         </td>
                                         <td className="text-right">
@@ -947,8 +972,12 @@ export function LibraryView({
                                                     }
                                                     title={
                                                         isSaved
-                                                            ? 'Quitar de lista corta'
-                                                            : 'Añadir a lista corta'
+                                                            ? t(
+                                                                  'Quitar de lista corta',
+                                                              )
+                                                            : t(
+                                                                  'Añadir a lista corta',
+                                                              )
                                                     }
                                                 >
                                                     <Bookmark
@@ -976,8 +1005,12 @@ export function LibraryView({
                                                             game.appId,
                                                         )}
                                                         className="hud-steam-launch-link"
-                                                        aria-label="Jugar en Steam"
-                                                        title="Jugar en Steam"
+                                                        aria-label={t(
+                                                            'Jugar en Steam',
+                                                        )}
+                                                        title={t(
+                                                            'Jugar en Steam',
+                                                        )}
                                                     >
                                                         <Play
                                                             size={13}
@@ -992,13 +1025,13 @@ export function LibraryView({
                                                     className="hud-lib-steam-link"
                                                     aria-label={
                                                         game.appId > 0
-                                                            ? `Ver tienda de ${game.name}`
-                                                            : `Ver en IGDB: ${game.name}`
+                                                            ? `${t('Ver tienda de ')}${game.name}`
+                                                            : `${t('Ver en IGDB: ')}${game.name}`
                                                     }
                                                     title={
                                                         game.appId > 0
-                                                            ? 'Ver tienda'
-                                                            : 'Ver en IGDB'
+                                                            ? t('Ver tienda')
+                                                            : t('Ver en IGDB')
                                                     }
                                                 >
                                                     <ExternalLink size={12} />
@@ -1012,8 +1045,10 @@ export function LibraryView({
                                                         onClick={() =>
                                                             confirmRemove(game)
                                                         }
-                                                        title="Borrar de mi biblioteca"
-                                                        aria-label={`Borrar ${game.name} de mi biblioteca`}
+                                                        title={t(
+                                                            'Borrar de mi biblioteca',
+                                                        )}
+                                                        aria-label={`${t('Borrar ')}${game.name}${t(' de mi biblioteca')}`}
                                                     >
                                                         <Trash2 size={13} />
                                                     </Button>
@@ -1036,7 +1071,7 @@ export function LibraryView({
                     aria-live="polite"
                 >
                     <span className="text-xs text-muted-foreground">
-                        Cargando más juegos…
+                        {t('Cargando más juegos… ')}
                     </span>
                 </div>
             )}

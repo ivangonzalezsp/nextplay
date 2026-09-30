@@ -137,7 +137,7 @@ export const AFFINITIES = [
         pattern: /co.op|cooperative|multiplayer/i,
     },
 ];
-export function gameAffinitySignals(game: Game) {
+export function gameAffinitySignals(game: Game, language: 'es' | 'en' = 'es') {
     return AFFINITIES.flatMap((a) => {
         const tags = (game.steamTags ?? [])
             .slice(0, 4)
@@ -163,7 +163,17 @@ export function gameAffinitySignals(game: Game) {
                   ? 0.25
                   : 0;
         const sources = tags.length
-            ? [...new Set(tags.map((t) => 'Steam: ' + t.name))]
+            ? [
+                  ...new Set(
+                      tags.map(
+                          (tag) =>
+                              'Steam: ' +
+                              (language === 'en'
+                                  ? tag.englishName || tag.name
+                                  : tag.name),
+                      ),
+                  ),
+              ]
             : genres.length
               ? genres.map((g) => 'IGDB: ' + g.name)
               : social
@@ -272,10 +282,13 @@ export function tasteEvidence(state: State) {
     }
     return [...unique.values()];
 }
-export function buildTasteProfile(state: State): TasteAffinity[] {
+export function buildTasteProfile(
+    state: State,
+    language: 'es' | 'en' = 'es',
+): TasteAffinity[] {
     const evidence = tasteEvidence(state).map((e) => ({
         ...e,
-        traits: gameAffinitySignals(e.game),
+        traits: gameAffinitySignals(e.game, language),
     }));
     // Missing metadata is unknown, not disinterest. Unplayed library additions do not dilute tastes.
     const total = evidence.reduce(

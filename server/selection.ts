@@ -1,3 +1,8 @@
+import {
+    t as translateMessage,
+    serverLocale,
+    requestLanguage,
+} from './i18n.ts';
 import { filterCandidates } from '../lib/filters.ts';
 export { eligible } from '../lib/filters.ts';
 import { AppError } from './store.ts';
@@ -33,7 +38,9 @@ const editionMarker =
 
 export function parseEngine(value: unknown): RecommendationEngine {
     if (value !== 'codex' && value !== 'local')
-        throw new AppError('Elige Codex o el algoritmo local.');
+        throw new AppError(
+            translateMessage('Elige Codex o el algoritmo local.'),
+        );
     return value;
 }
 
@@ -52,19 +59,27 @@ export function parseCodexSettings(
         !CODEX_EFFORTS.includes(effort) ||
         !codexEffortsForModel(model).includes(effort)
     )
-        throw new AppError('El modelo o el esfuerzo de Codex no es válido.');
+        throw new AppError(
+            translateMessage('El modelo o el esfuerzo de Codex no es válido.'),
+        );
     return { model, effort };
 }
 
 export function parseProfile(input: unknown) {
     if (typeof input !== 'string' || input.length > 300)
-        throw new AppError('Introduce un enlace válido de tu perfil de Steam.');
+        throw new AppError(
+            translateMessage(
+                'Introduce un enlace válido de tu perfil de Steam.',
+            ),
+        );
     let url: URL;
     try {
         url = new URL(input);
     } catch {
         throw new AppError(
-            'Usa el enlace completo: https://steamcommunity.com/id/tu-perfil/',
+            translateMessage(
+                'Usa el enlace completo: https://steamcommunity.com/id/tu-perfil/',
+            ),
         );
     }
     const match = url.pathname.match(
@@ -79,10 +94,14 @@ export function parseProfile(input: unknown) {
         !match
     )
         throw new AppError(
-            'El enlace debe ser un perfil de steamcommunity.com.',
+            translateMessage(
+                'El enlace debe ser un perfil de steamcommunity.com.',
+            ),
         );
     if (match[1] === 'profiles' && !/^765\d{14}$/.test(match[2]))
-        throw new AppError('El SteamID del enlace no es válido.');
+        throw new AppError(
+            translateMessage('El SteamID del enlace no es válido.'),
+        );
     return {
         type: match[1],
         id: match[2],
@@ -91,7 +110,7 @@ export function parseProfile(input: unknown) {
 }
 export function parseFilters(value: unknown): Filters {
     if (!value || typeof value !== 'object')
-        throw new AppError('Faltan los filtros.');
+        throw new AppError(translateMessage('Faltan los filtros.'));
     const f = value as Filters;
     const number = (v: unknown, max: number) =>
         v === null ||
@@ -134,7 +153,9 @@ export function parseFilters(value: unknown): Filters {
         (f.comfortZone !== undefined && typeof f.comfortZone !== 'boolean')
     )
         throw new AppError(
-            'Revisa el tiempo, el modo y los filtros seleccionados.',
+            translateMessage(
+                'Revisa el tiempo, el modo y los filtros seleccionados.',
+            ),
         );
     return {
         ...(f.shortlistOnly !== undefined
@@ -167,7 +188,9 @@ export function parsePreference(value: unknown): Preference {
                 p.opinionReason.length > 500)) ||
         (!p.opinion && !!p.opinionReason?.trim())
     )
-        throw new AppError('El estado del juego no es válido.');
+        throw new AppError(
+            translateMessage('El estado del juego no es válido.'),
+        );
     return {
         favorite: p.favorite,
         status: p.status,
@@ -186,7 +209,11 @@ export function updateShortlist(state: State, appId: unknown, saved: unknown) {
         appId === 0 ||
         typeof saved !== 'boolean'
     )
-        throw new AppError('El juego o la opción de lista corta no es válido.');
+        throw new AppError(
+            translateMessage(
+                'El juego o la opción de lista corta no es válido.',
+            ),
+        );
     const game =
         state.games.find((game) => game.appId === appId) ??
         [...state.conversation, ...(state.history ?? [])]
@@ -199,7 +226,9 @@ export function updateShortlist(state: State, appId: unknown, saved: unknown) {
         state.shortlist?.find((game) => game.appId === appId);
     if (!game)
         throw new AppError(
-            'Ese juego no está en tu biblioteca ni en tus recomendaciones.',
+            translateMessage(
+                'Ese juego no está en tu biblioteca ni en tus recomendaciones.',
+            ),
         );
     const rest = (state.shortlist ?? []).filter((game) => game.appId !== appId);
     state.shortlist = saved ? [...rest, game] : rest;
@@ -229,7 +258,9 @@ export function parseTastes(value: unknown, state: State): TasteSettings {
         v.notes.length > 2000
     )
         throw new AppError(
-            'Revisa las afinidades, los juegos excluidos y las notas (máximo 2000 caracteres).',
+            translateMessage(
+                'Revisa las afinidades, los juegos excluidos y las notas (máximo 2000 caracteres).',
+            ),
         );
     return {
         overrides: { ...v.overrides },
@@ -288,7 +319,7 @@ export function selectCandidates(
     text = '',
     excludedAppId?: number,
 ): Game[] {
-    const profile = buildTasteProfile(state);
+    const profile = buildTasteProfile(state, requestLanguage());
     const recent = recentRecommendationPenalties(state);
     const library = new Map(state.games.map((g) => [g.appId, g]));
     const libraryEditionKeys = new Set(
@@ -361,7 +392,7 @@ export function selectCandidates(
 
 // ponytail: contrast uses the nine existing affinities, not a semantic similarity model.
 export function comfortSelection(state: State, candidates: Game[]) {
-    const profile = buildTasteProfile(state);
+    const profile = buildTasteProfile(state, requestLanguage());
     const positive = new Set(
         profile
             .filter(
@@ -372,8 +403,11 @@ export function comfortSelection(state: State, candidates: Game[]) {
             .map((a) => a.id),
     );
     const signals = (game: Game) =>
-        gameAffinitySignals(game).filter((a) => a.strength >= 0.5);
-    const label = (id: string) => profile.find((a) => a.id === id)!.label;
+        gameAffinitySignals(game, requestLanguage()).filter(
+            (a) => a.strength >= 0.5,
+        );
+    const label = (id: string) =>
+        translateMessage(profile.find((a) => a.id === id)!.label);
     const familiar = candidates.find((g) =>
         signals(g).some((a) => positive.has(a.id)),
     );
@@ -382,15 +416,16 @@ export function comfortSelection(state: State, candidates: Game[]) {
         return {
             games: [],
             reasons,
-            message:
+            message: translateMessage(
                 'No hay señales de gustos y metadatos suficientes para identificar una opción afín. Ajusta Tus gustos o actualiza la biblioteca.',
+            ),
         };
     const usualSignals = signals(familiar);
     const connection = usualSignals.find((a) => positive.has(a.id))!;
     reasons[familiar.appId] =
-        'Opción afín: ' +
+        translateMessage('Opción afín: ') +
         label(connection.id) +
-        ' conecta con Tus gustos (' +
+        translateMessage(' conecta con Tus gustos (') +
         connection.sources.join(', ') +
         ').';
     const weight = (id: string) => {
@@ -426,31 +461,35 @@ export function comfortSelection(state: State, candidates: Game[]) {
         return {
             games: [familiar],
             reasons,
-            message:
+            message: translateMessage(
                 'Encontré una opción afín, pero no una alternativa con conexión y diferencia respaldadas por los datos que cumpla estos filtros.',
+            ),
         };
     const { bridge, difference } = contrast(alternative)!;
     reasons[alternative.appId] =
-        'Opción distinta: conecta por ' +
+        translateMessage('Opción distinta: conecta por ') +
         label(bridge.id) +
         ' (' +
         bridge.sources.join(', ') +
-        '). Añade ' +
+        translateMessage('). Añade ') +
         label(difference.id) +
         ' (' +
         difference.sources.join(', ') +
-        '), menos representado en Tus gustos que la conexión y sin señal en la opción afín. Afinidad inferida: ' +
+        translateMessage(
+            '), menos representado en Tus gustos que la conexión y sin señal en la opción afín. Afinidad inferida: ',
+        ) +
         weight(difference.id) +
-        '; conexión: ' +
+        translateMessage('; conexión: ') +
         (profile.find((a) => a.id === bridge.id)!.choice === 'like'
-            ? 'Me gusta explícito'
-            : 'afinidad inferida ' + weight(bridge.id)) +
-        '. Esto no demuestra que nunca lo hayas probado.';
+            ? translateMessage('Me gusta explícito')
+            : translateMessage('afinidad inferida ') + weight(bridge.id)) +
+        translateMessage('. Esto no demuestra que nunca lo hayas probado.');
     return {
         games: [familiar, alternative],
         reasons,
-        message:
+        message: translateMessage(
             'Una opción afín y otra distinta, conectadas por Tus gustos. La diferencia se basa en los metadatos disponibles.',
+        ),
     };
 }
 
@@ -458,7 +497,7 @@ export function recommendLocally(
     state: State,
     filters: Filters,
 ): Recommendation {
-    const profile = buildTasteProfile(state);
+    const profile = buildTasteProfile(state, requestLanguage());
     const recent = recentRecommendationPenalties(state);
     const discoveries = (state.history ?? []).flatMap((t) =>
         t.result.discoveries.map((p) => p.game),
@@ -482,37 +521,51 @@ export function recommendLocally(
             0,
         );
         const points = (value: number) =>
-            value.toLocaleString('es', { maximumFractionDigits: 1 });
+            value.toLocaleString(serverLocale(), { maximumFractionDigits: 1 });
         const reasons = Object.entries(weights)
             .filter(([, value]) => value !== 0)
             .map(
                 ([label, value]) =>
-                    `${label} ${value > 0 ? '+' : ''}${points(value)}`,
+                    `${translateMessage(label)} ${value > 0 ? '+' : ''}${points(value)}`,
             );
         return {
             appId: game.appId,
             game,
             reason:
                 comfort?.reasons[game.appId] ??
-                `Puntuación: ${points(score)}. ${reasons.length ? reasons.join('; ') + '.' : 'Sin señales de afinidad suficientes; cumple tus filtros.'}`,
+                `${translateMessage('Puntuación: ')}${points(score)}. ${reasons.length ? reasons.join('; ') + '.' : translateMessage('Sin señales de afinidad suficientes; cumple tus filtros.')}`,
             whyNow:
                 filters.mode === 'today'
                     ? filters.sessionIntent === 'continue'
                         ? state.preferences[game.appId]?.status === 'paused'
-                            ? 'Lo dejaste en pausa: puedes retomarlo hoy.'
-                            : 'Lo marcaste como Estoy jugando: puedes continuar hoy.'
+                            ? translateMessage(
+                                  'Lo dejaste en pausa: puedes retomarlo hoy.',
+                              )
+                            : translateMessage(
+                                  'Lo marcaste como Estoy jugando: puedes continuar hoy.',
+                              )
                         : weights['actividad reciente'] > 0
-                          ? 'Lo has jugado recientemente: puede ser una opción para retomar hoy.'
-                          : 'Una opción para hoy según tus gustos y filtros.'
+                          ? translateMessage(
+                                'Lo has jugado recientemente: puede ser una opción para retomar hoy.',
+                            )
+                          : translateMessage(
+                                'Una opción para hoy según tus gustos y filtros.',
+                            )
                     : filters.hours !== null
-                      ? `Historia estimada de ${points(storyHours(game)!)} h, dentro de tu límite de ${filters.hours} h.`
-                      : 'Una opción para varias sesiones según tus gustos y filtros.',
+                      ? `${translateMessage('Historia estimada de ')}${points(storyHours(game)!)}${translateMessage(' h, dentro de tu límite de ')}${filters.hours} h.`
+                      : translateMessage(
+                            'Una opción para varias sesiones según tus gustos y filtros.',
+                        ),
             caveat:
                 filters.mode === 'today'
-                    ? `No hay datos de duración de sesión${filters.minutes !== null ? ` para asegurar que encaje en ${filters.minutes} minutos` : ''}.`
+                    ? `${translateMessage('No hay datos de duración de sesión')}${filters.minutes !== null ? `${translateMessage(' para asegurar que encaje en ')}${filters.minutes}${translateMessage(' minutos')}` : ''}.`
                     : storyHours(game)
-                      ? 'La duración es una estimación total de la historia, no el tiempo que te queda.'
-                      : 'No se conoce la duración de la historia.',
+                      ? translateMessage(
+                            'La duración es una estimación total de la historia, no el tiempo que te queda.',
+                        )
+                      : translateMessage(
+                            'No se conoce la duración de la historia.',
+                        ),
         };
     };
     return {
@@ -520,8 +573,12 @@ export function recommendLocally(
         message:
             comfort?.message ??
             (candidates.length
-                ? 'Selección local según tus favoritos y afinidades, sin consumir tokens.'
-                : 'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.'),
+                ? translateMessage(
+                      'Selección local según tus favoritos y afinidades, sin consumir tokens.',
+                  )
+                : translateMessage(
+                      'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.',
+                  )),
         owned: candidates.filter(inLibrary).slice(0, 3).map(pick),
         discoveries: candidates
             .filter((g) => !inLibrary(g))
@@ -529,10 +586,14 @@ export function recommendLocally(
             .map(pick),
         at: Date.now(),
         warnings: [
-            'Se usan los datos guardados. Actualiza la biblioteca para refrescarlos; los descubrimientos proceden del historial.',
+            translateMessage(
+                'Se usan los datos guardados. Actualiza la biblioteca para refrescarlos; los descubrimientos proceden del historial.',
+            ),
             ...(filters.mood || state.tastes?.notes
                 ? [
-                      'El algoritmo local no interpreta el ánimo ni las notas en texto libre. Ajusta las afinidades en Tus gustos.',
+                      translateMessage(
+                          'El algoritmo local no interpreta el ánimo ni las notas en texto libre. Ajusta las afinidades en Tus gustos.',
+                      ),
                   ]
                 : []),
         ],
@@ -566,7 +627,9 @@ export function validatePicks(
             (v.owned.length > 0 || v.discoveries.length > 0))
     )
         throw new AppError(
-            'Codex no devolvió una recomendación válida. Puedes reintentar.',
+            translateMessage(
+                'Codex no devolvió una recomendación válida. Puedes reintentar.',
+            ),
             502,
         );
     const known = new Map(candidates.map((g) => [g.appId, g]));
@@ -582,7 +645,9 @@ export function validatePicks(
             )
         )
             throw new AppError(
-                'La respuesta de Codex contiene juegos o datos no válidos. No se ha guardado; vuelve a intentarlo.',
+                translateMessage(
+                    'La respuesta de Codex contiene juegos o datos no válidos. No se ha guardado; vuelve a intentarlo.',
+                ),
                 502,
             );
         used.add(p.appId);

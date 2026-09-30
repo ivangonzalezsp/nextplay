@@ -1,5 +1,8 @@
 'use client';
 
+import { steamTagLabel, translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useState } from 'react';
 import { useTheme } from '@/components/header/ThemeSelector';
 import { useGameVideoPreview } from '@/components/recommendations/useGameVideoPreview';
@@ -51,8 +54,8 @@ import {
 
 function formatHours(value: number | null | undefined) {
     return value == null
-        ? 'sin datos'
-        : value.toLocaleString('es', { maximumFractionDigits: 1 }) + ' h';
+        ? t('sin datos')
+        : value.toLocaleString(locale(), { maximumFractionDigits: 1 }) + ' h';
 }
 
 export function HeroSpotlight({
@@ -80,12 +83,15 @@ export function HeroSpotlight({
     favorite?: boolean;
     onFavorite?: () => void;
 }) {
+    useLanguage();
     const { game } = pick;
     const theme = useTheme();
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [failedArtwork, setFailedArtwork] = useState<number | null>(null);
     const hasArtwork =
-        theme === 'cinema' && game.appId > 0 && failedArtwork !== game.appId;
+        theme.startsWith('cinema') &&
+        game.appId > 0 &&
+        failedArtwork !== game.appId;
     const preview = useGameVideoPreview(game.appId, hasArtwork);
     const [coverFailed, setCoverFailed] = useState(false);
     const steamUrl = steamLaunchUrl(game.appId);
@@ -117,7 +123,7 @@ export function HeroSpotlight({
                     <iframe
                         className={`cinema-hero-preview cinema-preview-frame ${preview.revealed ? 'is-visible' : ''}`}
                         src={`https://www.youtube-nocookie.com/embed/${preview.videoId}?autoplay=1&mute=1&controls=0&disablekb=1&start=4&end=12&playsinline=1&rel=0`}
-                        title={`Tráiler de ${game.name}`}
+                        title={`${t('Tráiler de ')}${game.name}`}
                         tabIndex={-1}
                         allow="autoplay; encrypted-media; picture-in-picture"
                         onLoad={preview.onFrameLoad}
@@ -154,7 +160,7 @@ export function HeroSpotlight({
                     <div className="hud-poster-badge-top">
                         <span className="hud-spotlight-tag">
                             <Flame size={12} className="text-amber-400 mr-1" />
-                            TOP RECOMENDACIÓN
+                            {t('TOP RECOMENDACIÓN ')}
                         </span>
                     </div>
                 </div>
@@ -163,7 +169,7 @@ export function HeroSpotlight({
                 <div className="hud-hero-details">
                     <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="hud-meta-badge source">
-                            {libraryLabel(game)}
+                            {t(libraryLabel(game))}
                         </span>
 
                         {steamReviewScore !== null && (
@@ -173,23 +179,27 @@ export function HeroSpotlight({
                                         ? 'positive'
                                         : 'mixed'
                                 }`}
-                                title={`${game.reviews?.positive.toLocaleString('es')} de ${game.reviews?.total.toLocaleString('es')} reseñas positivas`}
+                                title={`${game.reviews?.positive.toLocaleString(locale())}${t(' de ')}${game.reviews?.total.toLocaleString(locale())}${t(' reseñas positivas')}`}
                             >
                                 <ThumbsUp size={11} className="mr-1" />
-                                {steamReviewScore}% Positivas
+                                {steamReviewScore}
+                                {t('% Positivas ')}
                             </span>
                         )}
 
                         {game.hltb?.mainHours && (
                             <span
                                 className="hud-meta-badge hltb"
-                                title="Tiempo de historia principal según HowLongToBeat"
+                                title={t(
+                                    'Tiempo de historia principal según HowLongToBeat',
+                                )}
                             >
                                 <Clock
                                     size={11}
                                     className="mr-1 text-emerald-400"
                                 />
-                                {formatHours(game.hltb.mainHours)} historia
+                                {formatHours(game.hltb.mainHours)}{' '}
+                                {t('historia ')}
                             </span>
                         )}
 
@@ -198,10 +208,10 @@ export function HeroSpotlight({
                             game.playtimeMinutes > 0 && (
                                 <span className="hud-meta-badge playtime">
                                     {(game.playtimeMinutes / 60).toLocaleString(
-                                        'es',
+                                        locale(),
                                         { maximumFractionDigits: 1 },
                                     )}
-                                    h jugadas
+                                    {t('h jugadas ')}
                                 </span>
                             )}
                     </div>
@@ -216,7 +226,7 @@ export function HeroSpotlight({
                                     key={steamTagKey(tag)}
                                     className="hud-tag-pill"
                                 >
-                                    {tag.name}
+                                    {steamTagLabel(tag)}
                                 </span>
                             ))}
                         </div>
@@ -227,7 +237,8 @@ export function HeroSpotlight({
                         <p className="hud-pitch-text">{pick.reason}</p>
                         {pick.whyNow && (
                             <p className="hud-whynow-text">
-                                <strong>¿Por qué ahora?</strong> {pick.whyNow}
+                                <strong>{t('¿Por qué ahora?')}</strong>{' '}
+                                {pick.whyNow}
                             </p>
                         )}
                         {pick.caveat && (
@@ -237,7 +248,7 @@ export function HeroSpotlight({
                                     className="shrink-0 text-amber-400 mt-0.5"
                                 />
                                 <span>
-                                    <strong>A tener en cuenta:</strong>{' '}
+                                    <strong>{t('A tener en cuenta:')}</strong>{' '}
                                     {pick.caveat}
                                 </span>
                             </div>
@@ -250,12 +261,12 @@ export function HeroSpotlight({
                             <a
                                 href={steamUrl}
                                 className="hud-steam-launch-link"
-                                aria-label="Jugar en Steam"
-                                title="Jugar en Steam"
+                                aria-label={t('Jugar en Steam')}
+                                title={t('Jugar en Steam')}
                             >
                                 <Play size={14} aria-hidden="true" />
                                 <span className="cinema-action-label">
-                                    Jugar
+                                    {t('Jugar ')}
                                 </span>
                             </a>
                         )}
@@ -266,12 +277,12 @@ export function HeroSpotlight({
                             className="hud-card-steam-link"
                         >
                             <span>
-                                {steamUrl ? 'Ver tienda' : 'Ver en IGDB'}
+                                {steamUrl ? t('Ver tienda') : t('Ver en IGDB')}
                             </span>
                             <ExternalLink size={15} />
                         </a>
 
-                        {theme === 'cinema' && (
+                        {theme.startsWith('cinema') && (
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -279,7 +290,7 @@ export function HeroSpotlight({
                                 disabled={busy}
                             >
                                 <Info size={14} className="mr-1.5" />
-                                Ver detalles
+                                {t('Ver detalles ')}
                             </Button>
                         )}
 
@@ -299,7 +310,9 @@ export function HeroSpotlight({
                                     size={14}
                                     className={`mr-1.5 ${saved ? 'fill-current' : ''}`}
                                 />
-                                {saved ? 'En lista corta' : 'Guardar en lista'}
+                                {saved
+                                    ? t('En lista corta')
+                                    : t('Guardar en lista')}
                             </Button>
                         )}
 
@@ -314,13 +327,15 @@ export function HeroSpotlight({
                                         ? 'text-amber-400 border-amber-500/40'
                                         : ''
                                 }
-                                title="Marcar como favorito"
+                                title={t('Marcar como favorito')}
                             >
                                 <Star
                                     size={14}
                                     className={`mr-1.5 ${favorite ? 'fill-current' : ''}`}
                                 />
-                                {favorite ? 'Favorito' : 'Marcar favorito'}
+                                {favorite
+                                    ? t('Favorito')
+                                    : t('Marcar favorito')}
                             </Button>
                         )}
 
@@ -334,7 +349,7 @@ export function HeroSpotlight({
                                 size={14}
                                 className="mr-1.5 text-cyan-400"
                             />
-                            Algo como este, pero…
+                            {t('Algo como este, pero… ')}
                         </Button>
                     </div>
 
@@ -343,7 +358,7 @@ export function HeroSpotlight({
                         <div className="hud-status-opinion-row">
                             <div className="flex items-center gap-2">
                                 <span className="text-xs text-muted-foreground">
-                                    Estado:
+                                    {t('Estado: ')}
                                 </span>
                                 <Select
                                     value={status ?? 'pending'}
@@ -352,7 +367,7 @@ export function HeroSpotlight({
                                     }
                                     disabled={busy}
                                     items={Object.entries(STATUS_LABELS).map(
-                                        ([v, l]) => ({ value: v, label: l }),
+                                        ([v, l]) => ({ value: v, label: t(l) }),
                                     )}
                                 >
                                     <SelectTrigger className="h-8 text-xs bg-black/40 border-border/70 min-w-[150px]">
@@ -365,7 +380,7 @@ export function HeroSpotlight({
                                                     key={value}
                                                     value={value}
                                                 >
-                                                    {label}
+                                                    {t(label)}
                                                 </SelectItem>
                                             ),
                                         )}
@@ -391,8 +406,8 @@ export function HeroSpotlight({
                                 >
                                     <Check size={13} className="mr-1" />
                                     {status === 'completed'
-                                        ? 'Completado'
-                                        : 'Ya jugado'}
+                                        ? t('Completado')
+                                        : t('Ya jugado')}
                                 </Button>
 
                                 <Button
@@ -413,7 +428,7 @@ export function HeroSpotlight({
                                     }
                                 >
                                     <X size={13} className="mr-1" />
-                                    No me interesa
+                                    {t('No me interesa ')}
                                 </Button>
                             </div>
 
@@ -431,13 +446,15 @@ export function HeroSpotlight({
                 </div>
             </div>
 
-            {theme === 'cinema' && (
+            {theme.startsWith('cinema') && (
                 <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
                     <DialogContent className="hud-game-detail-dialog max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
                         <DialogHeader>
                             <DialogTitle>{game.name}</DialogTitle>
                             <DialogDescription>
-                                El contexto completo de esta recomendación.
+                                {t(
+                                    'El contexto completo de esta recomendación. ',
+                                )}
                             </DialogDescription>
                         </DialogHeader>
 
@@ -446,7 +463,7 @@ export function HeroSpotlight({
                                 {game.cover && !coverFailed ? (
                                     <img
                                         src={game.cover}
-                                        alt={`Carátula de ${game.name}`}
+                                        alt={`${t('Carátula de ')}${game.name}`}
                                         className="hud-game-detail-cover"
                                     />
                                 ) : (
@@ -467,7 +484,7 @@ export function HeroSpotlight({
                                                         key={steamTagKey(tag)}
                                                         className="hud-tag-pill"
                                                     >
-                                                        {tag.name}
+                                                        {steamTagLabel(tag)}
                                                     </span>
                                                 ))}
                                         </div>
@@ -475,7 +492,7 @@ export function HeroSpotlight({
                                 <p className="hud-pitch-text">{pick.reason}</p>
                                 {pick.whyNow && (
                                     <p className="hud-whynow-text">
-                                        <strong>¿Por qué ahora?</strong>{' '}
+                                        <strong>{t('¿Por qué ahora?')}</strong>{' '}
                                         {pick.whyNow}
                                     </p>
                                 )}
@@ -485,17 +502,17 @@ export function HeroSpotlight({
                                     </p>
                                 )}
                                 <div className="hud-game-detail-meta">
-                                    <span>{libraryLabel(game)}</span>
+                                    <span>{t(libraryLabel(game))}</span>
                                     {game.hltb?.mainHours && (
                                         <span>
                                             {formatHours(game.hltb.mainHours)}{' '}
-                                            de historia
+                                            {t('de historia ')}
                                         </span>
                                     )}
                                     {steamReviewScore !== null && (
                                         <span>
-                                            {steamReviewScore}% de reseñas
-                                            positivas
+                                            {steamReviewScore}
+                                            {t('% de reseñas positivas ')}
                                         </span>
                                     )}
                                 </div>
@@ -504,7 +521,7 @@ export function HeroSpotlight({
 
                         <DialogFooter className="hud-game-detail-footer">
                             <DialogClose render={<Button variant="outline" />}>
-                                Cerrar
+                                {t('Cerrar ')}
                             </DialogClose>
                             {onSaved && (
                                 <Button
@@ -513,7 +530,7 @@ export function HeroSpotlight({
                                     disabled={busy}
                                 >
                                     <Bookmark size={14} className="mr-1.5" />
-                                    {saved ? 'En lista corta' : 'Guardar'}
+                                    {saved ? t('En lista corta') : t('Guardar')}
                                 </Button>
                             )}
                         </DialogFooter>

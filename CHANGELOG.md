@@ -4,6 +4,15 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Interfaz bilingüe español/inglés con selector de banderas, idioma persistente y nuevas recomendaciones en el idioma elegido; README con acceso directo a ambas versiones.
+- Inmersivo pasa a ser el único diseño, con cinco paletas de color: Menta, Océano, Violeta, Ámbar y Rosa.
+
+### Correcciones de errores
+
+- Ninguno.
+
 ## [0.9.0] - 2026-09-30
 
 ### Features

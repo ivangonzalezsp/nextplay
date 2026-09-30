@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { readFile, writeFile, mkdir, rename, unlink } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -35,7 +36,10 @@ export function validateConnections(payload: Record<string, unknown>) {
     const connections: NonNullable<UserSettings['connections']> = {};
     for (const [key, value] of Object.entries(payload)) {
         if (!connectionKeys.includes(key as ConnectionKey))
-            throw new AppError('Esta conexión no se puede configurar.', 400);
+            throw new AppError(
+                translateMessage('Esta conexión no se puede configurar.'),
+                400,
+            );
         if (
             value !== null &&
             (typeof value !== 'string' ||
@@ -44,7 +48,9 @@ export function validateConnections(payload: Record<string, unknown>) {
                 /[\s\p{Cc}]/u.test(value))
         )
             throw new AppError(
-                'La clave no puede estar vacía ni contener espacios o saltos de línea.',
+                translateMessage(
+                    'La clave no puede estar vacía ni contener espacios o saltos de línea.',
+                ),
                 400,
             );
         if (
@@ -53,7 +59,9 @@ export function validateConnections(payload: Record<string, unknown>) {
             !/^[a-f\d]{32}$/i.test(String(value))
         )
             throw new AppError(
-                'La clave de Steam debe tener 32 caracteres hexadecimales.',
+                translateMessage(
+                    'La clave de Steam debe tener 32 caracteres hexadecimales.',
+                ),
                 400,
             );
         connections[key as ConnectionKey] = value as string | null;
@@ -83,7 +91,10 @@ export async function config() {
             local = parseEnv(await readFile(resolve('.env.local'), 'utf8'));
     } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== 'ENOENT')
-            throw new AppError('No se puede leer .env.local.', 500);
+            throw new AppError(
+                translateMessage('No se puede leer .env.local.'),
+                500,
+            );
     }
     const get = (key: string) =>
         (Object.hasOwn(settings.connections ?? {}, key)
@@ -108,7 +119,9 @@ export async function readJson<T>(path: string, fallback: T): Promise<T> {
         if ((e as NodeJS.ErrnoException).code === 'ENOENT')
             return structuredClone(fallback);
         throw new AppError(
-            'No se pueden leer los datos locales. Se han conservado los archivos originales; revisa data antes de continuar.',
+            translateMessage(
+                'No se pueden leer los datos locales. Se han conservado los archivos originales; revisa data antes de continuar.',
+            ),
             500,
         );
     }
@@ -161,7 +174,9 @@ export function validState(state: State): State {
         !state.filters
     )
         throw new AppError(
-            'El formato de los datos locales no es compatible. Los originales se han conservado.',
+            translateMessage(
+                'El formato de los datos locales no es compatible. Los originales se han conservado.',
+            ),
             500,
         );
     // Preserve the existing conversation on upgrade, before any action can reset it.
@@ -201,7 +216,9 @@ export const enterMaintenance = () => {
 export async function exclusive<T>(fn: () => Promise<T>): Promise<T> {
     if (busy || maintenance)
         throw new AppError(
-            'Hay una operación en curso. Espera a que termine e inténtalo de nuevo.',
+            translateMessage(
+                'Hay una operación en curso. Espera a que termine e inténtalo de nuevo.',
+            ),
             409,
         );
     busy = true;

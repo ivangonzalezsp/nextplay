@@ -1,5 +1,8 @@
 'use client';
 
+import { languageHeaders, translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { Plus } from 'lucide-react';
@@ -61,6 +64,7 @@ export function AddGameDialog({
     className?: string;
     trigger?: React.ReactNode;
 }) {
+    useLanguage();
     const [open, setOpen] = useState(false);
     const [query, setQuery] = useState('');
     const [suggestionsOpen, setSuggestionsOpen] = useState(false);
@@ -80,12 +84,12 @@ export function AddGameDialog({
             try {
                 const response = await fetch(
                     `/api/igdb/search?q=${encodeURIComponent(query.trim())}`,
-                    { signal: controller.signal },
+                    { signal: controller.signal, headers: languageHeaders() },
                 );
                 const data = await response.json();
                 if (!response.ok)
                     throw new Error(
-                        data.error || 'No se ha podido buscar en IGDB.',
+                        data.error || t('No se ha podido buscar en IGDB.'),
                     );
                 if (!controller.signal.aborted) setResults(data.games);
             } catch (e) {
@@ -93,7 +97,7 @@ export function AddGameDialog({
                     setError(
                         e instanceof Error
                             ? e.message
-                            : 'No se ha podido buscar en IGDB.',
+                            : t('No se ha podido buscar en IGDB.'),
                     );
             } finally {
                 if (!controller.signal.aborted) setSearching(false);
@@ -133,21 +137,24 @@ export function AddGameDialog({
                         />
                     }
                 >
-                    <Plus size={15} /> Añadir juego
+                    <Plus size={15} /> {t('Añadir juego ')}
                 </DialogTrigger>
             )}
             <DialogContent
                 className="sm:max-w-lg max-h-[90dvh] overflow-y-auto"
                 showCloseButton={!saving}
             >
-                <DialogTitle>Añadir un juego</DialogTitle>
+                <DialogTitle>{t('Añadir un juego')}</DialogTitle>
                 <DialogDescription>
-                    Busca en IGDB y elige dónde lo tienes y su estado actual.
+                    {t(
+                        'Busca en IGDB y elige dónde lo tienes y su estado actual. ',
+                    )}
                 </DialogDescription>
                 {!igdbReady ? (
                     <output>
-                        Configura Twitch / IGDB en Ajustes y Conexiones para
-                        buscar juegos.
+                        {t(
+                            'Configura Twitch / IGDB en Ajustes y Conexiones para buscar juegos. ',
+                        )}
                     </output>
                 ) : (
                     <form
@@ -169,7 +176,7 @@ export function AddGameDialog({
                                 setError(
                                     e instanceof Error
                                         ? e.message
-                                        : 'No se ha podido añadir el juego.',
+                                        : t('No se ha podido añadir el juego.'),
                                 );
                             } finally {
                                 setSaving(false);
@@ -181,7 +188,7 @@ export function AddGameDialog({
                                 htmlFor="add-game-search"
                                 className="font-medium"
                             >
-                                Juego
+                                {t('Juego ')}
                             </label>
                             <Combobox
                                 items={results}
@@ -218,7 +225,7 @@ export function AddGameDialog({
                             >
                                 <ComboboxInput
                                     id="add-game-search"
-                                    placeholder="Ej. Warcraft"
+                                    placeholder={t('Ej. Warcraft')}
                                     maxLength={100}
                                     disabled={saving}
                                     showTrigger={false}
@@ -227,11 +234,13 @@ export function AddGameDialog({
                                 <ComboboxContent>
                                     <ComboboxEmpty>
                                         {searching
-                                            ? 'Buscando en IGDB…'
+                                            ? t('Buscando en IGDB…')
                                             : query.trim().length < 2
-                                              ? 'Escribe al menos 2 caracteres.'
+                                              ? t(
+                                                    'Escribe al menos 2 caracteres.',
+                                                )
                                               : error ||
-                                                'No se encontraron juegos.'}
+                                                t('No se encontraron juegos.')}
                                     </ComboboxEmpty>
                                     <ComboboxList>
                                         {(game: IgdbSearchResult) => (
@@ -275,7 +284,8 @@ export function AddGameDialog({
                             </Combobox>
                             {selected && (
                                 <p className="text-sm text-muted-foreground">
-                                    Seleccionado: {selected.name}
+                                    {t('Seleccionado: ')}
+                                    {selected.name}
                                     {selected.releasedAt
                                         ? ` (${new Date(selected.releasedAt).getFullYear()})`
                                         : ''}
@@ -287,7 +297,7 @@ export function AddGameDialog({
                                 htmlFor="add-game-platform"
                                 className="font-medium"
                             >
-                                Plataforma o tienda
+                                {t('Plataforma o tienda ')}
                             </label>
                             <Input
                                 id="add-game-platform"
@@ -296,7 +306,9 @@ export function AddGameDialog({
                                 onChange={(event) =>
                                     setPlatform(event.target.value)
                                 }
-                                placeholder="Elige o escribe una plataforma"
+                                placeholder={t(
+                                    'Elige o escribe una plataforma',
+                                )}
                                 maxLength={80}
                                 required
                                 disabled={saving}
@@ -314,7 +326,7 @@ export function AddGameDialog({
                                 htmlFor="add-game-status"
                                 className="font-medium"
                             >
-                                Estado
+                                {t('Estado ')}
                             </label>
                             <select
                                 id="add-game-status"
@@ -328,7 +340,7 @@ export function AddGameDialog({
                                 {Object.entries(STATUS_LABELS).map(
                                     ([value, label]) => (
                                         <option key={value} value={value}>
-                                            {label}
+                                            {t(label)}
                                         </option>
                                     ),
                                 )}
@@ -346,7 +358,7 @@ export function AddGameDialog({
                                 disabled={saving}
                                 onClick={() => setOpen(false)}
                             >
-                                Cancelar
+                                {t('Cancelar ')}
                             </Button>
                             <Button
                                 type="submit"
@@ -358,8 +370,8 @@ export function AddGameDialog({
                                 }
                             >
                                 {saving
-                                    ? 'Añadiendo…'
-                                    : 'Añadir a mi biblioteca'}
+                                    ? t('Añadiendo…')
+                                    : t('Añadir a mi biblioteca')}
                             </Button>
                         </div>
                     </form>

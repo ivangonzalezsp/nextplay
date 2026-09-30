@@ -1,5 +1,8 @@
 'use client';
 
+import { translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import type { ReactNode } from 'react';
 import {
     MessageSquare,
@@ -27,35 +30,35 @@ function activityLabel(progress: RecommendationProgress) {
         typeof details[key] === 'number' ? details[key] : undefined;
     switch (progress.event) {
         case 'recommendations:start':
-            return 'Preparando tu consulta…';
+            return t('Preparando tu consulta…');
         case 'recommendations:library-refresh:start':
-            return 'Actualizando tu biblioteca…';
+            return t('Actualizando tu biblioteca…');
         case 'recommendations:enrich:start':
-            return 'Completando los datos de tus juegos…';
+            return t('Completando los datos de tus juegos…');
         case 'recommendations:discover:start':
-            return 'Buscando descubrimientos…';
+            return t('Buscando descubrimientos…');
         case 'recommendations:candidates':
-            return `${number('total') ?? 'Varios'} candidatos cumplen tus filtros.`;
+            return `${number('total') ?? t('Varios')}${t(' candidatos cumplen tus filtros.')}`;
         case 'recommendations:reviews:batch:start':
-            return 'Consultando valoraciones…';
+            return t('Consultando valoraciones…');
         case 'recommendations:database:ready':
-            return 'Catálogo listo para la IA.';
+            return t('Catálogo listo para la IA.');
         case 'recommendations:codex:start':
-            return 'La IA está analizando qué encaja contigo…';
+            return t('La IA está analizando qué encaja contigo…');
         case 'recommendations:codex:thinking':
-            return 'La IA está pensando la recomendación…';
+            return t('La IA está pensando la recomendación…');
         case 'recommendations:codex:catalog-query':
-            return 'La IA está consultando tu biblioteca…';
+            return t('La IA está consultando tu biblioteca…');
         case 'recommendations:codex:reasoning':
-            return 'La IA está afinando la comparación…';
+            return t('La IA está afinando la comparación…');
         case 'recommendations:codex:response':
-            return 'Respuesta recibida; comprobando los juegos…';
+            return t('Respuesta recibida; comprobando los juegos…');
         case 'recommendations:codex:validated':
-            return 'Respuesta validada.';
+            return t('Respuesta validada.');
         case 'recommendations:complete':
-            return 'Consulta completada.';
+            return t('Consulta completada.');
         default:
-            return 'Preparando la recomendación…';
+            return t('Preparando la recomendación…');
     }
 }
 
@@ -64,11 +67,17 @@ function activityDetail(progress: RecommendationProgress) {
     if (progress.event === 'recommendations:codex:reasoning')
         return typeof summary === 'string' && summary.trim()
             ? summary.trim()
-            : 'Codex ha preparado un resumen de su criterio para esta recomendación.';
+            : t(
+                  'Codex ha preparado un resumen de su criterio para esta recomendación.',
+              );
     if (progress.event === 'recommendations:codex:catalog-query')
-        return 'Está buscando y filtrando candidatos en el catálogo local mediante una consulta de solo lectura. Los prompts y argumentos internos no se muestran.';
+        return t(
+            'Está buscando y filtrando candidatos en el catálogo local mediante una consulta de solo lectura. Los prompts y argumentos internos no se muestran.',
+        );
     if (progress.event === 'recommendations:codex:thinking')
-        return 'Está comparando tus preferencias, el contexto de la conversación y los candidatos disponibles.';
+        return t(
+            'Está comparando tus preferencias, el contexto de la conversación y los candidatos disponibles.',
+        );
     return null;
 }
 
@@ -107,12 +116,13 @@ export function CopilotBar({
     onReset: () => void;
     renderResult: (result: Recommendation) => ReactNode;
 }) {
+    useLanguage();
     const suggestedPrompts = [
-        'Quiero algo más corto que lo propuesto',
-        'Sin combates difíciles ni estrés, prefiero explorar',
-        'Un juego para jugar con mando relajado en el sofá',
-        'Tráeme algo de mi biblioteca familiar que casi nadie juegue',
-        'Tráeme otras opciones completamente distintas',
+        t('Quiero algo más corto que lo propuesto'),
+        t('Sin combates difíciles ni estrés, prefiero explorar'),
+        t('Un juego para jugar con mando relajado en el sofá'),
+        t('Tráeme algo de mi biblioteca familiar que casi nadie juegue'),
+        t('Tráeme otras opciones completamente distintas'),
     ];
 
     const conversationHistory = state?.conversation ?? [];
@@ -129,17 +139,21 @@ export function CopilotBar({
                     </div>
                     <div>
                         <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                            <span>Copiloto de Selección</span>
+                            <span>{t('Copiloto de Selección')}</span>
                             <span className="hud-copilot-pill">
                                 {engine === 'codex'
                                     ? `${codex.model} · ${codex.effort}`
-                                    : 'Motor local'}
+                                    : t('Motor local')}
                             </span>
                         </h4>
                         <p className="text-xs text-muted-foreground">
                             {engine === 'codex' && conversationMode === 'guided'
-                                ? 'La IA te hará preguntas hasta que pulses «Recomiéndame ya».'
-                                : 'Cuéntame qué te apetece y afinamos tu próximo juego.'}
+                                ? t(
+                                      'La IA te hará preguntas hasta que pulses «Recomiéndame ya».',
+                                  )
+                                : t(
+                                      'Cuéntame qué te apetece y afinamos tu próximo juego.',
+                                  )}
                         </p>
                     </div>
                 </div>
@@ -148,7 +162,7 @@ export function CopilotBar({
                     {engine === 'codex' && (
                         <fieldset
                             className="flex gap-1"
-                            aria-label="Modo de conversación"
+                            aria-label={t('Modo de conversación')}
                         >
                             {(['direct', 'guided'] as const).map((mode) => (
                                 <Button
@@ -165,8 +179,8 @@ export function CopilotBar({
                                     onClick={() => setConversationMode(mode)}
                                 >
                                     {mode === 'guided'
-                                        ? 'Modo guiado'
-                                        : 'Directo'}
+                                        ? t('Modo guiado')
+                                        : t('Directo')}
                                 </Button>
                             ))}
                         </fieldset>
@@ -178,10 +192,10 @@ export function CopilotBar({
                         className="h-7 text-xs text-muted-foreground hover:text-foreground"
                         onClick={onReset}
                         disabled={!!busy}
-                        title="Reiniciar conversación y filtros"
+                        title={t('Reiniciar conversación y filtros')}
                     >
                         <RotateCcw size={12} className="mr-1" />
-                        Reiniciar
+                        {t('Reiniciar ')}
                     </Button>
                 </div>
             </div>
@@ -191,8 +205,8 @@ export function CopilotBar({
                     <div className="hud-ai-activity-header">
                         <span>
                             {engine === 'codex'
-                                ? 'Actividad de la IA'
-                                : 'Actividad de la recomendación'}
+                                ? t('Actividad de la IA')
+                                : t('Actividad de la recomendación')}
                         </span>
                         {busy === 'recommend' && (
                             <LoaderCircle className="spin" size={13} />
@@ -218,7 +232,7 @@ export function CopilotBar({
                                                 </span>
                                             </span>
                                             <span className="hud-ai-activity-hint">
-                                                Ver detalle
+                                                {t('Ver detalle ')}
                                             </span>
                                         </summary>
                                         <p className="hud-ai-activity-detail">
@@ -241,7 +255,7 @@ export function CopilotBar({
                 <div
                     className="hud-copilot-history"
                     role="log"
-                    aria-label="Conversación"
+                    aria-label={t('Conversación')}
                 >
                     {conversationHistory.map((turn, index) => {
                         const isLatest =
@@ -253,17 +267,19 @@ export function CopilotBar({
                                 className="hud-history-turn"
                             >
                                 <div className="hud-history-user">
-                                    <strong>Tú</strong>
+                                    <strong>{t('Tú')}</strong>
                                     <p className="whitespace-pre-wrap">
                                         {turn.text ||
-                                            'Ayúdame a elegir mi próximo juego.'}
+                                            t(
+                                                'Ayúdame a elegir mi próximo juego.',
+                                            )}
                                     </p>
                                 </div>
                                 <div className="hud-history-ai">
                                     <strong>
                                         {turn.result.engine === 'local'
-                                            ? 'Motor local'
-                                            : 'Copiloto'}
+                                            ? t('Motor local')
+                                            : t('Copiloto')}
                                     </strong>
                                     <p
                                         id={
@@ -289,7 +305,7 @@ export function CopilotBar({
                 <div className="hud-copilot-reference-chip">
                     <Sparkles size={13} className="text-cyan-400" />
                     <span>
-                        Buscando algo similar a:{' '}
+                        {t('Buscando algo similar a:')}{' '}
                         <strong>{reference.name}</strong>
                     </span>
                     <button
@@ -299,7 +315,7 @@ export function CopilotBar({
                             setReference(null);
                             setText('');
                         }}
-                        title="Quitar referencia"
+                        title={t('Quitar referencia')}
                     >
                         <X size={13} />
                     </button>
@@ -316,11 +332,13 @@ export function CopilotBar({
                             onClick={() =>
                                 onRecommend(
                                     text.trim() ||
-                                        'Hazme preguntas para encontrar mi juego ideal.',
+                                        t(
+                                            'Hazme preguntas para encontrar mi juego ideal.',
+                                        ),
                                 )
                             }
                         >
-                            Empezar preguntas
+                            {t('Empezar preguntas ')}
                         </Button>
                     )}
                     <Button
@@ -330,12 +348,14 @@ export function CopilotBar({
                         onClick={() =>
                             onRecommend(
                                 text.trim() ||
-                                    'Recomiéndame ya con lo que sabes de mí, sin más preguntas.',
+                                    t(
+                                        'Recomiéndame ya con lo que sabes de mí, sin más preguntas.',
+                                    ),
                                 'direct',
                             )
                         }
                     >
-                        Recomiéndame ya
+                        {t('Recomiéndame ya ')}
                     </Button>
                 </div>
             )}
@@ -369,8 +389,8 @@ export function CopilotBar({
                     id="copilot-input"
                     aria-label={
                         clarification
-                            ? 'Tu respuesta'
-                            : 'Mensaje para el copiloto'
+                            ? t('Tu respuesta')
+                            : t('Mensaje para el copiloto')
                     }
                     aria-describedby={
                         clarification ? 'copilot-question' : undefined
@@ -380,9 +400,13 @@ export function CopilotBar({
                     placeholder={
                         engine === 'codex'
                             ? clarification || conversationMode === 'guided'
-                                ? 'Cuéntame qué prefieres…'
-                                : '¿Qué cambiarías? (ej: prefiero un roguelike espacial, o algo que dure menos de 4 horas)…'
-                            : 'El motor local usa los filtros fijos. Cambia a Codex para conversar en lenguaje natural.'
+                                ? t('Cuéntame qué prefieres…')
+                                : t(
+                                      '¿Qué cambiarías? (ej: prefiero un roguelike espacial, o algo que dure menos de 4 horas)…',
+                                  )
+                            : t(
+                                  'El motor local usa los filtros fijos. Cambia a Codex para conversar en lenguaje natural.',
+                              )
                     }
                     maxLength={2000}
                     disabled={engine !== 'codex' || !canRecommend || !!busy}
@@ -406,7 +430,7 @@ export function CopilotBar({
                         !!busy
                     }
                     className="hud-copilot-send-btn"
-                    aria-label="Enviar mensaje"
+                    aria-label={t('Enviar mensaje')}
                 >
                     <ArrowRight size={16} />
                 </Button>
@@ -415,8 +439,9 @@ export function CopilotBar({
             {engine !== 'codex' && (
                 <div className="hud-engine-warning-banner">
                     <span>
-                        Estás en modo motor local (offline). Para afinar con IA,
-                        cambia a Codex:
+                        {t(
+                            'Estás en modo motor local (offline). Para afinar con IA, cambia a Codex: ',
+                        )}
                     </span>
                     <Button
                         variant="outline"
@@ -424,7 +449,7 @@ export function CopilotBar({
                         className="h-6 text-xs ml-2"
                         onClick={() => setEngine('codex')}
                     >
-                        Activar Codex
+                        {t('Activar Codex ')}
                     </Button>
                 </div>
             )}

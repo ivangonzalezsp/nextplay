@@ -1,6 +1,3 @@
-@import './steam.css';
-@import './ps5.css';
-@import './switch2.css';
 @import './cinema.css';
 
 .theme-selector {
@@ -25,17 +22,17 @@
     outline-offset: 3px;
 }
 
-/* Shared theme contract. No overrides are applied to the original HUD. */
-html[data-theme]:not([data-theme='default']) {
+/* One immersive layout, with palette variables inherited by portals. */
+html[data-theme^='cinema'] {
     --primary: var(--theme-accent);
     --card: var(--theme-surface);
     --secondary: var(--theme-selected);
 }
-html[data-theme]:not([data-theme='default']) body {
+html[data-theme^='cinema'] body {
     background: var(--theme-backdrop);
     background-attachment: fixed;
 }
-html[data-theme]:not([data-theme='default'])
+html[data-theme^='cinema']
     :is(
         .hud-topbar,
         .hud-quick-vibe-container,
@@ -46,7 +43,7 @@ html[data-theme]:not([data-theme='default'])
     background: var(--theme-panel);
     border-color: var(--border);
 }
-html[data-theme]:not([data-theme='default'])
+html[data-theme^='cinema']
     :is(
         .hud-game-card,
         .hud-library-card,
@@ -59,14 +56,13 @@ html[data-theme]:not([data-theme='default'])
     ) {
     border-radius: var(--theme-radius);
 }
-html[data-theme]:not([data-theme='default']) .hud-main-recommend-btn {
+html[data-theme^='cinema'] .hud-main-recommend-btn {
     border-radius: var(--theme-button-radius);
 }
-html[data-theme]:not([data-theme='default']) .hud-chip.vibe.active {
+html[data-theme^='cinema'] .hud-chip.vibe.active {
     border-color: var(--primary);
 }
-html[data-theme]:not([data-theme='default'])
-    .hud-copilot-send-btn:hover:not(:disabled) {
+html[data-theme^='cinema'] .hud-copilot-send-btn:hover:not(:disabled) {
     background: var(--theme-accent-hover);
 }
 @media (max-width: 600px) {
@@ -84,4 +80,38 @@ html[data-theme]:not([data-theme='default'])
     .hud-user-name {
         display: none;
     }
+}
+
+.language-selector {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+.language-selector button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 44px;
+    min-height: 36px;
+    padding: 4px 7px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted-foreground);
+    background: var(--card);
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+.language-selector button[aria-pressed='true'] {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--secondary);
+}
+.language-selector button:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+}
+.language-selector output {
+    max-width: 140px;
+    font-size: 0.7rem;
 }

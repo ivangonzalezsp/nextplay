@@ -1,15 +1,13 @@
-# Temas
+# Immersive colors
 
-El HUD original vive en `app/globals.css` y permanece disponible como el tema `Legacy` (`default`).
+Next Play uses one immersive layout. `cinema.css` defines that layout and its default Mint palette. Ocean, Violet, Amber, and Rose override only its color variables. `index.css` applies the shared variables to components and portals.
 
-Para añadir un tema:
+To add a palette:
 
-1. Copia uno de los CSS de esta carpeta y cambia su selector `html[data-theme='identificador']` y sus variables.
-2. Importa el archivo en `index.css`.
-3. Añade su identificador y nombre a `THEMES` en `lib/themes.ts`.
+1. Add a `cinema-*` entry to `THEMES` in `lib/themes.ts` with its Spanish label and an English translation in `lib/translations.ts`.
+2. Add its `html[data-theme='cinema-*']` variables at the end of `cinema.css`: accent, RGB accent, hover, gradient end, text on accent, and selected surface.
+3. Check cards, navigation, modals, keyboard focus, contrast, and small screens. Every palette must retain the immersive layout and video/art previews.
 
-Cada módulo define paleta, superficies, fondo, radios y color de texto de botones. Puede añadir reglas propias bajo su selector. `index.css` aplica las variables a los componentes compartidos; los portales de ajustes y desplegables heredan el tema desde `html`.
+The choice is saved under `nextplay-theme`. Missing, unknown, blocked-storage, and retired Legacy/Steam/PS5/Switch 2 choices fall back to Mint (`cinema`). The initial script and selector share the same catalog.
 
-La elección se guarda en localStorage con la clave `nextplay-theme`. Sin elección, con un tema desconocido o con almacenamiento bloqueado, la carga usa Inmersivo. Las elecciones ya guardadas se conservan, incluido `default`, que ahora aparece como Legacy. Los estilos Steam, PS5 y Switch 2 son interpretaciones visuales, no réplicas de sus interfaces.
-
-Inmersivo (`cinema`) es el tema inicial y adapta los mockups aprobados a los componentes reales: navegación lateral, tarjetas con acciones compactas y arte panorámico de Steam. El arte se carga únicamente en este tema; si no está disponible, la recomendación conserva su carátula. No requiere migración ni altera datos personales.
+The header's English/Spanish selector stores `nextplay-language` separately. `useLanguage` subscribes components to changes; `lib/i18n.ts` translates UI copy, formats locales, and chooses Steam tag display names without changing tag IDs. API requests send `Accept-Language`; `server/i18n.ts` isolates each request's language, including streamed recommendations. Unknown language values fall back to Spanish. Personal notes, metadata from external sources without translations, and historical conversations retain their original content.

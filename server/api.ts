@@ -1,3 +1,4 @@
+import { t as translateMessage, withRequestLanguage } from './i18n.ts';
 import {
     AppError,
     config,
@@ -147,7 +148,9 @@ export function streamRecommendations(request: Request): Response {
             } catch {
                 send({
                     type: 'error',
-                    error: 'El contenido de la solicitud no es válido.',
+                    error: translateMessage(
+                        'El contenido de la solicitud no es válido.',
+                    ),
                 });
                 close();
                 return;
@@ -165,7 +168,9 @@ export function streamRecommendations(request: Request): Response {
                     } catch {
                         send({
                             type: 'error',
-                            error: 'La respuesta de Next Play no es válida.',
+                            error: translateMessage(
+                                'La respuesta de Next Play no es válida.',
+                            ),
                             status: response.status,
                         });
                         return;
@@ -182,7 +187,9 @@ export function streamRecommendations(request: Request): Response {
                             'error' in payload &&
                             typeof payload.error === 'string'
                                 ? payload.error
-                                : 'No se ha podido completar la recomendación.',
+                                : translateMessage(
+                                      'No se ha podido completar la recomendación.',
+                                  ),
                         status: response.status,
                     });
                 })
@@ -192,7 +199,9 @@ export function streamRecommendations(request: Request): Response {
                         error:
                             error instanceof Error
                                 ? error.message
-                                : 'No se ha podido completar la recomendación.',
+                                : translateMessage(
+                                      'No se ha podido completar la recomendación.',
+                                  ),
                     }),
                 )
                 .finally(close);
@@ -225,26 +234,41 @@ export function verifyRequest(request: Request) {
         (host && host !== url.host)
     )
         throw new AppError(
-            'Acceso permitido únicamente desde la red local.',
+            translateMessage('Acceso permitido únicamente desde la red local.'),
             403,
         );
     const origin = request.headers.get('origin');
     if (origin && origin !== url.origin)
-        throw new AppError('Origen de solicitud no permitido.', 403);
+        throw new AppError(
+            translateMessage('Origen de solicitud no permitido.'),
+            403,
+        );
     if (request.headers.get('sec-fetch-site') === 'cross-site')
-        throw new AppError('Acceso desde otra web no permitido.', 403);
+        throw new AppError(
+            translateMessage('Acceso desde otra web no permitido.'),
+            403,
+        );
     if (
         request.method !== 'GET' &&
         request.headers.get('content-type')?.split(';')[0] !==
             'application/json'
     )
-        throw new AppError('Se requiere una solicitud JSON.', 415);
+        throw new AppError(
+            translateMessage('Se requiere una solicitud JSON.'),
+            415,
+        );
 }
 async function body(request: Request): Promise<Record<string, unknown>> {
     if (Number(request.headers.get('content-length')) > 16000)
-        throw new AppError('La solicitud es demasiado grande.', 413);
+        throw new AppError(
+            translateMessage('La solicitud es demasiado grande.'),
+            413,
+        );
     const reader = request.body?.getReader();
-    if (!reader) throw new AppError('Falta el contenido de la solicitud.');
+    if (!reader)
+        throw new AppError(
+            translateMessage('Falta el contenido de la solicitud.'),
+        );
     const chunks: Uint8Array[] = [];
     let size = 0;
     while (true) {
@@ -253,7 +277,10 @@ async function body(request: Request): Promise<Record<string, unknown>> {
         size += value.byteLength;
         if (size > 16000) {
             await reader.cancel();
-            throw new AppError('La solicitud es demasiado grande.', 413);
+            throw new AppError(
+                translateMessage('La solicitud es demasiado grande.'),
+                413,
+            );
         }
         chunks.push(value);
     }
@@ -263,7 +290,9 @@ async function body(request: Request): Promise<Record<string, unknown>> {
             throw new Error();
         return value;
     } catch {
-        throw new AppError('El contenido de la solicitud no es válido.');
+        throw new AppError(
+            translateMessage('El contenido de la solicitud no es válido.'),
+        );
     }
 }
 async function snapshot(
@@ -307,7 +336,7 @@ async function saveRecommendation(state: State, turn: Turn) {
     await saveState(next);
     return snapshot(next, turn.result.warnings);
 }
-export async function handle(
+async function handleRequest(
     request: Request,
     onProgress?: ProgressListener,
     signal: AbortSignal = request.signal,
@@ -327,7 +356,10 @@ export async function handle(
     const ensureActive = () => {
         // ponytail: source refreshes finish at their await boundary; this guard avoids threading signals through every source.
         if (signal.aborted)
-            throw new AppError('La búsqueda se ha detenido.', 499);
+            throw new AppError(
+                translateMessage('La búsqueda se ha detenido.'),
+                499,
+            );
     };
     const phase = (event: string, details?: Record<string, unknown>) => {
         ensureActive();
@@ -362,7 +394,9 @@ export async function handle(
             );
         if (isMaintenance())
             throw new AppError(
-                'Next Play se está reiniciando. Espera un momento.',
+                translateMessage(
+                    'Next Play se está reiniciando. Espera un momento.',
+                ),
                 503,
             );
         if (path === '/api/app' && request.method === 'GET')
@@ -384,7 +418,9 @@ export async function handle(
                 query.split('').some((char) => char < ' ')
             )
                 throw new AppError(
-                    'Busca un título de entre 2 y 100 caracteres.',
+                    translateMessage(
+                        'Busca un título de entre 2 y 100 caracteres.',
+                    ),
                 );
             return complete(
                 Response.json({ games: await searchIgdb(query) }, { headers }),
@@ -396,7 +432,9 @@ export async function handle(
                 !/^[1-9]\d*$/.test(appId) ||
                 !Number.isSafeInteger(Number(appId))
             )
-                throw new AppError('El AppID de Steam no es válido.');
+                throw new AppError(
+                    translateMessage('El AppID de Steam no es válido.'),
+                );
             return complete(
                 Response.json(
                     { videoId: await getGameVideo(Number(appId)) },
@@ -431,7 +469,9 @@ export async function handle(
                     payload.igdbId <= 0
                 )
                     throw new AppError(
-                        'Selecciona un juego de los resultados de IGDB.',
+                        translateMessage(
+                            'Selecciona un juego de los resultados de IGDB.',
+                        ),
                     );
                 if (
                     typeof payload.platform !== 'string' ||
@@ -441,7 +481,9 @@ export async function handle(
                     payload.platform.trim().toLowerCase() === 'steam'
                 )
                     throw new AppError(
-                        'Indica una plataforma distinta de Steam (máximo 80 caracteres).',
+                        translateMessage(
+                            'Indica una plataforma distinta de Steam (máximo 80 caracteres).',
+                        ),
                     );
                 const platform = payload.platform.trim();
                 const preference = parsePreference({
@@ -458,7 +500,9 @@ export async function handle(
                     )
                 )
                     throw new AppError(
-                        'Ya tienes ese juego en esa plataforma. Puedes cambiar su estado en tu biblioteca.',
+                        translateMessage(
+                            'Ya tienes ese juego en esa plataforma. Puedes cambiar su estado en tu biblioteca.',
+                        ),
                         409,
                     );
                 const game: Game = {
@@ -485,11 +529,15 @@ export async function handle(
                     payload.appId >= 0
                 )
                     throw new AppError(
-                        'Solo se pueden borrar juegos añadidos manualmente.',
+                        translateMessage(
+                            'Solo se pueden borrar juegos añadidos manualmente.',
+                        ),
                     );
                 if (!state.games.some((game) => game.appId === payload.appId))
                     throw new AppError(
-                        'Ese juego manual ya no está en tu biblioteca.',
+                        translateMessage(
+                            'Ese juego manual ya no está en tu biblioteca.',
+                        ),
                         404,
                     );
                 state.games = state.games.filter(
@@ -538,7 +586,9 @@ export async function handle(
                         ))
                 )
                     throw new AppError(
-                        'Ese juego no pertenece a la biblioteca sincronizada.',
+                        translateMessage(
+                            'Ese juego no pertenece a la biblioteca sincronizada.',
+                        ),
                     );
                 const game =
                     state.games.find((g) => g.appId === payload.appId) ??
@@ -568,11 +618,13 @@ export async function handle(
                     typeof payload.force !== 'boolean'
                 )
                     throw new AppError(
-                        'La opción de actualización de logros no es válida.',
+                        translateMessage(
+                            'La opción de actualización de logros no es válida.',
+                        ),
                     );
                 if (!state.profile)
                     throw new AppError(
-                        'Conecta primero tu perfil de Steam.',
+                        translateMessage('Conecta primero tu perfil de Steam.'),
                         422,
                     );
                 const active = state.games.filter(
@@ -590,14 +642,18 @@ export async function handle(
                         payload.appId <= 0
                     )
                         throw new AppError(
-                            'El juego para actualizar los logros no es válido.',
+                            translateMessage(
+                                'El juego para actualizar los logros no es válido.',
+                            ),
                         );
                     games = active.filter(
                         (game) => game.appId === payload.appId,
                     );
                     if (!games.length)
                         throw new AppError(
-                            'Los logros solo se siguen en juegos que estás jugando, tienes en pausa o has terminado.',
+                            translateMessage(
+                                'Los logros solo se siguen en juegos que estás jugando, tienes en pausa o has terminado.',
+                            ),
                             422,
                         );
                 }
@@ -631,11 +687,15 @@ export async function handle(
                     typeof payload.force !== 'boolean'
                 )
                     throw new AppError(
-                        'La opción de actualización de etiquetas no es válida.',
+                        translateMessage(
+                            'La opción de actualización de etiquetas no es válida.',
+                        ),
                     );
                 if (!state.games.some((game) => game.appId > 0))
                     throw new AppError(
-                        'Sincroniza primero una biblioteca de Steam con juegos.',
+                        translateMessage(
+                            'Sincroniza primero una biblioteca de Steam con juegos.',
+                        ),
                         422,
                     );
                 let result;
@@ -652,12 +712,16 @@ export async function handle(
                 }
                 if (result.stopReason === 'rate-limit')
                     throw new AppError(
-                        'Steam ha limitado la carga de etiquetas. Se han conservado los avances; inténtalo más tarde.',
+                        translateMessage(
+                            'Steam ha limitado la carga de etiquetas. Se han conservado los avances; inténtalo más tarde.',
+                        ),
                         429,
                     );
                 if (result.stopReason === 'interrumpido')
                     throw new AppError(
-                        'La carga de etiquetas se ha interrumpido.',
+                        translateMessage(
+                            'La carga de etiquetas se ha interrumpido.',
+                        ),
                         409,
                     );
                 phase('steam:tags:sync:complete', result);
@@ -669,12 +733,16 @@ export async function handle(
                     typeof payload.allMissing !== 'boolean'
                 )
                     throw new AppError(
-                        'La opción de búsqueda HLTB no es válida.',
+                        translateMessage(
+                            'La opción de búsqueda HLTB no es válida.',
+                        ),
                     );
                 if (payload.allMissing === true) {
                     if (!(await hltbAvailable()))
                         throw new AppError(
-                            'HowLongToBeat no está disponible en este entorno.',
+                            translateMessage(
+                                'HowLongToBeat no está disponible en este entorno.',
+                            ),
                             503,
                         );
                     const durations = await getHltbCache();
@@ -705,19 +773,25 @@ export async function handle(
                     appId <= 0
                 )
                     throw new AppError(
-                        'El juego para actualizar HLTB no es válido.',
+                        translateMessage(
+                            'El juego para actualizar HLTB no es válido.',
+                        ),
                     );
                 const game = state.games.find(
                     (candidate) => candidate.appId === appId,
                 );
                 if (!game)
                     throw new AppError(
-                        'Ese juego no pertenece a tu biblioteca de Steam.',
+                        translateMessage(
+                            'Ese juego no pertenece a tu biblioteca de Steam.',
+                        ),
                         404,
                     );
                 if (!(await hltbAvailable()))
                     throw new AppError(
-                        'HowLongToBeat no está disponible en este entorno.',
+                        translateMessage(
+                            'HowLongToBeat no está disponible en este entorno.',
+                        ),
                         503,
                     );
                 phase('hltb:refresh:start', { appId });
@@ -741,7 +815,9 @@ export async function handle(
                     dateInputValue(at) > dateInputValue(Date.now())
                 )
                     throw new AppError(
-                        'La fecha del cambio de estado no es válida.',
+                        translateMessage(
+                            'La fecha del cambio de estado no es válida.',
+                        ),
                     );
                 events[payload.index].at = at;
                 await saveState(state);
@@ -769,7 +845,9 @@ export async function handle(
                 const parsed = parseProfile(payload.profileUrl);
                 if (typeof payload.force !== 'boolean')
                     throw new AppError(
-                        'La opción de actualización no es válida.',
+                        translateMessage(
+                            'La opción de actualización no es válida.',
+                        ),
                     );
                 if (
                     !payload.force &&
@@ -789,7 +867,9 @@ export async function handle(
                     state.profile.steamId !== fresh.profile.steamId
                 )
                     throw new AppError(
-                        'Esta app conserva un único perfil. Usa el perfil ya conectado para mantener sus preferencias.',
+                        translateMessage(
+                            'Esta app conserva un único perfil. Usa el perfil ya conectado para mantener sus preferencias.',
+                        ),
                         409,
                     );
                 const cache = await getCache();
@@ -828,12 +908,16 @@ export async function handle(
                         warnings.push(
                             e instanceof AppError
                                 ? e.message
-                                : 'No se ha actualizado Steam Families. Se conserva su última biblioteca.',
+                                : translateMessage(
+                                      'No se ha actualizado Steam Families. Se conserva su última biblioteca.',
+                                  ),
                         );
                     }
                 } else if (next.family)
                     warnings.push(
-                        'Falta el token de Steam Families. Se conserva su última biblioteca guardada.',
+                        translateMessage(
+                            'Falta el token de Steam Families. Se conserva su última biblioteca guardada.',
+                        ),
                     );
                 phase('steam:enrich:start', { games: next.games.length });
                 const enriched = await enrich(next.games, cache, payload.force);
@@ -906,11 +990,15 @@ export async function handle(
                     payload.text.length > 2000
                 )
                     throw new AppError(
-                        'El mensaje no puede superar los 2000 caracteres.',
+                        translateMessage(
+                            'El mensaje no puede superar los 2000 caracteres.',
+                        ),
                     );
                 if (!state.profile && !state.games.some(inLibrary))
                     throw new AppError(
-                        'Añade un juego o conecta tu perfil de Steam antes de pedir recomendaciones.',
+                        translateMessage(
+                            'Añade un juego o conecta tu perfil de Steam antes de pedir recomendaciones.',
+                        ),
                     );
                 const engine = parseEngine(
                     payload.engine === undefined
@@ -929,7 +1017,9 @@ export async function handle(
                     conversationMode !== 'guided'
                 )
                     throw new AppError(
-                        'Elige Directo o Modo guiado para conversar.',
+                        translateMessage(
+                            'Elige Directo o Modo guiado para conversar.',
+                        ),
                     );
                 const referenceAppId =
                     payload.referenceAppId === undefined &&
@@ -960,11 +1050,15 @@ export async function handle(
                     (!Number.isSafeInteger(referenceAppId) || !reference)
                 )
                     throw new AppError(
-                        'El juego de referencia no está disponible. Vuelve a seleccionarlo.',
+                        translateMessage(
+                            'El juego de referencia no está disponible. Vuelve a seleccionarlo.',
+                        ),
                     );
                 if (reference && engine !== 'codex')
                     throw new AppError(
-                        'Algo como este necesita Codex para interpretar qué conservar o cambiar.',
+                        translateMessage(
+                            'Algo como este necesita Codex para interpretar qué conservar o cambiar.',
+                        ),
                     );
                 if (engine === 'local') {
                     phase('recommendations:local:start');
@@ -976,7 +1070,9 @@ export async function handle(
                     const recommendation = recommendLocally(state, filters);
                     if (payload.text.trim())
                         recommendation.warnings.push(
-                            'El mensaje no se interpreta en modo local; usa los filtros y Tus gustos.',
+                            translateMessage(
+                                'El mensaje no se interpreta en modo local; usa los filtros y Tus gustos.',
+                            ),
                         );
                     ensureActive();
                     const next = await saveRecommendation(state, {
@@ -1029,7 +1125,9 @@ export async function handle(
                             },
                         );
                         warnings.push(
-                            'No se ha podido refrescar Steam. Se usa la última biblioteca guardada, que puede estar desactualizada.',
+                            translateMessage(
+                                'No se ha podido refrescar Steam. Se usa la última biblioteca guardada, que puede estar desactualizada.',
+                            ),
                         );
                     }
                 }
@@ -1063,12 +1161,16 @@ export async function handle(
                         warnings.push(
                             e instanceof AppError
                                 ? e.message
-                                : 'No se ha podido actualizar Steam Families. Se conserva su última biblioteca.',
+                                : translateMessage(
+                                      'No se ha podido actualizar Steam Families. Se conserva su última biblioteca.',
+                                  ),
                         );
                     }
                 } else if (state.family && !c.familyToken)
                     warnings.push(
-                        'Falta el token de Steam Families. Los juegos compartidos proceden de la última lectura guardada.',
+                        translateMessage(
+                            'Falta el token de Steam Families. Los juegos compartidos proceden de la última lectura guardada.',
+                        ),
                     );
                 const cache = await getCache();
                 phase('recommendations:enrich:start', {
@@ -1100,7 +1202,9 @@ export async function handle(
                             { path },
                         );
                         warnings.push(
-                            'No se han podido buscar nuevos descubrimientos. La selección continúa con tu biblioteca.',
+                            translateMessage(
+                                'No se han podido buscar nuevos descubrimientos. La selección continúa con tu biblioteca.',
+                            ),
                         );
                     }
                 }
@@ -1175,7 +1279,9 @@ export async function handle(
                     });
                     if (failed) {
                         warnings.push(
-                            'Algunas valoraciones no se han actualizado; las disponibles muestran su fecha de consulta.',
+                            translateMessage(
+                                'Algunas valoraciones no se han actualizado; las disponibles muestran su fecha de consulta.',
+                            ),
                         );
                         break;
                     }
@@ -1237,7 +1343,9 @@ export async function handle(
                                 candidates.length
                         )
                             throw new AppError(
-                                'Codex no devolvió las opciones de zona de confort. Reintenta la consulta.',
+                                translateMessage(
+                                    'Codex no devolvió las opciones de zona de confort. Reintenta la consulta.',
+                                ),
                                 502,
                             );
                         out.message = comfort.message;
@@ -1254,7 +1362,9 @@ export async function handle(
                         needsClarification: false,
                         message:
                             comfort?.message ??
-                            'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.',
+                            translateMessage(
+                                'No hay juegos con datos suficientes que cumplan estos filtros. Prueba otro género, quita el límite de duración o incluye juegos terminados.',
+                            ),
                         owned: [],
                         discoveries: [],
                     };
@@ -1289,7 +1399,10 @@ export async function handle(
                 return nextSnapshot;
             }
             phase('operation:unknown');
-            throw new AppError('Esta operación no existe.', 404);
+            throw new AppError(
+                translateMessage('Esta operación no existe.'),
+                404,
+            );
         });
         return complete(Response.json(result, { headers }));
     } catch (e) {
@@ -1305,10 +1418,22 @@ export async function handle(
                     error:
                         e instanceof AppError
                             ? e.message
-                            : 'No se ha podido completar la operación. Tus datos anteriores están guardados.',
+                            : translateMessage(
+                                  'No se ha podido completar la operación. Tus datos anteriores están guardados.',
+                              ),
                 },
                 { status, headers },
             ),
         );
     }
+}
+
+export function handle(
+    request: Request,
+    onProgress?: ProgressListener,
+    signal: AbortSignal = request.signal,
+): Promise<Response> {
+    return withRequestLanguage(request, () =>
+        handleRequest(request, onProgress, signal),
+    );
 }

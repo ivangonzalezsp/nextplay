@@ -1,7 +1,10 @@
 'use client';
 
+import { translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { es } from 'date-fns/locale';
+import { es, enGB } from 'date-fns/locale';
 import {
     CalendarDays,
     List,
@@ -38,11 +41,13 @@ import {
 } from '@/lib/play-history';
 import styles from './PlayHistory.module.css';
 
-const months = Array.from({ length: 12 }, (_, month) =>
-    new Date(2024, month).toLocaleDateString('es', { month: 'long' }),
-);
+const months = () =>
+    Array.from({ length: 12 }, (_, month) =>
+        new Date(2024, month).toLocaleDateString(locale(), { month: 'long' }),
+    );
 
 function EventLabel({ event }: { event: PlayEvent }) {
+    useLanguage();
     const Icon = {
         started: Play,
         playing: Play,
@@ -60,12 +65,13 @@ function EventLabel({ event }: { event: PlayEvent }) {
         >
             <Icon size={12} className="mr-1 inline" />
             {phase !== 'neutral' && `${phase === 'start' ? 'Start' : 'End'} · `}
-            {playEventLabel(event)}
+            {t(playEventLabel(event))}
         </span>
     );
 }
 
 function EventCover({ src }: { src?: string }) {
+    useLanguage();
     const [failedSrc, setFailedSrc] = useState<string>();
     return (
         <div className="flex aspect-[2/3] w-full items-center justify-center overflow-hidden rounded-md bg-muted">
@@ -104,12 +110,13 @@ function EventDateEditor({
     busy: boolean;
     onChange: (date: string) => Promise<void>;
 }) {
+    useLanguage();
     const selected = dateFromInput(value);
     const [open, setOpen] = useState(false);
     const [month, setMonth] = useState(
         () => new Date(selected.getFullYear(), selected.getMonth(), 1),
     );
-    const dateLabel = selected.toLocaleDateString('es', {
+    const dateLabel = selected.toLocaleDateString(locale(), {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -137,7 +144,7 @@ function EventDateEditor({
                         variant="outline"
                         size="sm"
                         disabled={busy}
-                        aria-label={label}
+                        aria-label={t(label)}
                     >
                         <CalendarDays size={14} /> {dateLabel}
                     </Button>
@@ -146,7 +153,7 @@ function EventDateEditor({
             <PopoverContent align="end" className="w-auto p-0">
                 <Calendar
                     mode="single"
-                    locale={es}
+                    locale={locale() === 'en-GB' ? enGB : es}
                     month={month}
                     selected={selected}
                     onMonthChange={setMonth}
@@ -159,8 +166,8 @@ function EventDateEditor({
                     }}
                     disabled={{ after: maxDate }}
                     labels={{
-                        labelPrevious: () => 'Mes anterior',
-                        labelNext: () => 'Próximo mes',
+                        labelPrevious: () => t('Mes anterior'),
+                        labelNext: () => t('Próximo mes'),
                     }}
                     initialFocus
                 />
@@ -196,6 +203,7 @@ function PeriodPopover({
     style?: CSSProperties;
     children: ReactNode;
 }) {
+    useLanguage();
     return (
         <Popover>
             <PopoverTrigger
@@ -234,15 +242,17 @@ function PeriodPopover({
                                 )}
                             </PopoverTitle>
                             <p className="text-[11px] text-muted-foreground">
-                                Fragmento {periodIndex + 1} de {groupLength}
+                                {t('Fragmento ')}
+                                {periodIndex + 1} {t('de ')}
+                                {groupLength}
                             </p>
                         </div>
                         <span className={styles.detailStatus}>
                             {standalone
-                                ? playEventLabel(period.start)
+                                ? t(playEventLabel(period.start))
                                 : period.end
-                                  ? playEventLabel(period.end)
-                                  : 'En curso'}
+                                  ? t(playEventLabel(period.end))
+                                  : t('En curso')}
                         </span>
                     </div>
                     <div
@@ -250,7 +260,7 @@ function PeriodPopover({
                     >
                         <div>
                             <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                {standalone ? 'Fecha' : 'Inicio'}
+                                {standalone ? t('Fecha') : t('Inicio')}
                             </p>
                             <p className="font-medium">
                                 {dateLabel(period.start.at)}
@@ -259,12 +269,12 @@ function PeriodPopover({
                         {!standalone && (
                             <div>
                                 <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                                    {period.end ? 'Fin' : 'Hasta hoy'}
+                                    {period.end ? t('Fin') : t('Hasta hoy')}
                                 </p>
                                 <p className="font-medium">
                                     {period.end
                                         ? dateLabel(period.end.at)
-                                        : 'En curso'}
+                                        : t('En curso')}
                                 </p>
                             </div>
                         )}
@@ -284,6 +294,7 @@ export function PlayHistory({
     busy: boolean;
     onDateChange: (index: number, date: string) => Promise<void>;
 }) {
+    useLanguage();
     const events = state.playHistory ?? [];
     const eventUrl = (event: PlayEvent) =>
         gameUrl(
@@ -327,21 +338,21 @@ export function PlayHistory({
     const periodGroups = groupPlayPeriods(periods);
     const standaloneEvents = standalonePlayEvents(visibleEvents, periods);
     const dateLabel = (at: number) =>
-        new Date(at).toLocaleDateString('es', {
+        new Date(at).toLocaleDateString(locale(), {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
         });
     const periodRangeLabel = (period: PlayPeriod) =>
-        `Start ${dateLabel(period.start.at)} · ${period.end ? `${playEventLabel(period.end)} ${dateLabel(period.end.at)}` : 'En curso'}`;
+        `Start ${dateLabel(period.start.at)} · ${period.end ? `${t(playEventLabel(period.end))} ${dateLabel(period.end.at)}` : t('En curso')}`;
     const periodDescription = (period: PlayPeriod) =>
-        `${period.start.name}: ${periodRangeLabel(period)}${period.end ? '' : ' hasta hoy'}`;
+        `${period.start.name}: ${periodRangeLabel(period)}${period.end ? '' : t(' hasta hoy')}`;
     const periodCalendarLabel = (period: PlayPeriod) =>
-        `${period.start.name}: actividad desde ${dateLabel(period.start.at)}${period.end ? ` hasta ${dateLabel(period.end.at)}` : ' hasta hoy'}. Pulsa para ver el detalle.`;
+        `${period.start.name}${t(': actividad desde ')}${dateLabel(period.start.at)}${period.end ? `${t(' hasta ')}${dateLabel(period.end.at)}` : t(' hasta hoy')}${t('. Pulsa para ver el detalle.')}`;
     const standaloneDescription = (event: PlayEvent) =>
-        `${event.name}: ${playEventLabel(event)} el ${dateLabel(event.at)}`;
+        `${event.name}: ${t(playEventLabel(event))}${t(' el ')}${dateLabel(event.at)}`;
     const standaloneCalendarLabel = (event: PlayEvent) =>
-        `${event.name}: actividad el ${dateLabel(event.at)}. Pulsa para ver el detalle.`;
+        `${event.name}${t(': actividad el ')}${dateLabel(event.at)}${t('. Pulsa para ver el detalle.')}`;
     const maxDate = new Date(calendarDateAt(dateInputValue(now))!);
     const count = (kind: PlayEvent['kind']) =>
         new Set(
@@ -353,21 +364,21 @@ export function PlayHistory({
     return (
         <section
             className={`${styles.history} space-y-6`}
-            aria-label="Mi año de juegos"
+            aria-label={t('Mi año de juegos')}
         >
             <div className={styles.header}>
                 <div>
-                    <p className={styles.eyebrow}>Actividad de juego</p>
-                    <h2 className={styles.title}>Mi año</h2>
+                    <p className={styles.eyebrow}>{t('Actividad de juego')}</p>
+                    <h2 className={styles.title}>{t('Mi año')}</h2>
                     <p className={styles.subtitle}>
                         {view === 'calendar'
-                            ? `Actividad registrada en ${year}`
-                            : `${count('started')} juegos empezados · ${count('completed')} terminados`}
+                            ? `${t('Actividad registrada en ')}${year}`
+                            : `${count('started')}${t(' juegos empezados · ')}${count('completed')}${t(' terminados')}`}
                     </p>
                 </div>
                 <div className={styles.controls}>
                     <label htmlFor="play-year" className="text-sm">
-                        Año
+                        {t('Año ')}
                     </label>
                     <select
                         id="play-year"
@@ -395,7 +406,7 @@ export function PlayHistory({
                         aria-pressed={view === 'calendar'}
                         onClick={() => setView('calendar')}
                     >
-                        <CalendarDays size={16} /> Calendario
+                        <CalendarDays size={16} /> {t('Calendario ')}
                     </Button>
                 </div>
             </div>
@@ -406,35 +417,34 @@ export function PlayHistory({
                         className="h-2 w-2 shrink-0 rounded-full bg-primary ring-4 ring-primary/10"
                     />
                     <span>
-                        Un color por juego. Las bandas conectan sus días de
-                        actividad; haz clic para ver el detalle.
+                        {t(
+                            'Un color por juego. Las bandas conectan sus días de actividad; haz clic para ver el detalle. ',
+                        )}
                     </span>
                 </div>
             ) : (
                 <>
                     <p className="text-sm text-muted-foreground">
-                        Cada cambio de estado queda registrado: inicios, pausas,
-                        reanudaciones, finales y abandonos, también al volver a
-                        Pendiente o marcar No me interesa. Puedes corregir la
-                        fecha de cada evento desde la lista de cambios.
+                        {t(
+                            'Cada cambio de estado queda registrado: inicios, pausas, reanudaciones, finales y abandonos, también al volver a Pendiente o marcar No me interesa. Puedes corregir la fecha de cada evento desde la lista de cambios. ',
+                        )}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                        Un color por juego. Cada juego aparece en una sola línea
-                        y cada Start-End conserva su propio tramo; al reanudar
-                        comienza otro tramo del mismo color. Los tramos abiertos
-                        llegan hasta hoy. Sin un inicio registrado no se dibuja
-                        un tramo.
+                        {t(
+                            'Un color por juego. Cada juego aparece en una sola línea y cada Start-End conserva su propio tramo; al reanudar comienza otro tramo del mismo color. Los tramos abiertos llegan hasta hoy. Sin un inicio registrado no se dibuja un tramo. ',
+                        )}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                        Las idas y vueltas que regresan al estado inicial el
-                        mismo día se consideran un clic accidental y no crean un
-                        tramo.
+                        {t(
+                            'Las idas y vueltas que regresan al estado inicial el mismo día se consideran un clic accidental y no crean un tramo. ',
+                        )}
                     </p>
                 </>
             )}
             {selected.length === 0 && periods.length === 0 && (
                 <p className="rounded-xl border border-border p-6">
-                    Todavía no hay actividad registrada en {year}.
+                    {t('Todavía no hay actividad registrada en ')}
+                    {year}.
                 </p>
             )}
             {view === 'timeline' ? (
@@ -442,12 +452,12 @@ export function PlayHistory({
                     <div
                         className="overflow-x-auto rounded-xl border border-border bg-card p-4"
                         role="region"
-                        aria-label={`Tramos de juego de ${year}`}
+                        aria-label={`${t('Tramos de juego de ')}${year}`}
                         tabIndex={0}
                     >
                         <div className="min-w-[640px] space-y-4">
                             <div className="ml-52 grid grid-cols-12 text-xs text-muted-foreground">
-                                {months.map((month) => (
+                                {months().map((month) => (
                                     <span key={month}>{month.slice(0, 3)}</span>
                                 ))}
                             </div>
@@ -571,7 +581,8 @@ export function PlayHistory({
                     </div>
                     <details>
                         <summary className="cursor-pointer text-sm">
-                            Todos los cambios de estado ({selected.length})
+                            {t('Todos los cambios de estado (')}
+                            {selected.length})
                         </summary>
                         <ol className="ml-2 mt-4 space-y-4 border-l border-border pl-6">
                             {selected.map((event, index) => {
@@ -599,7 +610,7 @@ export function PlayHistory({
                                                 href={eventUrl(event)}
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                aria-label={`Ver ${event.name}`}
+                                                aria-label={`${t('Ver ')}${event.name}`}
                                             >
                                                 <EventCover
                                                     src={
@@ -629,7 +640,7 @@ export function PlayHistory({
                                                             {new Date(
                                                                 event.at,
                                                             ).toLocaleDateString(
-                                                                'es',
+                                                                locale(),
                                                                 {
                                                                     day: 'numeric',
                                                                     month: 'long',
@@ -639,7 +650,9 @@ export function PlayHistory({
                                                         </time>
                                                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                                                             <span>
-                                                                Editar fecha
+                                                                {t(
+                                                                    'Editar fecha ',
+                                                                )}
                                                             </span>
                                                             <EventDateEditor
                                                                 value={
@@ -649,7 +662,7 @@ export function PlayHistory({
                                                                     maxDate
                                                                 }
                                                                 busy={busy}
-                                                                label={`Fecha de ${playEventLabel(event)} para ${event.name}`}
+                                                                label={`${t('Fecha de ')}${t(playEventLabel(event))}${t(' para ')}${event.name}`}
                                                                 onChange={(
                                                                     date,
                                                                 ) =>
@@ -673,7 +686,7 @@ export function PlayHistory({
                 </div>
             ) : (
                 <div className={styles.calendarGrid}>
-                    {months.map((monthName, month) => {
+                    {months().map((monthName, month) => {
                         const offset =
                             (new Date(year, month, 1).getDay() + 6) % 7;
                         const days = new Date(year, month + 1, 0).getDate();
@@ -713,8 +726,8 @@ export function PlayHistory({
                                     <span>
                                         {monthGameIds.size}{' '}
                                         {monthGameIds.size === 1
-                                            ? 'juego'
-                                            : 'juegos'}
+                                            ? t('juego')
+                                            : t('juegos')}
                                     </span>
                                 </header>
                                 <div
@@ -948,7 +961,9 @@ export function PlayHistory({
                                                                 className={
                                                                     styles.lane
                                                                 }
-                                                                aria-label="Actividad puntual de la semana"
+                                                                aria-label={t(
+                                                                    'Actividad puntual de la semana',
+                                                                )}
                                                             >
                                                                 {weekPointEvents.map(
                                                                     (event) => {

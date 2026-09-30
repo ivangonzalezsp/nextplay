@@ -1,5 +1,8 @@
 'use client';
 
+import { translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useState } from 'react';
 import {
     Dialog,
@@ -76,6 +79,7 @@ export function SettingsModal({
     onSetup: () => void;
     onWelcome: () => void;
 }) {
+    useLanguage();
     const [activeTab, setActiveTab] = useState('steam');
     const [draftEngine, setDraftEngine] = useState<RecommendationEngine | null>(
         null,
@@ -93,13 +97,13 @@ export function SettingsModal({
     }
 
     const modelOptions = [
-        ...CODEX_MODELS,
+        ...CODEX_MODELS.map((model) => ({ ...model, label: t(model.label) })),
         ...(CODEX_MODELS.some((m) => m.value === selectedCodex.model)
             ? []
             : [
                   {
                       value: selectedCodex.model,
-                      label: selectedCodex.model + ' · configurado',
+                      label: selectedCodex.model + t(' · configurado'),
                   },
               ]),
     ];
@@ -109,15 +113,15 @@ export function SettingsModal({
             value,
             label:
                 value === 'low'
-                    ? 'Bajo · más rápido'
+                    ? t('Bajo · más rápido')
                     : value === 'medium'
-                      ? 'Medio · equilibrado'
+                      ? t('Medio · equilibrado')
                       : value === 'high'
-                        ? 'Alto · más razonado'
+                        ? t('Alto · más razonado')
                         : value === 'xhigh'
-                          ? 'Muy alto'
+                          ? t('Muy alto')
                           : value === 'max'
-                            ? 'Máximo'
+                            ? t('Máximo')
                             : 'Ultra',
         }),
     );
@@ -139,17 +143,18 @@ export function SettingsModal({
                         </div>
                         <div>
                             <DialogTitle className="text-xl font-bold tracking-tight">
-                                Ajustes y Conexiones
+                                {t('Ajustes y Conexiones ')}
                             </DialogTitle>
                             <DialogDescription className="text-xs text-muted-foreground">
-                                Configuración local de Steam, grupos familiares
-                                e inteligencia artificial.
+                                {t(
+                                    'Configuración local de Steam, grupos familiares e inteligencia artificial. ',
+                                )}
                             </DialogDescription>
                         </div>
                     </div>
                 </DialogHeader>
                 <Button variant="outline" onClick={onSetup}>
-                    Configurar cuentas y aplicación
+                    {t('Configurar cuentas y aplicación ')}
                 </Button>
                 <Button
                     variant="outline"
@@ -158,7 +163,7 @@ export function SettingsModal({
                         onWelcome();
                     }}
                 >
-                    Tutorial y preferencias iniciales
+                    {t('Tutorial y preferencias iniciales ')}
                 </Button>
 
                 <Tabs
@@ -169,15 +174,15 @@ export function SettingsModal({
                     <TabsList className="hud-settings-tabs grid grid-cols-3">
                         <TabsTrigger value="steam" className="gap-2">
                             <Library size={15} />
-                            <span>Steam & Familias</span>
+                            <span>{t('Steam & Familias')}</span>
                         </TabsTrigger>
                         <TabsTrigger value="ai" className="gap-2">
                             <Sparkles size={15} />
-                            <span>Motor & IA</span>
+                            <span>{t('Motor & IA')}</span>
                         </TabsTrigger>
                         <TabsTrigger value="status" className="gap-2">
                             <CheckCircle2 size={15} />
-                            <span>Diagnóstico</span>
+                            <span>{t('Diagnóstico')}</span>
                         </TabsTrigger>
                     </TabsList>
 
@@ -196,17 +201,17 @@ export function SettingsModal({
                                         size={16}
                                         className="text-emerald-400"
                                     />
-                                    Perfil de Steam
+                                    {t('Perfil de Steam ')}
                                 </label>
                                 {state?.syncedAt && (
                                     <span className="text-xs text-muted-foreground">
-                                        Sincronizado:{' '}
+                                        {t('Sincronizado:')}{' '}
                                         {new Date(
                                             state.syncedAt,
-                                        ).toLocaleDateString('es')}{' '}
+                                        ).toLocaleDateString(locale())}{' '}
                                         {new Date(
                                             state.syncedAt,
-                                        ).toLocaleTimeString('es', {
+                                        ).toLocaleTimeString(locale(), {
                                             hour: '2-digit',
                                             minute: '2-digit',
                                         })}
@@ -220,7 +225,9 @@ export function SettingsModal({
                                     onChange={(e) =>
                                         setProfileUrl(e.target.value)
                                     }
-                                    placeholder="https://steamcommunity.com/id/tu_usuario/"
+                                    placeholder={t(
+                                        'https://steamcommunity.com/id/tu_usuario/',
+                                    )}
                                     className="bg-black/30 border-border/70"
                                 />
                                 <Button
@@ -238,13 +245,14 @@ export function SettingsModal({
                                         }
                                     />
                                     {busy === 'sync'
-                                        ? 'Sincronizando…'
-                                        : 'Sincronizar'}
+                                        ? t('Sincronizando…')
+                                        : t('Sincronizar')}
                                 </Button>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2">
-                                El perfil y los detalles de juegos deben ser
-                                públicos en la privacidad de Steam.
+                                {t(
+                                    'El perfil y los detalles de juegos deben ser públicos en la privacidad de Steam. ',
+                                )}
                             </p>
                         </div>
 
@@ -256,15 +264,16 @@ export function SettingsModal({
                                             size={16}
                                             className="text-emerald-400"
                                         />
-                                        Duraciones de HowLongToBeat
+                                        {t('Duraciones de HowLongToBeat ')}
                                     </h4>
                                     <span className="text-xs text-muted-foreground">
-                                        {pendingHltbCount} pendientes
+                                        {pendingHltbCount} {t('pendientes ')}
                                     </span>
                                 </div>
                                 <p className="text-xs text-muted-foreground mb-2">
-                                    Busca las duraciones que faltan para todos
-                                    tus juegos de Steam.
+                                    {t(
+                                        'Busca las duraciones que faltan para todos tus juegos de Steam. ',
+                                    )}
                                 </p>
                                 <Button
                                     variant="outline"
@@ -272,7 +281,9 @@ export function SettingsModal({
                                     onClick={() => void onRefreshHltb()}
                                     disabled={!!busy}
                                     className="w-full"
-                                    title="Buscar en HowLongToBeat los juegos que aún no tienen duración"
+                                    title={t(
+                                        'Buscar en HowLongToBeat los juegos que aún no tienen duración',
+                                    )}
                                     aria-busy={busy === 'hltb-all'}
                                 >
                                     <RefreshCw
@@ -285,9 +296,9 @@ export function SettingsModal({
                                     />
                                     {busy === 'hltb-all'
                                         ? hltbRemaining === null
-                                            ? 'Buscando HLTB…'
-                                            : `Buscando HLTB… (${hltbRemaining} restantes)`
-                                        : 'Buscar HLTB pendientes'}
+                                            ? t('Buscando HLTB…')
+                                            : `${t('Buscando HLTB… (')}${hltbRemaining}${t(' restantes)')}`
+                                        : t('Buscar HLTB pendientes')}
                                 </Button>
                             </div>
                         )}
@@ -299,18 +310,19 @@ export function SettingsModal({
                                         size={16}
                                         className="text-violet-400"
                                     />
-                                    Etiquetas de Steam
+                                    {t('Etiquetas de Steam ')}
                                 </h4>
                                 {steamGames.length ? (
                                     <span className="text-xs text-muted-foreground">
-                                        {checkedSteamGames} de{' '}
-                                        {steamGames.length} revisados
+                                        {checkedSteamGames} {t('de')}{' '}
+                                        {steamGames.length} {t('revisados ')}
                                     </span>
                                 ) : null}
                             </div>
                             <p className="text-xs text-muted-foreground mb-2">
-                                Carga las etiquetas públicas de Steam para
-                                mejorar los filtros y las recomendaciones.
+                                {t(
+                                    'Carga las etiquetas públicas de Steam para mejorar los filtros y las recomendaciones. ',
+                                )}
                             </p>
                             <Button
                                 variant="outline"
@@ -326,8 +338,8 @@ export function SettingsModal({
                                     }
                                 />
                                 {busy === 'tags'
-                                    ? 'Cargando etiquetas…'
-                                    : 'Cargar etiquetas de Steam'}
+                                    ? t('Cargando etiquetas…')
+                                    : t('Cargar etiquetas de Steam')}
                             </Button>
                         </div>
 
@@ -338,14 +350,14 @@ export function SettingsModal({
                                         size={16}
                                         className="text-cyan-400"
                                     />
-                                    Steam Families (Préstamo Familiar)
+                                    {t('Steam Families (Préstamo Familiar) ')}
                                 </h4>
                                 {state?.family?.syncedAt && (
                                     <span className="text-xs text-muted-foreground">
-                                        Última lectura:{' '}
+                                        {t('Última lectura:')}{' '}
                                         {new Date(
                                             state.family.syncedAt,
-                                        ).toLocaleDateString('es')}
+                                        ).toLocaleDateString(locale())}
                                     </span>
                                 )}
                             </div>
@@ -354,7 +366,7 @@ export function SettingsModal({
                                     <div className="hud-family-info-grid">
                                         <div>
                                             <span className="text-xs text-muted-foreground">
-                                                Grupo:
+                                                {t('Grupo: ')}
                                             </span>{' '}
                                             <strong className="text-sm text-foreground">
                                                 {state.family.name}
@@ -362,7 +374,7 @@ export function SettingsModal({
                                         </div>
                                         <div>
                                             <span className="text-xs text-muted-foreground">
-                                                Miembros:
+                                                {t('Miembros: ')}
                                             </span>{' '}
                                             <strong className="text-sm text-foreground">
                                                 {state.family.members.length}
@@ -370,7 +382,7 @@ export function SettingsModal({
                                         </div>
                                         <div>
                                             <span className="text-xs text-muted-foreground">
-                                                Compartidos:
+                                                {t('Compartidos: ')}
                                             </span>{' '}
                                             <strong className="text-sm text-cyan-400">
                                                 {
@@ -378,7 +390,7 @@ export function SettingsModal({
                                                         (g) => g.shared,
                                                     ).length
                                                 }{' '}
-                                                juegos
+                                                {t('juegos ')}
                                             </strong>
                                         </div>
                                     </div>
@@ -398,28 +410,29 @@ export function SettingsModal({
                                             }
                                         />
                                         {busy === 'family'
-                                            ? 'Actualizando familias…'
-                                            : 'Actualizar Steam Families'}
+                                            ? t('Actualizando familias…')
+                                            : t('Actualizar Steam Families')}
                                     </Button>
                                 </div>
                             ) : (
                                 <div className="space-y-2">
                                     <p className="text-xs text-muted-foreground">
-                                        Añade las bibliotecas compartidas por tu
-                                        grupo familiar de Steam, incluso con
-                                        perfiles privados.
+                                        {t(
+                                            'Añade las bibliotecas compartidas por tu grupo familiar de Steam, incluso con perfiles privados. ',
+                                        )}
                                     </p>
                                     {!state?.setup.family && (
                                         <div className="bg-amber-950/30 border border-amber-800/40 p-2.5 rounded-lg text-xs text-amber-200/90">
-                                            Guarda tu token en Configurar
-                                            cuentas y aplicación.{' '}
+                                            {t(
+                                                'Guarda tu token en Configurar cuentas y aplicación.',
+                                            )}{' '}
                                             <a
                                                 href="https://store.steampowered.com/pointssummary/ajaxgetasyncconfig"
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="underline text-amber-300 inline-flex items-center gap-1"
                                             >
-                                                Obtener token oficial{' '}
+                                                {t('Obtener token oficial')}{' '}
                                                 <ExternalLink size={11} />
                                             </a>
                                         </div>
@@ -435,7 +448,7 @@ export function SettingsModal({
                                         onClick={onFamilySync}
                                         className="w-full"
                                     >
-                                        Conectar Steam Families
+                                        {t('Conectar Steam Families ')}
                                     </Button>
                                 </div>
                             )}
@@ -450,7 +463,7 @@ export function SettingsModal({
                         <div className="hud-card-subpanel space-y-3">
                             <div>
                                 <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                                    Motor de Recomendación
+                                    {t('Motor de Recomendación ')}
                                 </label>
                                 <Select
                                     value={selectedEngine}
@@ -462,11 +475,15 @@ export function SettingsModal({
                                     items={[
                                         {
                                             value: 'codex',
-                                            label: 'Codex · Inteligencia Artificial (ChatGPT)',
+                                            label: t(
+                                                'Codex · Inteligencia Artificial (ChatGPT)',
+                                            ),
                                         },
                                         {
                                             value: 'local',
-                                            label: 'Algoritmo Local · Sin tokens (Offline)',
+                                            label: t(
+                                                'Algoritmo Local · Sin tokens (Offline)',
+                                            ),
                                         },
                                     ]}
                                 >
@@ -475,19 +492,25 @@ export function SettingsModal({
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="codex">
-                                            Codex · Inteligencia Artificial
-                                            (ChatGPT)
+                                            {t(
+                                                'Codex · Inteligencia Artificial (ChatGPT) ',
+                                            )}
                                         </SelectItem>
                                         <SelectItem value="local">
-                                            Algoritmo Local · Sin tokens
-                                            (Offline)
+                                            {t(
+                                                'Algoritmo Local · Sin tokens (Offline) ',
+                                            )}
                                         </SelectItem>
                                     </SelectContent>
                                 </Select>
                                 <p className="text-xs text-muted-foreground mt-1.5">
                                     {selectedEngine === 'codex'
-                                        ? 'Usa tu sesión de Codex para razonamiento profundo y sugerencias en lenguaje natural.'
-                                        : 'Calcula afinidades matemáticas directamente con tu SQLite local sin llamadas a OpenAI.'}
+                                        ? t(
+                                              'Usa tu sesión de Codex para razonamiento profundo y sugerencias en lenguaje natural.',
+                                          )
+                                        : t(
+                                              'Calcula afinidades matemáticas directamente con tu SQLite local sin llamadas a OpenAI.',
+                                          )}
                                 </p>
                             </div>
 
@@ -495,7 +518,7 @@ export function SettingsModal({
                                 <>
                                     <div>
                                         <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                                            Modelo de Codex
+                                            {t('Modelo de Codex ')}
                                         </label>
                                         <Select
                                             value={selectedCodex.model}
@@ -523,7 +546,7 @@ export function SettingsModal({
                                                         key={opt.value}
                                                         value={opt.value}
                                                     >
-                                                        {opt.label}
+                                                        {t(opt.label)}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -532,7 +555,7 @@ export function SettingsModal({
 
                                     <div>
                                         <label className="text-xs font-medium text-muted-foreground mb-1 block">
-                                            Esfuerzo de Razonamiento
+                                            {t('Esfuerzo de Razonamiento ')}
                                         </label>
                                         <Select
                                             value={selectedCodex.effort}
@@ -554,7 +577,7 @@ export function SettingsModal({
                                                         key={opt.value}
                                                         value={opt.value}
                                                     >
-                                                        {opt.label}
+                                                        {t(opt.label)}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
@@ -572,7 +595,7 @@ export function SettingsModal({
                             }}
                             className="w-full sm:w-auto sm:ml-auto"
                         >
-                            Guardar
+                            {t('Guardar ')}
                         </Button>
                     </TabsContent>
 
@@ -583,7 +606,7 @@ export function SettingsModal({
                     >
                         <div className="hud-card-subpanel space-y-3">
                             <h4 className="text-sm font-semibold text-foreground">
-                                Estado de las Integraciones
+                                {t('Estado de las Integraciones ')}
                             </h4>
 
                             <div className="hud-status-checklist space-y-2">
@@ -606,8 +629,12 @@ export function SettingsModal({
                                             </div>
                                             <div className="text-[11px] text-muted-foreground">
                                                 {state?.setup.steam
-                                                    ? 'Clave guardada; sincroniza para comprobarla'
-                                                    : 'Añade tu clave de Steam'}
+                                                    ? t(
+                                                          'Clave guardada; sincroniza para comprobarla',
+                                                      )
+                                                    : t(
+                                                          'Añade tu clave de Steam',
+                                                      )}
                                             </div>
                                         </div>
                                     </div>
@@ -618,7 +645,8 @@ export function SettingsModal({
                                             rel="noreferrer"
                                             className="text-xs text-primary underline inline-flex items-center gap-1"
                                         >
-                                            Obtener <ExternalLink size={10} />
+                                            {t('Obtener ')}
+                                            <ExternalLink size={10} />
                                         </a>
                                     )}
                                 </div>
@@ -642,8 +670,10 @@ export function SettingsModal({
                                             </div>
                                             <div className="text-[11px] text-muted-foreground">
                                                 {state?.setup.igdb
-                                                    ? 'Credenciales activas'
-                                                    : 'Añade las credenciales de IGDB'}
+                                                    ? t('Credenciales activas')
+                                                    : t(
+                                                          'Añade las credenciales de IGDB',
+                                                      )}
                                             </div>
                                         </div>
                                     </div>
@@ -654,7 +684,8 @@ export function SettingsModal({
                                             rel="noreferrer"
                                             className="text-xs text-primary underline inline-flex items-center gap-1"
                                         >
-                                            Registrar <ExternalLink size={10} />
+                                            {t('Registrar ')}
+                                            <ExternalLink size={10} />
                                         </a>
                                     )}
                                 </div>
@@ -678,10 +709,10 @@ export function SettingsModal({
                                             </div>
                                             <div className="text-[11px] text-muted-foreground">
                                                 {state?.setup.codex
-                                                    ? 'Conectado con ChatGPT'
+                                                    ? t('Conectado con ChatGPT')
                                                     : (state?.setup
                                                           .codexMessage ??
-                                                      'Desconectado')}
+                                                      t('Desconectado'))}
                                             </div>
                                         </div>
                                     </div>
@@ -706,8 +737,12 @@ export function SettingsModal({
                                             </div>
                                             <div className="text-[11px] text-muted-foreground">
                                                 {state?.setup.hltb
-                                                    ? 'Preparado para consultar duraciones'
-                                                    : 'No disponible en este entorno'}
+                                                    ? t(
+                                                          'Preparado para consultar duraciones',
+                                                      )
+                                                    : t(
+                                                          'No disponible en este entorno',
+                                                      )}
                                             </div>
                                         </div>
                                     </div>
@@ -728,8 +763,8 @@ export function SettingsModal({
                                     }
                                 />
                                 {busy === 'reload'
-                                    ? 'Comprobando…'
-                                    : 'Comprobar conexiones'}
+                                    ? t('Comprobando…')
+                                    : t('Comprobar conexiones')}
                             </Button>
                         </div>
                     </TabsContent>

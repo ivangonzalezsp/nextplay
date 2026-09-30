@@ -1,5 +1,8 @@
 'use client';
 
+import { translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useState, useSyncExternalStore } from 'react';
 import {
     DEFAULT_THEME,
@@ -31,12 +34,13 @@ export function useTheme() {
 }
 
 export function ThemeSelector() {
+    useLanguage();
     const theme = useTheme();
     const [storageError, setStorageError] = useState(false);
 
     return (
         <label className="theme-selector">
-            <span>Tema</span>
+            <span>{t('Color')}</span>
             <select
                 value={theme}
                 onChange={(event) => {
@@ -53,11 +57,13 @@ export function ThemeSelector() {
             >
                 {THEMES.map(({ id, label }) => (
                     <option key={id} value={id}>
-                        {label}
+                        {t(label)}
                     </option>
                 ))}
             </select>
-            {storageError && <output>No se pudo guardar el tema.</output>}
+            {storageError && (
+                <output>{t('No se pudo guardar el tema.')}</output>
+            )}
         </label>
     );
 }

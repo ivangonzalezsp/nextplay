@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { AppError, atomicJson, config, dataDir, readJson } from './store.ts';
@@ -115,7 +116,9 @@ export async function json<T>(
             ms: Date.now() - started,
         });
         throw new AppError(
-            'No se ha podido conectar con una fuente de datos. Se conservan los datos anteriores.',
+            translateMessage(
+                'No se ha podido conectar con una fuente de datos. Se conservan los datos anteriores.',
+            ),
             502,
         );
     }
@@ -128,13 +131,19 @@ export async function json<T>(
         if ([401, 403].includes(response.status))
             throw new AppError(
                 authMessage ||
-                    'Una fuente rechazó las credenciales. Revisa la clave de Steam o las credenciales de Twitch/IGDB.',
+                    translateMessage(
+                        'Una fuente rechazó las credenciales. Revisa la clave de Steam o las credenciales de Twitch/IGDB.',
+                    ),
                 502,
             );
         throw new AppError(
             response.status === 429
-                ? 'La fuente ha alcanzado su límite de consultas. Espera un momento y vuelve a intentarlo.'
-                : 'Una fuente de datos no está disponible. Inténtalo de nuevo más tarde.',
+                ? translateMessage(
+                      'La fuente ha alcanzado su límite de consultas. Espera un momento y vuelve a intentarlo.',
+                  )
+                : translateMessage(
+                      'Una fuente de datos no está disponible. Inténtalo de nuevo más tarde.',
+                  ),
             502,
         );
     }
@@ -153,7 +162,7 @@ export async function json<T>(
             ms: Date.now() - started,
         });
         throw new AppError(
-            'La fuente devolvió datos que no se pueden leer.',
+            translateMessage('La fuente devolvió datos que no se pueden leer.'),
             502,
         );
     }
@@ -175,14 +184,18 @@ export function ownedGames(response: unknown): Game[] {
     const data = (response as SteamResponse)?.response;
     if (!data || !natural(data.game_count))
         throw new AppError(
-            'Steam no permite leer tu biblioteca. Pon el perfil y los detalles de juegos en Público; después vuelve a sincronizar.',
+            translateMessage(
+                'Steam no permite leer tu biblioteca. Pon el perfil y los detalles de juegos en Público; después vuelve a sincronizar.',
+            ),
             422,
         );
     if (data.game_count === 0 && (!data.games || data.games.length === 0))
         return [];
     if (!Array.isArray(data.games) || data.games.length !== data.game_count)
         throw new AppError(
-            'Steam devolvió una biblioteca incompleta. Se conserva la última lectura.',
+            translateMessage(
+                'Steam devolvió una biblioteca incompleta. Se conserva la última lectura.',
+            ),
             502,
         );
     const games: Game[] = data.games.map((g) => {
@@ -193,7 +206,9 @@ export function ownedGames(response: unknown): Game[] {
             !g.name.trim()
         )
             throw new AppError(
-                'Steam devolvió un juego con datos incompletos.',
+                translateMessage(
+                    'Steam devolvió un juego con datos incompletos.',
+                ),
                 502,
             );
         return {
@@ -213,7 +228,9 @@ export function ownedGames(response: unknown): Game[] {
     });
     if (new Set(games.map((g) => g.appId)).size !== games.length)
         throw new AppError(
-            'Steam devolvió una biblioteca duplicada. Inténtalo de nuevo.',
+            translateMessage(
+                'Steam devolvió una biblioteca duplicada. Inténtalo de nuevo.',
+            ),
             502,
         );
     return games;
@@ -226,7 +243,9 @@ export async function syncSteam(
     const parsed = parseProfile(profileUrl);
     if (!apiKey)
         throw new AppError(
-            'Falta STEAM_API_KEY en .env.local. Añádela en tu PC y vuelve a sincronizar.',
+            translateMessage(
+                'Falta STEAM_API_KEY en .env.local. Añádela en tu PC y vuelve a sincronizar.',
+            ),
             503,
         );
     const steam = async (method: string, params: Record<string, string>) => {
@@ -245,7 +264,10 @@ export async function syncSteam(
             !resolvedId ||
             !/^765\d{14}$/.test(resolvedId)
         )
-            throw new AppError('No se ha encontrado ese perfil de Steam.', 404);
+            throw new AppError(
+                translateMessage('No se ha encontrado ese perfil de Steam.'),
+                404,
+            );
         steamId = resolvedId;
     }
     const [playerResult, libraryResult] = await Promise.allSettled([
@@ -260,7 +282,10 @@ export async function syncSteam(
     if (libraryResult.status === 'rejected') throw libraryResult.reason;
     const p = playerResult.value?.response?.players?.[0];
     if (!p || p.steamid !== steamId || typeof p.personaname !== 'string')
-        throw new AppError('Steam no devolvió el perfil solicitado.', 502);
+        throw new AppError(
+            translateMessage('Steam no devolvió el perfil solicitado.'),
+            502,
+        );
     const games = ownedGames(libraryResult.value);
     const warnings: string[] = [];
     try {
@@ -277,9 +302,18 @@ export async function syncSteam(
                         ? row.playtime_2weeks
                         : 0;
             }
-        else warnings.push('Steam no ha facilitado la actividad reciente.');
+        else
+            warnings.push(
+                translateMessage(
+                    'Steam no ha facilitado la actividad reciente.',
+                ),
+            );
     } catch {
-        warnings.push('No se ha podido actualizar la actividad reciente.');
+        warnings.push(
+            translateMessage(
+                'No se ha podido actualizar la actividad reciente.',
+            ),
+        );
     }
     return {
         profile: {
@@ -307,7 +341,10 @@ async function igdb<T = IgdbGame>(
 ): Promise<T[]> {
     const c = await config();
     if (!c.clientId || !c.clientSecret)
-        throw new AppError('Faltan las credenciales de Twitch/IGDB.', 503);
+        throw new AppError(
+            translateMessage('Faltan las credenciales de Twitch/IGDB.'),
+            503,
+        );
     if (
         !token ||
         token.until < Date.now() ||
@@ -327,7 +364,7 @@ async function igdb<T = IgdbGame>(
         );
         if (typeof t.access_token !== 'string' || !natural(t.expires_in))
             throw new AppError(
-                'Twitch no devolvió un acceso válido a IGDB.',
+                translateMessage('Twitch no devolvió un acceso válido a IGDB.'),
                 502,
             );
         token = {
@@ -349,7 +386,10 @@ async function igdb<T = IgdbGame>(
         body,
     });
     if (!Array.isArray(rows))
-        throw new AppError('IGDB devolvió un formato inesperado.', 502);
+        throw new AppError(
+            translateMessage('IGDB devolvió un formato inesperado.'),
+            502,
+        );
     return rows;
 }
 const ids = (list: number[]) =>
@@ -373,7 +413,9 @@ async function dictionary() {
         )?.id;
         if (!natural(source))
             throw new AppError(
-                'No se ha encontrado la correspondencia de Steam en IGDB.',
+                translateMessage(
+                    'No se ha encontrado la correspondencia de Steam en IGDB.',
+                ),
                 502,
             );
         const gameTypes = new Set(
@@ -398,7 +440,9 @@ async function dictionary() {
         );
         if (!gameTypes.size)
             throw new AppError(
-                'IGDB no ha facilitado los tipos de juegos. Se conservan los metadatos anteriores.',
+                translateMessage(
+                    'IGDB no ha facilitado los tipos de juegos. Se conservan los metadatos anteriores.',
+                ),
                 502,
             );
         dictionaries = { source, gameTypes, until: Date.now() + DAY };
@@ -520,7 +564,7 @@ async function lookupGameVideo(appId: number): Promise<string | null> {
 }
 export function getGameVideo(appId: number): Promise<string | null> {
     if (!natural(appId) || appId <= 0)
-        throw new AppError('El AppID de Steam no es válido.');
+        throw new AppError(translateMessage('El AppID de Steam no es válido.'));
     let video = gameVideoCache.get(appId);
     if (!video) {
         video = lookupGameVideo(appId).catch((error: unknown) => {
@@ -544,7 +588,9 @@ export async function getIgdbGame(id: number) {
         !raw.name.trim()
     )
         throw new AppError(
-            'No se ha encontrado ese juego en IGDB. Vuelve a buscarlo.',
+            translateMessage(
+                'No se ha encontrado ese juego en IGDB. Vuelve a buscarlo.',
+            ),
             404,
         );
     const d = await dictionary();
@@ -566,7 +612,9 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
                 games.map((g) => ({ ...g, ...cache.metadata[g.appId] })),
             ),
             warnings: [
-                'IGDB no está configurado: faltan géneros, duraciones y descubrimientos nuevos.',
+                translateMessage(
+                    'IGDB no está configurado: faltan géneros, duraciones y descubrimientos nuevos.',
+                ),
             ],
         };
     const warnings: string[] = [];
@@ -641,7 +689,9 @@ export async function enrich(games: Game[], cache: Cache, force = false) {
     } catch (e) {
         warnings.push(
             (e as Error).message +
-                ' Los metadatos disponibles pueden estar incompletos o desactualizados.',
+                translateMessage(
+                    ' Los metadatos disponibles pueden estar incompletos o desactualizados.',
+                ),
         );
     }
     return {
@@ -758,7 +808,9 @@ export async function review(
         s.total_positive > s.total_reviews
     )
         throw new AppError(
-            'No se han podido actualizar las valoraciones de Steam.',
+            translateMessage(
+                'No se han podido actualizar las valoraciones de Steam.',
+            ),
             502,
         );
     cache.reviews[game.appId] = {

@@ -1,5 +1,8 @@
 'use client';
 
+import { translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useState } from 'react';
 import {
     Clock3,
@@ -86,6 +89,7 @@ export function QuickVibeBar({
     savedGamesCount: number;
     conversationMode: ConversationMode;
 }) {
+    useLanguage();
     const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
     const [tagSearch, setTagSearch] = useState('');
     const [tagsMenuOpen, setTagsMenuOpen] = useState(false);
@@ -97,12 +101,17 @@ export function QuickVibeBar({
 
     const activeFilterChips: { label: string; patch: Partial<Filters> }[] = [
         ...(filters.shortlistOnly
-            ? [{ label: 'Solo lista corta', patch: { shortlistOnly: false } }]
+            ? [
+                  {
+                      label: t('Solo lista corta'),
+                      patch: { shortlistOnly: false },
+                  },
+              ]
             : []),
         ...(filters.comfortZone
             ? [
                   {
-                      label: 'Zona de confort activa',
+                      label: t('Zona de confort activa'),
                       patch: { comfortZone: false },
                   },
               ]
@@ -114,8 +123,8 @@ export function QuickVibeBar({
                   {
                       label:
                           filters.sessionIntent === 'continue'
-                              ? 'Continuar partida'
-                              : 'Empezar nuevo',
+                              ? t('Continuar partida')
+                              : t('Empezar nuevo'),
                       patch: { sessionIntent: 'any' as const },
                   },
               ]
@@ -123,7 +132,7 @@ export function QuickVibeBar({
         ...(filters.mode === 'next' && filters.hours !== null
             ? [
                   {
-                      label: `Historia ≤ ${filters.hours}h`,
+                      label: `${t('Historia ≤ ')}${filters.hours}h`,
                       patch: { hours: null },
                   },
               ]
@@ -131,7 +140,7 @@ export function QuickVibeBar({
         ...(filters.mode === 'today' && filters.minutes !== null
             ? [
                   {
-                      label: `${filters.minutes} min sesión`,
+                      label: `${filters.minutes}${t(' min sesión')}`,
                       patch: { minutes: null },
                   },
               ]
@@ -139,7 +148,7 @@ export function QuickVibeBar({
         ...(filters.minReleaseDate
             ? [
                   {
-                      label: `Desde ${filters.minReleaseDate}`,
+                      label: `${t('Desde ')}${filters.minReleaseDate}`,
                       patch: { minReleaseDate: null },
                   },
               ]
@@ -152,9 +161,9 @@ export function QuickVibeBar({
                   {
                       label:
                           {
-                              single: 'En solitario',
-                              coop: 'Cooperativo',
-                              multi: 'Multijugador',
+                              single: t('En solitario'),
+                              coop: t('Cooperativo'),
+                              multi: t('Multijugador'),
                           }[filters.gameMode] ?? filters.gameMode,
                       patch: { gameMode: '' },
                   },
@@ -165,32 +174,42 @@ export function QuickVibeBar({
             patch: { tags: selectedTagKeys.filter((tag) => tag !== key) },
         })),
         ...(!filters.replay
-            ? [{ label: 'Sin terminados/abandonados', patch: { replay: true } }]
+            ? [
+                  {
+                      label: t('Sin terminados/abandonados'),
+                      patch: { replay: true },
+                  },
+              ]
             : []),
         ...(engine === 'codex' && filters.mood.trim()
-            ? [{ label: `Ánimo: "${filters.mood}"`, patch: { mood: '' } }]
+            ? [
+                  {
+                      label: `${t('Ánimo: "')}${filters.mood}"`,
+                      patch: { mood: '' },
+                  },
+              ]
             : []),
     ];
 
     const quickMoods = [
         {
-            label: 'Relax / Desconectar',
-            mood: 'Algo tranquilo y relajante, sin prisas ni estrés',
+            label: t('Relax / Desconectar'),
+            mood: t('Algo tranquilo y relajante, sin prisas ni estrés'),
             icon: Smile,
         },
         {
-            label: 'Historia profunda',
-            mood: 'Una gran historia absorbente con buena narrativa',
+            label: t('Historia profunda'),
+            mood: t('Una gran historia absorbente con buena narrativa'),
             icon: BookOpen,
         },
         {
-            label: 'Acción / Reto',
-            mood: 'Acción directa, dinámico y desafiante',
+            label: t('Acción / Reto'),
+            mood: t('Acción directa, dinámico y desafiante'),
             icon: Swords,
         },
         {
-            label: 'Para cooperativo',
-            mood: 'Ideal para jugar en cooperativo',
+            label: t('Para cooperativo'),
+            mood: t('Ideal para jugar en cooperativo'),
             icon: Users,
         },
     ];
@@ -215,7 +234,7 @@ export function QuickVibeBar({
                         }
                     >
                         <Clock3 size={15} />
-                        <span>Para hoy</span>
+                        <span>{t('Para hoy')}</span>
                     </button>
                     <button
                         type="button"
@@ -223,7 +242,7 @@ export function QuickVibeBar({
                         onClick={() => setFilters({ ...filters, mode: 'next' })}
                     >
                         <Sparkles size={15} />
-                        <span>Próximo juego</span>
+                        <span>{t('Próximo juego')}</span>
                     </button>
                 </div>
 
@@ -235,10 +254,12 @@ export function QuickVibeBar({
                         onClick={onSurpriseMe}
                         disabled={!canRecommend || !!busy}
                         className="hud-roulette-btn"
-                        title="Elegir una partida al azar entre tus pendientes de alta afinidad"
+                        title={t(
+                            'Elegir una partida al azar entre tus pendientes de alta afinidad',
+                        )}
                     >
                         <Dices size={16} className="text-amber-400 mr-1.5" />
-                        <span>Sorpréndeme</span>
+                        <span>{t('Sorpréndeme')}</span>
                     </Button>
 
                     <Button
@@ -248,7 +269,7 @@ export function QuickVibeBar({
                         onClick={() => setFiltersSheetOpen(true)}
                     >
                         <SlidersHorizontal size={14} className="mr-1.5" />
-                        <span>Filtros</span>
+                        <span>{t('Filtros')}</span>
                         {activeFilterChips.length > 0 && (
                             <span className="hud-filter-count-badge">
                                 {activeFilterChips.length}
@@ -270,10 +291,12 @@ export function QuickVibeBar({
                                         size={18}
                                         className="text-emerald-400"
                                     />
-                                    <span>Filtros de recomendación</span>
+                                    <span>{t('Filtros de recomendación')}</span>
                                 </SheetTitle>
                                 <SheetDescription className="text-xs">
-                                    Todos los criterios en un único lugar.
+                                    {t(
+                                        'Todos los criterios en un único lugar. ',
+                                    )}
                                 </SheetDescription>
                             </SheetHeader>
 
@@ -282,7 +305,7 @@ export function QuickVibeBar({
                                 {filters.mode === 'today' && (
                                     <div className="hud-filter-field">
                                         <label className="text-xs font-semibold text-foreground mb-1 block">
-                                            ¿Qué tipo de sesión buscas?
+                                            {t('¿Qué tipo de sesión buscas? ')}
                                         </label>
                                         <Select
                                             value={
@@ -298,15 +321,21 @@ export function QuickVibeBar({
                                             items={[
                                                 {
                                                     value: 'any',
-                                                    label: 'Cualquiera (empezar o continuar)',
+                                                    label: t(
+                                                        'Cualquiera (empezar o continuar)',
+                                                    ),
                                                 },
                                                 {
                                                     value: 'continue',
-                                                    label: 'Continuar partida en curso o pausa',
+                                                    label: t(
+                                                        'Continuar partida en curso o pausa',
+                                                    ),
                                                 },
                                                 {
                                                     value: 'start',
-                                                    label: 'Empezar un juego pendiente',
+                                                    label: t(
+                                                        'Empezar un juego pendiente',
+                                                    ),
                                                 },
                                             ]}
                                         >
@@ -315,15 +344,19 @@ export function QuickVibeBar({
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="any">
-                                                    Cualquiera (empezar o
-                                                    continuar)
+                                                    {t(
+                                                        'Cualquiera (empezar o continuar) ',
+                                                    )}
                                                 </SelectItem>
                                                 <SelectItem value="continue">
-                                                    Continuar partida en curso o
-                                                    pausa
+                                                    {t(
+                                                        'Continuar partida en curso o pausa ',
+                                                    )}
                                                 </SelectItem>
                                                 <SelectItem value="start">
-                                                    Empezar un juego pendiente
+                                                    {t(
+                                                        'Empezar un juego pendiente ',
+                                                    )}
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -333,7 +366,7 @@ export function QuickVibeBar({
                                 {/* Genre */}
                                 <div className="hud-filter-field">
                                     <label className="text-xs font-semibold text-foreground mb-1 block">
-                                        Género
+                                        {t('Género ')}
                                     </label>
                                     <Select
                                         value={filters.genre}
@@ -346,7 +379,7 @@ export function QuickVibeBar({
                                         items={[
                                             {
                                                 value: '',
-                                                label: 'Cualquier género',
+                                                label: t('Cualquier género'),
                                             },
                                             ...genres.map((g) => ({
                                                 value: g,
@@ -359,7 +392,7 @@ export function QuickVibeBar({
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="">
-                                                Cualquier género
+                                                {t('Cualquier género ')}
                                             </SelectItem>
                                             {genres.map((g) => (
                                                 <SelectItem key={g} value={g}>
@@ -373,7 +406,7 @@ export function QuickVibeBar({
                                 {/* Game Mode */}
                                 <div className="hud-filter-field">
                                     <label className="text-xs font-semibold text-foreground mb-1 block">
-                                        Modalidad
+                                        {t('Modalidad ')}
                                     </label>
                                     <Select
                                         value={filters.gameMode}
@@ -386,19 +419,19 @@ export function QuickVibeBar({
                                         items={[
                                             {
                                                 value: '',
-                                                label: 'Sin preferencia',
+                                                label: t('Sin preferencia'),
                                             },
                                             {
                                                 value: 'single',
-                                                label: 'En solitario',
+                                                label: t('En solitario'),
                                             },
                                             {
                                                 value: 'coop',
-                                                label: 'En cooperativo',
+                                                label: t('En cooperativo'),
                                             },
                                             {
                                                 value: 'multi',
-                                                label: 'Multijugador',
+                                                label: t('Multijugador'),
                                             },
                                         ]}
                                     >
@@ -407,16 +440,16 @@ export function QuickVibeBar({
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="">
-                                                Sin preferencia
+                                                {t('Sin preferencia ')}
                                             </SelectItem>
                                             <SelectItem value="single">
-                                                En solitario
+                                                {t('En solitario ')}
                                             </SelectItem>
                                             <SelectItem value="coop">
-                                                En cooperativo
+                                                {t('En cooperativo ')}
                                             </SelectItem>
                                             <SelectItem value="multi">
-                                                Multijugador
+                                                {t('Multijugador ')}
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -428,7 +461,7 @@ export function QuickVibeBar({
                                         htmlFor="hud-tags-input"
                                         className="text-xs font-semibold text-foreground block"
                                     >
-                                        Etiquetas de Steam
+                                        {t('Etiquetas de Steam ')}
                                     </label>
                                     <Combobox<(typeof steamTags)[number]>
                                         items={availableSteamTags}
@@ -459,15 +492,21 @@ export function QuickVibeBar({
                                     >
                                         <ComboboxInput
                                             id="hud-tags-input"
-                                            placeholder="Buscar una etiqueta…"
+                                            placeholder={t(
+                                                'Buscar una etiqueta…',
+                                            )}
                                             autoComplete="off"
                                             showClear
                                         />
                                         <ComboboxContent>
                                             <ComboboxEmpty>
                                                 {tagSearch.trim()
-                                                    ? 'No hay etiquetas que coincidan.'
-                                                    : 'Escribe para buscar etiquetas.'}
+                                                    ? t(
+                                                          'No hay etiquetas que coincidan.',
+                                                      )
+                                                    : t(
+                                                          'Escribe para buscar etiquetas.',
+                                                      )}
                                             </ComboboxEmpty>
                                             <ComboboxList>
                                                 {(
@@ -484,8 +523,9 @@ export function QuickVibeBar({
                                         </ComboboxContent>
                                     </Combobox>
                                     <p className="text-[11px] text-muted-foreground">
-                                        Escribe para filtrar y selecciona una
-                                        etiqueta o pulsa Enter.
+                                        {t(
+                                            'Escribe para filtrar y selecciona una etiqueta o pulsa Enter. ',
+                                        )}
                                     </p>
 
                                     {selectedTagKeys.length > 0 && (
@@ -508,7 +548,7 @@ export function QuickVibeBar({
                                                                 ),
                                                             })
                                                         }
-                                                        aria-label={`Quitar etiqueta ${tagLabels.get(key) ?? key}`}
+                                                        aria-label={`${t('Quitar etiqueta ')}${tagLabels.get(key) ?? key}`}
                                                     >
                                                         <X size={12} />
                                                     </button>
@@ -524,7 +564,7 @@ export function QuickVibeBar({
                                         htmlFor="hud-release-date"
                                         className="text-xs font-semibold text-foreground mb-1 block"
                                     >
-                                        Lanzamiento a partir de
+                                        {t('Lanzamiento a partir de ')}
                                     </label>
                                     <Input
                                         id="hud-release-date"
@@ -554,8 +594,9 @@ export function QuickVibeBar({
                                             }
                                         />
                                         <span>
-                                            Sácame de mi zona de confort
-                                            (propuestas audaces)
+                                            {t(
+                                                'Sácame de mi zona de confort (propuestas audaces) ',
+                                            )}
                                         </span>
                                     </label>
 
@@ -570,8 +611,9 @@ export function QuickVibeBar({
                                             }
                                         />
                                         <span>
-                                            Incluir juegos ya terminados o
-                                            abandonados
+                                            {t(
+                                                'Incluir juegos ya terminados o abandonados ',
+                                            )}
                                         </span>
                                     </label>
 
@@ -586,8 +628,9 @@ export function QuickVibeBar({
                                             }
                                         />
                                         <span>
-                                            Solo mi lista corta (
-                                            {savedGamesCount} candidatos)
+                                            {t('Solo mi lista corta ( ')}
+                                            {savedGamesCount}{' '}
+                                            {t('candidatos) ')}
                                         </span>
                                     </label>
                                 </div>
@@ -602,12 +645,12 @@ export function QuickVibeBar({
                                         setTagSearch('');
                                     }}
                                 >
-                                    Limpiar filtros
+                                    {t('Limpiar filtros ')}
                                 </Button>
                                 <SheetClose
                                     render={
                                         <Button className="hud-filters-done w-full sm:w-auto">
-                                            Listo
+                                            {t('Listo ')}
                                         </Button>
                                     }
                                 />
@@ -620,7 +663,9 @@ export function QuickVibeBar({
             {/* 2. DYNAMIC TIME PRESETS */}
             <div className="hud-preset-row">
                 <span className="hud-row-label">
-                    {filters.mode === 'today' ? 'Tiempo hoy:' : 'Duración max:'}
+                    {filters.mode === 'today'
+                        ? t('Tiempo hoy:')
+                        : t('Duración max:')}
                 </span>
 
                 {filters.mode === 'today' ? (
@@ -631,17 +676,17 @@ export function QuickVibeBar({
                             { label: '60m', val: 60 },
                             { label: '90m', val: 90 },
                             { label: '2h', val: 120 },
-                            { label: 'Sin límite', val: null },
+                            { label: t('Sin límite'), val: null },
                         ].map(({ label, val }) => (
                             <button
-                                key={label}
+                                key={t(label)}
                                 type="button"
                                 className={`hud-chip ${filters.minutes === val ? 'active' : ''}`}
                                 onClick={() =>
                                     setFilters({ ...filters, minutes: val })
                                 }
                             >
-                                {label}
+                                {t(label)}
                             </button>
                         ))}
                     </div>
@@ -651,17 +696,17 @@ export function QuickVibeBar({
                             { label: '≤ 10h', val: 10 },
                             { label: '≤ 20h', val: 20 },
                             { label: '≤ 40h', val: 40 },
-                            { label: 'Sin límite', val: null },
+                            { label: t('Sin límite'), val: null },
                         ].map(({ label, val }) => (
                             <button
-                                key={label}
+                                key={t(label)}
                                 type="button"
                                 className={`hud-chip ${filters.hours === val ? 'active' : ''}`}
                                 onClick={() =>
                                     setFilters({ ...filters, hours: val })
                                 }
                             >
-                                {label}
+                                {t(label)}
                             </button>
                         ))}
                     </div>
@@ -671,11 +716,11 @@ export function QuickVibeBar({
             {/* 3. QUICK VIBE PILLS */}
             {engine === 'codex' && (
                 <div className="hud-preset-row">
-                    <span className="hud-row-label">Vibra:</span>
+                    <span className="hud-row-label">{t('Vibra:')}</span>
                     <div className="hud-pill-selector flex-wrap">
                         {quickMoods.map(({ label, mood, icon: Icon }) => (
                             <button
-                                key={label}
+                                key={t(label)}
                                 type="button"
                                 className={`hud-chip vibe ${filters.mood === mood ? 'active' : ''}`}
                                 onClick={() =>
@@ -686,7 +731,7 @@ export function QuickVibeBar({
                                 }
                             >
                                 <Icon size={12} className="mr-1" />
-                                {label}
+                                {t(label)}
                             </button>
                         ))}
                     </div>
@@ -704,7 +749,7 @@ export function QuickVibeBar({
                                         key={index}
                                         className="hud-filter-tag active"
                                     >
-                                        {label}
+                                        {t(label)}
                                         <button
                                             type="button"
                                             onClick={() =>
@@ -713,7 +758,7 @@ export function QuickVibeBar({
                                                     ...patch,
                                                 })
                                             }
-                                            aria-label={`Quitar filtro ${label}`}
+                                            aria-label={`${t('Quitar filtro ')}${label}`}
                                         >
                                             <X size={11} />
                                         </button>
@@ -727,14 +772,14 @@ export function QuickVibeBar({
                                     setFilters(clearFilters(filters.mode))
                                 }
                             >
-                                Limpiar
+                                {t('Limpiar ')}
                             </button>
                         </div>
                     ) : (
                         <span className="text-xs text-muted-foreground">
                             {filterCounts
-                                ? `${filterCounts.eligible} de ${filterCounts.total} juegos cumplen los criterios`
-                                : 'Sin filtros restrictivos'}
+                                ? `${filterCounts.eligible}${t(' de ')}${filterCounts.total}${t(' juegos cumplen los criterios')}`
+                                : t('Sin filtros restrictivos')}
                         </span>
                     )}
                 </div>
@@ -752,11 +797,11 @@ export function QuickVibeBar({
                     )}
                     <span>
                         {busy === 'recommend'
-                            ? 'Parar búsqueda'
+                            ? t('Parar búsqueda')
                             : engine === 'codex' &&
                                 conversationMode === 'guided'
-                              ? 'Afinar con preguntas'
-                              : 'Encuentra mi próximo juego'}
+                              ? t('Afinar con preguntas')
+                              : t('Encuentra mi próximo juego')}
                     </span>
                     {busy !== 'recommend' && (
                         <ArrowRight size={17} className="ml-2 hud-btn-arrow" />

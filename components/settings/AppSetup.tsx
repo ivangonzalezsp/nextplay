@@ -1,5 +1,8 @@
 'use client';
 
+import { languageHeaders, translate as t } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useEffect, useState } from 'react';
 import {
     Dialog,
@@ -19,17 +22,20 @@ async function call(path: string, body?: unknown, method = 'POST') {
     const response = await fetch(
         '/api/' + path,
         body === undefined
-            ? undefined
+            ? { headers: languageHeaders() }
             : {
                   method,
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: {
+                      ...languageHeaders(),
+                      'Content-Type': 'application/json',
+                  },
                   body: JSON.stringify(body),
               },
     );
     const result = await response.json();
     if (!response.ok)
         throw new Error(
-            result.error || 'No se ha podido completar la operación.',
+            result.error || t('No se ha podido completar la operación.'),
         );
     return result;
 }
@@ -46,6 +52,7 @@ export function AppSetup({
     onReload: () => Promise<void>;
     onWelcome: (open: boolean) => void;
 }) {
+    useLanguage();
     const [status, setStatus] = useState<AppStatus | null>(null);
     const [step, setStep] = useState(0);
     const [draft, setDraft] = useState<Partial<Record<Key, string | null>>>({});
@@ -131,7 +138,7 @@ export function AppSetup({
             setError(
                 e instanceof Error
                     ? e.message
-                    : 'No se ha podido completar la operación.',
+                    : t('No se ha podido completar la operación.'),
             );
         } finally {
             setBusy('');
@@ -149,7 +156,7 @@ export function AppSetup({
         if (syncProfile && profile.trim() && profile !== state?.profile?.url)
             await call('steam/sync', { profileUrl: profile, force: true });
         await onReload();
-        setMessage('Conexiones guardadas en este PC.');
+        setMessage(t('Conexiones guardadas en este PC.'));
     }
     async function restarting(
         path: string,
@@ -162,7 +169,7 @@ export function AppSetup({
             setStatus(result);
             return;
         }
-        setMessage(result.message || 'Reiniciando Next Play…');
+        setMessage(result.message || t('Reiniciando Next Play…'));
         const deadline = Date.now() + 240_000;
         while (Date.now() < deadline) {
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -177,7 +184,9 @@ export function AppSetup({
             }
         }
         throw new Error(
-            'Next Play aún no ha vuelto a abrirse. Usa el acceso directo o vuelve a ejecutar el instalador; tus datos están guardados.',
+            t(
+                'Next Play aún no ha vuelto a abrirse. Usa el acceso directo o vuelve a ejecutar el instalador; tus datos están guardados.',
+            ),
         );
     }
     function credential(key: Key, label: string, url?: string, help?: string) {
@@ -188,10 +197,10 @@ export function AppSetup({
                     htmlFor={'connection-' + key}
                     className="text-sm font-medium"
                 >
-                    {label}{' '}
+                    {t(label)}{' '}
                     {configured && (
                         <span className="text-xs text-emerald-400">
-                            · guardada
+                            {t('· guardada ')}
                         </span>
                     )}
                 </label>
@@ -204,10 +213,10 @@ export function AppSetup({
                         value={draft[key] ?? ''}
                         placeholder={
                             draft[key] === null
-                                ? 'Se eliminará al guardar'
+                                ? t('Se eliminará al guardar')
                                 : configured
-                                  ? 'Pega una nueva clave para sustituirla'
-                                  : 'Pega aquí tu clave'
+                                  ? t('Pega una nueva clave para sustituirla')
+                                  : t('Pega aquí tu clave')
                         }
                         onChange={(e) =>
                             setDraft({ ...draft, [key]: e.target.value })
@@ -226,7 +235,9 @@ export function AppSetup({
                                 })
                             }
                         >
-                            {draft[key] === null ? 'Conservar' : 'Eliminar'}
+                            {draft[key] === null
+                                ? t('Conservar')
+                                : t('Eliminar')}
                         </Button>
                     )}
                 </div>
@@ -240,7 +251,8 @@ export function AppSetup({
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-xs text-primary underline"
                     >
-                        Obtener en la página oficial <ExternalLink size={12} />
+                        {t('Obtener en la página oficial ')}
+                        <ExternalLink size={12} />
                     </a>
                 )}
             </div>
@@ -254,11 +266,12 @@ export function AppSetup({
                 !open &&
                 !noticeDismissed && (
                     <aside
-                        aria-label="Actualización disponible"
+                        aria-label={t('Actualización disponible')}
                         className="fixed bottom-4 right-4 z-40 max-w-sm rounded-xl border border-border bg-background p-4 shadow-xl"
                     >
                         <p className="mb-3 text-sm">
-                            Next Play {status.update.version} está disponible.
+                            Next Play {status.update.version}{' '}
+                            {t('está disponible. ')}
                         </p>
                         <div className="flex gap-2">
                             <Button
@@ -268,14 +281,14 @@ export function AppSetup({
                                     onOpenChange(true);
                                 }}
                             >
-                                Ver actualización
+                                {t('Ver actualización ')}
                             </Button>
                             <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => setNoticeDismissed(true)}
                             >
-                                Más tarde
+                                {t('Más tarde ')}
                             </Button>
                         </div>
                     </aside>
@@ -292,23 +305,23 @@ export function AppSetup({
                     <DialogHeader>
                         <DialogTitle>
                             {status?.onboardingComplete
-                                ? 'Configurar Next Play'
-                                : 'Bienvenido a Next Play'}
+                                ? t('Configurar Next Play')
+                                : t('Bienvenido a Next Play')}
                         </DialogTitle>
                         <DialogDescription>
-                            Conecta tus cuentas y prepara la aplicación desde
-                            aquí. Puedes completar las conexiones opcionales más
-                            adelante.
+                            {t(
+                                'Conecta tus cuentas y prepara la aplicación desde aquí. Puedes completar las conexiones opcionales más adelante. ',
+                            )}
                         </DialogDescription>
                     </DialogHeader>
                     <nav
-                        aria-label="Pasos de configuración"
+                        aria-label={t('Pasos de configuración')}
                         className="flex flex-wrap gap-2"
                     >
                         {[
-                            'Tu biblioteca',
-                            'Más conexiones',
-                            'Tu aplicación',
+                            t('Tu biblioteca'),
+                            t('Más conexiones'),
+                            t('Tu aplicación'),
                         ].map((title, index) => (
                             <Button
                                 key={title}
@@ -339,12 +352,13 @@ export function AppSetup({
                     )}
                     {!status ? (
                         <p className="text-sm text-muted-foreground">
-                            Cargando configuración…
+                            {t('Cargando configuración… ')}
                         </p>
                     ) : !status.canManage ? (
                         <p className="text-sm">
-                            Abre Next Play en el PC donde está instalada para
-                            gestionar cuentas, conexiones y actualizaciones.
+                            {t(
+                                'Abre Next Play en el PC donde está instalada para gestionar cuentas, conexiones y actualizaciones. ',
+                            )}
                         </p>
                     ) : (
                         <>
@@ -355,18 +369,16 @@ export function AppSetup({
                                         !state?.games.length && (
                                             <div className="hud-card-subpanel space-y-2">
                                                 <p className="text-sm">
-                                                    Si ya usabas Next Play,
-                                                    cierra tu copia anterior
-                                                    antes de importar su
-                                                    biblioteca, historial y
-                                                    conexiones.
+                                                    {t(
+                                                        'Si ya usabas Next Play, cierra tu copia anterior antes de importar su biblioteca, historial y conexiones. ',
+                                                    )}
                                                 </p>
                                                 <Button
                                                     variant="outline"
                                                     disabled={!!busy}
                                                     onClick={() =>
                                                         void perform(
-                                                            'Importando…',
+                                                            t('Importando…'),
                                                             async () => {
                                                                 await call(
                                                                     'app/import',
@@ -379,29 +391,34 @@ export function AppSetup({
                                                                     ),
                                                                 );
                                                                 setMessage(
-                                                                    'Biblioteca importada. La copia anterior se conserva.',
+                                                                    t(
+                                                                        'Biblioteca importada. La copia anterior se conserva.',
+                                                                    ),
                                                                 );
                                                             },
                                                         )
                                                     }
                                                 >
-                                                    Importar instalación
-                                                    anterior
+                                                    {t(
+                                                        'Importar instalación anterior ',
+                                                    )}
                                                 </Button>
                                             </div>
                                         )}
                                     {credential(
                                         'STEAM_API_KEY',
-                                        'Clave de Steam',
+                                        t('Clave de Steam'),
                                         'https://steamcommunity.com/dev/apikey',
-                                        'Steam solicita un dominio al crear la clave: puedes indicar localhost.',
+                                        t(
+                                            'Steam solicita un dominio al crear la clave: puedes indicar localhost.',
+                                        ),
                                     )}
                                     <div className="space-y-2">
                                         <label
                                             htmlFor="setup-profile"
                                             className="text-sm font-medium"
                                         >
-                                            Enlace a tu perfil de Steam
+                                            {t('Enlace a tu perfil de Steam ')}
                                         </label>
                                         <Input
                                             id="setup-profile"
@@ -409,29 +426,35 @@ export function AppSetup({
                                             onChange={(e) =>
                                                 setProfile(e.target.value)
                                             }
-                                            placeholder="https://steamcommunity.com/id/tu_usuario/"
+                                            placeholder={t(
+                                                'https://steamcommunity.com/id/tu_usuario/',
+                                            )}
                                             disabled={!!busy}
                                         />
                                         <p className="text-xs text-muted-foreground">
-                                            El perfil y los detalles de juegos
-                                            deben ser públicos en Steam.
+                                            {t(
+                                                'El perfil y los detalles de juegos deben ser públicos en Steam. ',
+                                            )}
                                         </p>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
                                         <Button
                                             disabled={!!busy}
                                             onClick={() =>
-                                                void perform('Guardando…', save)
+                                                void perform(
+                                                    t('Guardando…'),
+                                                    save,
+                                                )
                                             }
                                         >
-                                            Guardar clave
+                                            {t('Guardar clave ')}
                                         </Button>
                                         <Button
                                             variant="outline"
                                             disabled={!!busy || !profile.trim()}
                                             onClick={() =>
                                                 void perform(
-                                                    'Importando juegos…',
+                                                    t('Importando juegos…'),
                                                     async () => {
                                                         await save();
                                                         await call(
@@ -444,13 +467,15 @@ export function AppSetup({
                                                         );
                                                         await onReload();
                                                         setMessage(
-                                                            'Tu biblioteca está lista.',
+                                                            t(
+                                                                'Tu biblioteca está lista.',
+                                                            ),
                                                         );
                                                     },
                                                 )
                                             }
                                         >
-                                            Guardar e importar juegos
+                                            {t('Guardar e importar juegos ')}
                                         </Button>
                                     </div>
                                 </div>
@@ -459,19 +484,19 @@ export function AppSetup({
                                 <div className="space-y-5">
                                     <div className="hud-card-subpanel space-y-3">
                                         <h3 className="font-semibold">
-                                            Recomendaciones con ChatGPT
+                                            {t('Recomendaciones con ChatGPT ')}
                                         </h3>
                                         <p className="text-sm text-muted-foreground">
-                                            Opcional. Usa tu cuenta y su cupo de
-                                            Codex. También puedes recomendar con
-                                            el algoritmo local.
+                                            {t(
+                                                'Opcional. Usa tu cuenta y su cupo de Codex. También puedes recomendar con el algoritmo local. ',
+                                            )}
                                         </p>
                                         {(state?.setup.codex ||
                                             status.login.state ===
                                                 'complete') && (
                                             <p className="flex items-center gap-2 text-sm text-emerald-400">
                                                 <CheckCircle2 size={16} />{' '}
-                                                ChatGPT conectado
+                                                {t('ChatGPT conectado ')}
                                             </p>
                                         )}
                                         {status.login.message && (
@@ -484,7 +509,7 @@ export function AppSetup({
                                             variant="outline"
                                             onClick={() =>
                                                 void perform(
-                                                    'Conectando…',
+                                                    t('Conectando…'),
                                                     async () =>
                                                         setStatus(
                                                             await call(
@@ -500,39 +525,47 @@ export function AppSetup({
                                             }
                                         >
                                             {status.login.state === 'pending'
-                                                ? 'Cancelar conexión'
-                                                : 'Conectar ChatGPT'}
+                                                ? t('Cancelar conexión')
+                                                : t('Conectar ChatGPT')}
                                         </Button>
                                     </div>
                                     {credential(
                                         'STEAM_FAMILY_TOKEN',
-                                        'Steam Families · opcional',
+                                        t('Steam Families · opcional'),
                                         'https://store.steampowered.com/pointssummary/ajaxgetasyncconfig',
-                                        'Abre la página con tu sesión de Steam y copia el valor webapi_token. Después podrás sincronizar el grupo desde Ajustes.',
+                                        t(
+                                            'Abre la página con tu sesión de Steam y copia el valor webapi_token. Después podrás sincronizar el grupo desde Ajustes.',
+                                        ),
                                     )}
                                     {credential(
                                         'TWITCH_CLIENT_ID',
-                                        'IGDB · identificador de aplicación',
+                                        t('IGDB · identificador de aplicación'),
                                         'https://dev.twitch.tv/console/apps',
-                                        'Para metadatos y juegos de otras plataformas. En Twitch registra una aplicación Confidential con redirección http://localhost.',
+                                        t(
+                                            'Para metadatos y juegos de otras plataformas. En Twitch registra una aplicación Confidential con redirección http://localhost.',
+                                        ),
                                     )}
                                     {credential(
                                         'TWITCH_CLIENT_SECRET',
-                                        'IGDB · secreto de aplicación',
+                                        t('IGDB · secreto de aplicación'),
                                     )}
                                     <Button
                                         disabled={!!busy}
                                         onClick={() =>
-                                            void perform('Guardando…', save)
+                                            void perform(t('Guardando…'), save)
                                         }
                                     >
-                                        Guardar conexiones
+                                        {t('Guardar conexiones ')}
                                     </Button>
                                     <p className="text-sm text-muted-foreground">
-                                        Duraciones de HowLongToBeat:{' '}
+                                        {t('Duraciones de HowLongToBeat:')}{' '}
                                         {state?.setup.hltb
-                                            ? 'preparadas; se consultan al recomendar.'
-                                            : 'no disponibles en este entorno.'}
+                                            ? t(
+                                                  'preparadas; se consultan al recomendar.',
+                                              )
+                                            : t(
+                                                  'no disponibles en este entorno.',
+                                              )}
                                     </p>
                                 </div>
                             )}
@@ -547,7 +580,7 @@ export function AppSetup({
                                                     disabled={!!busy}
                                                     onChange={(e) =>
                                                         void perform(
-                                                            'Guardando…',
+                                                            t('Guardando…'),
                                                             async () =>
                                                                 setStatus(
                                                                     await call(
@@ -564,7 +597,7 @@ export function AppSetup({
                                                         )
                                                     }
                                                 />
-                                                Iniciar con Windows
+                                                {t('Iniciar con Windows ')}
                                             </label>
                                             <label className="flex items-center gap-3 text-sm">
                                                 <input
@@ -575,7 +608,9 @@ export function AppSetup({
                                                         const lan =
                                                             e.target.checked;
                                                         void perform(
-                                                            'Cambiando acceso…',
+                                                            t(
+                                                                'Cambiando acceso…',
+                                                            ),
                                                             () =>
                                                                 restarting(
                                                                     'app/settings',
@@ -585,21 +620,21 @@ export function AppSetup({
                                                         );
                                                     }}
                                                 />
-                                                Permitir acceso desde mi red
-                                                local
+                                                {t(
+                                                    'Permitir acceso desde mi red local ',
+                                                )}
                                             </label>
                                             <p className="text-xs text-muted-foreground">
-                                                Al cambiar el acceso por red,
-                                                Windows solicitará permiso y
-                                                Next Play se reiniciará. Utiliza
-                                                una red doméstica de confianza.
+                                                {t(
+                                                    'Al cambiar el acceso por red, Windows solicitará permiso y Next Play se reiniciará. Utiliza una red doméstica de confianza. ',
+                                                )}
                                             </p>
                                             {status.urls.map((url) => (
                                                 <p
                                                     className="text-sm"
                                                     key={url}
                                                 >
-                                                    Desde tu móvil:{' '}
+                                                    {t('Desde tu móvil:')}{' '}
                                                     <a
                                                         className="text-primary underline"
                                                         href={url}
@@ -612,14 +647,19 @@ export function AppSetup({
                                             ))}
                                             <div className="hud-card-subpanel space-y-3">
                                                 <h3 className="font-semibold">
-                                                    Versión {status.version}
+                                                    {t('Versión ')}
+                                                    {status.version}
                                                 </h3>
                                                 <p className="text-sm">
                                                     {status.update.checking
-                                                        ? 'Buscando actualizaciones…'
+                                                        ? t(
+                                                              'Buscando actualizaciones…',
+                                                          )
                                                         : status.update.version
-                                                          ? `Disponible: ${status.update.version}`
-                                                          : 'No hay una actualización disponible.'}
+                                                          ? `${t('Disponible: ')}${status.update.version}`
+                                                          : t(
+                                                                'No hay una actualización disponible.',
+                                                            )}
                                                 </p>
                                                 {status.update.error && (
                                                     <p className="text-sm text-amber-400">
@@ -632,7 +672,7 @@ export function AppSetup({
                                                         disabled={!!busy}
                                                         onClick={() =>
                                                             void perform(
-                                                                'Buscando…',
+                                                                t('Buscando…'),
                                                                 async () =>
                                                                     setStatus(
                                                                         await call(
@@ -643,14 +683,18 @@ export function AppSetup({
                                                             )
                                                         }
                                                     >
-                                                        Buscar actualizaciones
+                                                        {t(
+                                                            'Buscar actualizaciones ',
+                                                        )}
                                                     </Button>
                                                     {status.update.version && (
                                                         <Button
                                                             disabled={!!busy}
                                                             onClick={() =>
                                                                 void perform(
-                                                                    'Actualizando…',
+                                                                    t(
+                                                                        'Actualizando…',
+                                                                    ),
                                                                     () =>
                                                                         restarting(
                                                                             'app/update',
@@ -658,8 +702,9 @@ export function AppSetup({
                                                                 )
                                                             }
                                                         >
-                                                            Actualizar y
-                                                            reiniciar
+                                                            {t(
+                                                                'Actualizar y reiniciar ',
+                                                            )}
                                                         </Button>
                                                     )}
                                                 </div>
@@ -673,23 +718,23 @@ export function AppSetup({
                                                         rel="noreferrer"
                                                         className="text-xs text-primary underline"
                                                     >
-                                                        Qué cambia en esta
-                                                        versión
+                                                        {t(
+                                                            'Qué cambia en esta versión ',
+                                                        )}
                                                     </a>
                                                 )}
                                             </div>
                                             <p className="text-xs text-muted-foreground">
-                                                Al cerrar la pestaña, Next Play
-                                                sigue activa. Para cerrarla por
-                                                completo, utiliza Salir en el
-                                                icono de la bandeja de Windows.
+                                                {t(
+                                                    'Al cerrar la pestaña, Next Play sigue activa. Para cerrarla por completo, utiliza Salir en el icono de la bandeja de Windows. ',
+                                                )}
                                             </p>
                                         </>
                                     ) : (
                                         <p className="text-sm text-muted-foreground">
-                                            El inicio con Windows y las
-                                            actualizaciones integradas están
-                                            disponibles en la versión instalada.
+                                            {t(
+                                                'El inicio con Windows y las actualizaciones integradas están disponibles en la versión instalada. ',
+                                            )}
                                         </p>
                                     )}
                                 </div>
@@ -705,7 +750,8 @@ export function AppSetup({
                                     </output>
                                 ) : (
                                     <span className="text-xs text-muted-foreground">
-                                        Paso {step + 1} de 3
+                                        {t('Paso ')}
+                                        {step + 1} {t('de 3 ')}
                                     </span>
                                 )}
                                 <div className="flex gap-2">
@@ -715,7 +761,7 @@ export function AppSetup({
                                             disabled={!!busy}
                                             onClick={() =>
                                                 void perform(
-                                                    'Guardando…',
+                                                    t('Guardando…'),
                                                     async () => {
                                                         await save(step === 0);
                                                         setStep(step + 1);
@@ -723,14 +769,14 @@ export function AppSetup({
                                                 )
                                             }
                                         >
-                                            Continuar
+                                            {t('Continuar ')}
                                         </Button>
                                     )}
                                     <Button
                                         disabled={!!busy}
                                         onClick={() =>
                                             void perform(
-                                                'Guardando…',
+                                                t('Guardando…'),
                                                 async () => {
                                                     await save(step === 0);
                                                     setStatus(
@@ -748,8 +794,8 @@ export function AppSetup({
                                         }
                                     >
                                         {step === 2
-                                            ? 'Empezar a usar'
-                                            : 'Completar más adelante'}
+                                            ? t('Empezar a usar')
+                                            : t('Completar más adelante')}
                                     </Button>
                                 </div>
                             </div>

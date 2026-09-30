@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import type { DatabaseSync, SQLInputValue } from 'node:sqlite';
 import { z } from 'zod';
 import type { Game, State } from '../lib/model.ts';
@@ -10,9 +11,9 @@ export function catalogGame(game: Game, state: State) {
         ...data,
         owners: (ownerSteamIds ?? []).map((id) =>
             id === state.profile?.steamId
-                ? 'Tu biblioteca'
+                ? translateMessage('Tu biblioteca')
                 : (state.family?.members.find((member) => member.steamId === id)
-                      ?.name ?? 'Familiar'),
+                      ?.name ?? translateMessage('Familiar')),
         ),
         preference: state.preferences[game.appId] ?? {
             favorite: false,

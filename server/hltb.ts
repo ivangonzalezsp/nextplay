@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { execFile } from 'node:child_process';
 import { join, resolve, isAbsolute } from 'node:path';
 import { access } from 'node:fs/promises';
@@ -22,7 +23,10 @@ export const withHltb = (games: Game[], cache: Cache) =>
 async function pythonPath() {
     const custom = (await config()).python;
     if (custom && !isAbsolute(custom))
-        throw new AppError('NEXTPLAY_PYTHON debe ser una ruta absoluta.', 503);
+        throw new AppError(
+            translateMessage('NEXTPLAY_PYTHON debe ser una ruta absoluta.'),
+            503,
+        );
     return (
         custom ||
         resolve(
@@ -50,7 +54,10 @@ export function pendingHltb(games: Game[], cache: Cache) {
 }
 export function validateHltb(value: unknown, games: Game[]) {
     if (!Array.isArray(value) || value.length !== games.length)
-        throw new AppError('Respuesta incompleta de HowLongToBeat.', 502);
+        throw new AppError(
+            translateMessage('Respuesta incompleta de HowLongToBeat.'),
+            502,
+        );
     const used = new Set<number>();
     return value.map((row) => {
         if (
@@ -59,7 +66,7 @@ export function validateHltb(value: unknown, games: Game[]) {
             used.has(row.appId)
         )
             throw new AppError(
-                'Identificador no válido de HowLongToBeat.',
+                translateMessage('Identificador no válido de HowLongToBeat.'),
                 502,
             );
         used.add(row.appId);
@@ -78,7 +85,10 @@ export function validateHltb(value: unknown, games: Game[]) {
                             d[k] <= 100000),
                 ))
         )
-            throw new AppError('Duraciones no válidas de HowLongToBeat.', 502);
+            throw new AppError(
+                translateMessage('Duraciones no válidas de HowLongToBeat.'),
+                502,
+            );
         return {
             appId: row.appId as number,
             checkedAt: Date.now(),
@@ -127,7 +137,9 @@ async function runPython(games: Game[]): Promise<unknown> {
                 if (error)
                     return reject(
                         new AppError(
-                            'No se pudo consultar HowLongToBeat. Se conservan los datos anteriores y las duraciones de IGDB.',
+                            translateMessage(
+                                'No se pudo consultar HowLongToBeat. Se conservan los datos anteriores y las duraciones de IGDB.',
+                            ),
                             502,
                         ),
                     );
@@ -136,7 +148,9 @@ async function runPython(games: Game[]): Promise<unknown> {
                 } catch {
                     reject(
                         new AppError(
-                            'HowLongToBeat devolvió datos ilegibles.',
+                            translateMessage(
+                                'HowLongToBeat devolvió datos ilegibles.',
+                            ),
                             502,
                         ),
                     );
@@ -157,9 +171,10 @@ export async function refreshHltb(
     force = false,
     runner = runPython,
 ) {
-    const missing = (force
-        ? games.filter((game) => game.appId > 0)
-        : pendingHltb(games, cache)
+    const missing = (
+        force
+            ? games.filter((game) => game.appId > 0)
+            : pendingHltb(games, cache)
     ).slice(0, 8);
     if (!missing.length) {
         log('server', 'hltb:refresh:skipped', { games: games.length });
@@ -188,7 +203,9 @@ export async function refreshHltb(
         });
         return rows.some((r) => r.data === null)
             ? [
-                  'No se encontró una correspondencia inequívoca en HLTB para algunos candidatos; se mantiene IGDB o la última lectura válida.',
+                  translateMessage(
+                      'No se encontró una correspondencia inequívoca en HLTB para algunos candidatos; se mantiene IGDB o la última lectura válida.',
+                  ),
               ]
             : [];
     } catch (e) {
@@ -199,7 +216,9 @@ export async function refreshHltb(
         return [
             e instanceof AppError
                 ? e.message
-                : 'HowLongToBeat no está disponible. Se conservan los datos anteriores.',
+                : translateMessage(
+                      'HowLongToBeat no está disponible. Se conservan los datos anteriores.',
+                  ),
         ];
     }
 }

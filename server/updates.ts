@@ -1,3 +1,4 @@
+import { t as translateMessage } from './i18n.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -41,7 +42,7 @@ export function parseRelease(value: unknown): Release {
         !Array.isArray(r.assets)
     )
         throw new AppError(
-            'La publicación no tiene un formato compatible.',
+            translateMessage('La publicación no tiene un formato compatible.'),
             502,
         );
     const version = r.tag_name.slice(1);
@@ -52,7 +53,9 @@ export function parseRelease(value: unknown): Release {
         );
         if (matches.length !== 1)
             throw new AppError(
-                'La publicación no contiene un instalador verificable.',
+                translateMessage(
+                    'La publicación no contiene un instalador verificable.',
+                ),
                 502,
             );
         return matches[0].browser_download_url;
@@ -84,7 +87,10 @@ export async function publicDownload(
             parsed.port ||
             !allowed.has(parsed.hostname)
         )
-            throw new AppError('Destino de actualización no permitido.', 502);
+            throw new AppError(
+                translateMessage('Destino de actualización no permitido.'),
+                502,
+            );
         const response = await fetch(url, {
             redirect: 'manual',
             signal,
@@ -102,18 +108,24 @@ export async function publicDownload(
         }
         return response;
     }
-    throw new AppError('No se ha podido descargar la actualización.', 502);
+    throw new AppError(
+        translateMessage('No se ha podido descargar la actualización.'),
+        502,
+    );
 }
 async function limitedText(response: Response, maximum: number) {
     if (!response.ok || !response.body)
-        throw new AppError('No se ha podido consultar la publicación.', 502);
+        throw new AppError(
+            translateMessage('No se ha podido consultar la publicación.'),
+            502,
+        );
     const chunks: Uint8Array[] = [];
     let size = 0;
     for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
         size += chunk.byteLength;
         if (size > maximum)
             throw new AppError(
-                'La publicación supera el tamaño permitido.',
+                translateMessage('La publicación supera el tamaño permitido.'),
                 502,
             );
         chunks.push(chunk);
@@ -159,7 +171,9 @@ export async function checkUpdates(force = false): Promise<UpdateCache> {
         } catch {
             next = {
                 ...next,
-                error: 'No se han podido buscar actualizaciones. Puedes volver a intentarlo; la aplicación sigue disponible.',
+                error: translateMessage(
+                    'No se han podido buscar actualizaciones. Puedes volver a intentarlo; la aplicación sigue disponible.',
+                ),
             };
         }
         await atomicJson(path, next);
@@ -178,7 +192,10 @@ export async function downloadVerified(
     maxBytes = 1_500_000_000,
 ) {
     if (!response.ok || !response.body || !/^[a-f\d]{64}$/i.test(expectedHash))
-        throw new AppError('El instalador no se puede verificar.', 502);
+        throw new AppError(
+            translateMessage('El instalador no se puede verificar.'),
+            502,
+        );
     const temp = destination + '.' + randomUUID() + '.partial';
     const file = await open(temp, 'wx');
     const hash = createHash('sha256');
@@ -188,7 +205,9 @@ export async function downloadVerified(
             size += chunk.byteLength;
             if (size > maxBytes)
                 throw new AppError(
-                    'El instalador supera el tamaño permitido.',
+                    translateMessage(
+                        'El instalador supera el tamaño permitido.',
+                    ),
                     502,
                 );
             hash.update(chunk);
@@ -200,7 +219,9 @@ export async function downloadVerified(
         }
         if (!size || hash.digest('hex') !== expectedHash.toLowerCase())
             throw new AppError(
-                'La descarga está incompleta o ha sido alterada. Vuelve a intentarlo.',
+                translateMessage(
+                    'La descarga está incompleta o ha sido alterada. Vuelve a intentarlo.',
+                ),
                 502,
             );
         await file.sync();
@@ -215,7 +236,8 @@ export async function prepareUpdate() {
     const { release, error } = await checkUpdates(true);
     if (!release)
         throw new AppError(
-            error || 'Ya tienes la última versión disponible.',
+            error ||
+                translateMessage('Ya tienes la última versión disponible.'),
             409,
         );
     // Construct URLs again; persisted metadata is never an executable/download authority.
@@ -230,7 +252,10 @@ export async function prepareUpdate() {
         .map((line) => /^([a-f\d]{64})\s+\*?([^\s]+)$/i.exec(line))
         .filter((match) => match?.[2] === name);
     if (matches.length !== 1)
-        throw new AppError('Falta la comprobación del instalador.', 502);
+        throw new AppError(
+            translateMessage('Falta la comprobación del instalador.'),
+            502,
+        );
     const digest = matches[0]![1].toLowerCase();
     const folder = join(userDir(), 'updates');
     await mkdir(folder, { recursive: true });

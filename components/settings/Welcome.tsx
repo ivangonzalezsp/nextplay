@@ -1,5 +1,8 @@
 'use client';
 
+import { translate as t, locale } from '@/lib/i18n';
+import { useLanguage } from '@/components/header/LanguageSelector';
+
 import { useState } from 'react';
 import Image from 'next/image';
 import { Compass, Heart, Library, Gamepad2 } from 'lucide-react';
@@ -42,6 +45,7 @@ export function Welcome({
     onClose: () => void;
     onFinish: () => void;
 }) {
+    useLanguage();
     const [games] = useState(() => selectWelcomeGames(state));
     const [step, setStep] = useState(0);
     const [drafts, setDrafts] = useState(() =>
@@ -77,7 +81,7 @@ export function Welcome({
             setError(
                 e instanceof Error
                     ? e.message
-                    : 'No se han podido guardar las respuestas.',
+                    : t('No se han podido guardar las respuestas.'),
             );
         } finally {
             setBusy(false);
@@ -133,31 +137,37 @@ export function Welcome({
                     <p className="text-xs text-muted-foreground">
                         Next Play ·{' '}
                         {summary
-                            ? 'Resumen'
-                            : `Paso ${step + 1} de ${summaryStep + 1}`}
+                            ? t('Resumen')
+                            : `${t('Paso ')}${step + 1}${t(' de ')}${summaryStep + 1}`}
                     </p>
                     <DialogTitle className="text-2xl">
                         {step === 0
-                            ? 'Configura tus preferencias'
+                            ? t('Configura tus preferencias')
                             : game
-                              ? '¿Cómo fue tu experiencia?'
+                              ? t('¿Cómo fue tu experiencia?')
                               : summary
-                                ? 'Resumen de tus respuestas'
-                                : '¿Qué te atrae de un juego?'}
+                                ? t('Resumen de tus respuestas')
+                                : t('¿Qué te atrae de un juego?')}
                     </DialogTitle>
                     <DialogDescription>
                         {step === 0
-                            ? 'Revisa el estado de algunos juegos y añade tus opiniones para ajustar las recomendaciones. Puedes saltar cualquier pregunta.'
+                            ? t(
+                                  'Revisa el estado de algunos juegos y añade tus opiniones para ajustar las recomendaciones. Puedes saltar cualquier pregunta.',
+                              )
                             : game
-                              ? `Tu biblioteca · Juego ${step} de ${games.length}. Las horas no confirman que lo terminaste ni que te gustó.`
+                              ? `${t('Tu biblioteca · Juego ')}${step}${t(' de ')}${games.length}${t('. Las horas no confirman que lo terminaste ni que te gustó.')}`
                               : summary
-                                ? 'Las respuestas confirmadas ya están guardadas. Puedes editarlas en la biblioteca y en Tus gustos.'
-                                : 'Elige solo lo que tengas claro. Las preferencias sin seleccionar se calcularán a partir de tus juegos y opiniones.'}
+                                ? t(
+                                      'Las respuestas confirmadas ya están guardadas. Puedes editarlas en la biblioteca y en Tus gustos.',
+                                  )
+                                : t(
+                                      'Elige solo lo que tengas claro. Las preferencias sin seleccionar se calcularán a partir de tus juegos y opiniones.',
+                                  )}
                     </DialogDescription>
                 </DialogHeader>
                 <progress
                     className="h-1 w-full accent-[var(--theme-accent)]"
-                    aria-label="Progreso de la bienvenida"
+                    aria-label={t('Progreso de la bienvenida')}
                     value={step}
                     max={summaryStep}
                 />
@@ -168,25 +178,29 @@ export function Welcome({
                 )}
                 <fieldset disabled={busy} className="min-w-0 space-y-5">
                     <legend className="sr-only">
-                        Tutorial y preferencias iniciales
+                        {t('Tutorial y preferencias iniciales ')}
                     </legend>
                     {step === 0 && (
                         <div className="space-y-6 py-3">
                             {[
                                 {
                                     icon: Library,
-                                    title: 'Biblioteca',
-                                    text: 'Consulta tus juegos, marca su estado y guarda tus favoritos.',
+                                    title: t('Biblioteca'),
+                                    text: t(
+                                        'Consulta tus juegos, marca su estado y guarda tus favoritos.',
+                                    ),
                                 },
                                 {
                                     icon: Compass,
-                                    title: 'Recomendaciones',
-                                    text: 'Elige el tiempo que tienes y lo que te apetece. Después, pide una recomendación.',
+                                    title: t('Recomendaciones'),
+                                    text: t(
+                                        'Elige el tiempo que tienes y lo que te apetece. Después, pide una recomendación.',
+                                    ),
                                 },
                                 {
                                     icon: Heart,
-                                    title: 'Gustos y opiniones',
-                                    text: `Revisaremos ${games.length ? `${games.length} juegos y unas pocas preferencias` : 'unas pocas preferencias'}. Puedes saltar cualquier pregunta.`,
+                                    title: t('Gustos y opiniones'),
+                                    text: `${t('Revisaremos ')}${games.length ? `${games.length}${t(' juegos y unas pocas preferencias')}` : t('unas pocas preferencias')}${t('. Puedes saltar cualquier pregunta.')}`,
                                 },
                             ].map(({ icon: Icon, title, text }) => (
                                 <div className="flex gap-4" key={title}>
@@ -207,9 +221,9 @@ export function Welcome({
                             ))}
                             {!games.length && (
                                 <p className="text-sm text-muted-foreground">
-                                    No hay juegos para revisar en este paso.
-                                    Puedes configurar tus gustos y retomar el
-                                    recorrido desde Ajustes.
+                                    {t(
+                                        'No hay juegos para revisar en este paso. Puedes configurar tus gustos y retomar el recorrido desde Ajustes. ',
+                                    )}
                                 </p>
                             )}
                         </div>
@@ -223,7 +237,7 @@ export function Welcome({
                                         width={96}
                                         height={128}
                                         unoptimized
-                                        alt={`Portada de ${game.name}`}
+                                        alt={`${t('Portada de ')}${game.name}`}
                                         className="h-32 w-24 rounded-lg object-cover"
                                     />
                                 ) : (
@@ -238,16 +252,16 @@ export function Welcome({
                                     <p className="text-sm text-muted-foreground">
                                         {(
                                             (game.playtimeMinutes ?? 0) / 60
-                                        ).toLocaleString('es', {
+                                        ).toLocaleString(locale(), {
                                             maximumFractionDigits: 1,
                                         })}{' '}
-                                        horas jugadas
+                                        {t('horas jugadas ')}
                                     </p>
                                 </div>
                             </div>
                             <fieldset>
                                 <legend className="mb-2 font-semibold">
-                                    ¿En qué estado lo dejaste?
+                                    {t('¿En qué estado lo dejaste? ')}
                                 </legend>
                                 <div className="flex flex-wrap gap-2">
                                     {statuses.map((status) => (
@@ -263,14 +277,14 @@ export function Welcome({
                                             }
                                             onClick={() => change({ status })}
                                         >
-                                            {STATUS_LABELS[status]}
+                                            {t(STATUS_LABELS[status])}
                                         </Button>
                                     ))}
                                 </div>
                             </fieldset>
                             <fieldset>
                                 <legend className="mb-2 font-semibold">
-                                    ¿Qué te pareció?
+                                    {t('¿Qué te pareció? ')}
                                 </legend>
                                 <div className="flex flex-wrap gap-2">
                                     {(
@@ -304,7 +318,7 @@ export function Welcome({
                                                 })
                                             }
                                         >
-                                            {label}
+                                            {t(label)}
                                         </Button>
                                     ))}
                                 </div>
@@ -314,9 +328,9 @@ export function Welcome({
                                     htmlFor="welcome-reason"
                                     className="font-semibold"
                                 >
-                                    ¿Por qué?{' '}
+                                    {t('¿Por qué?')}{' '}
                                     <span className="font-normal text-muted-foreground">
-                                        Opcional
+                                        {t('Opcional ')}
                                     </span>
                                 </label>
                                 <Textarea
@@ -331,7 +345,9 @@ export function Welcome({
                                             opinionReason: e.target.value,
                                         })
                                     }
-                                    placeholder="Qué te gustó o qué no te gustó"
+                                    placeholder={t(
+                                        'Qué te gustó o qué no te gustó',
+                                    )}
                                 />
                             </div>
                         </>
@@ -348,13 +364,13 @@ export function Welcome({
                                         key={id}
                                     >
                                         <legend className="sr-only">
-                                            {affinity.label}
+                                            {t(affinity.label)}
                                         </legend>
                                         <h3 className="font-semibold">
-                                            {affinity.label}
+                                            {t(affinity.label)}
                                         </h3>
                                         <p className="text-sm text-muted-foreground">
-                                            {affinity.description}
+                                            {t(affinity.description)}
                                         </p>
                                         <div className="flex flex-wrap gap-2">
                                             {choices.map(([choice, label]) => (
@@ -380,7 +396,7 @@ export function Welcome({
                                                         })
                                                     }
                                                 >
-                                                    {label}
+                                                    {t(label)}
                                                 </Button>
                                             ))}
                                         </div>
@@ -410,14 +426,18 @@ export function Welcome({
                                             <p className="text-sm text-muted-foreground">
                                                 {[
                                                     pref.status !== 'pending'
-                                                        ? STATUS_LABELS[
-                                                              pref.status
-                                                          ]
+                                                        ? t(
+                                                              STATUS_LABELS[
+                                                                  pref.status
+                                                              ],
+                                                          )
                                                         : '',
                                                     pref.opinion
-                                                        ? OPINION_LABELS[
-                                                              pref.opinion
-                                                          ]
+                                                        ? t(
+                                                              OPINION_LABELS[
+                                                                  pref.opinion
+                                                              ],
+                                                          )
                                                         : '',
                                                 ]
                                                     .filter(Boolean)
@@ -453,17 +473,16 @@ export function Welcome({
                                     </p>
                                 ))}
                             <p className="text-sm text-muted-foreground">
-                                Tus opiniones ayudan a ajustar las
-                                recomendaciones. Los juegos terminados quedan
-                                fuera salvo que permitas rejugar. No se han
-                                añadido fechas al historial de juego.
+                                {t(
+                                    'Tus opiniones ayudan a ajustar las recomendaciones. Los juegos terminados quedan fuera salvo que permitas rejugar. No se han añadido fechas al historial de juego. ',
+                                )}
                             </p>
                         </div>
                     )}
                 </fieldset>
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
                     <Button variant="ghost" disabled={busy} onClick={close}>
-                        Completar más adelante
+                        {t('Completar más adelante ')}
                     </Button>
                     <div className="flex flex-wrap gap-2">
                         {step > 0 && (
@@ -472,7 +491,7 @@ export function Welcome({
                                 disabled={busy}
                                 onClick={() => setStep(step - 1)}
                             >
-                                Atrás
+                                {t('Atrás ')}
                             </Button>
                         )}
                         <Button
@@ -480,19 +499,19 @@ export function Welcome({
                             onClick={() => void perform(next)}
                         >
                             {busy
-                                ? 'Guardando…'
+                                ? t('Guardando…')
                                 : summary
-                                  ? 'Ir a Recomendaciones'
+                                  ? t('Ir a Recomendaciones')
                                   : step === 0
                                     ? games.length
-                                        ? 'Conocer mi biblioteca'
-                                        : 'Configurar gustos'
+                                        ? t('Conocer mi biblioteca')
+                                        : t('Configurar gustos')
                                     : step === tasteStep
-                                      ? 'Ver mi resumen'
+                                      ? t('Ver mi resumen')
                                       : draft?.status === 'pending' &&
                                           !draft.opinion
-                                        ? 'Saltar este juego'
-                                        : 'Continuar'}
+                                        ? t('Saltar este juego')
+                                        : t('Continuar')}
                         </Button>
                     </div>
                 </div>
