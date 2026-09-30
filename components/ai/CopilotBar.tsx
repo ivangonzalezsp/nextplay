@@ -1,21 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import type { ReactNode } from 'react';
 import {
     MessageSquare,
     Sparkles,
     ArrowRight,
     RotateCcw,
     X,
-    History,
-    ChevronDown,
-    ChevronUp,
     LoaderCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import type {
     Game,
+    ConversationMode,
+    Recommendation,
     RecommendationEngine,
     CodexSettings,
     RecommendationProgress,
@@ -52,7 +51,7 @@ function activityLabel(progress: RecommendationProgress) {
         case 'recommendations:codex:response':
             return 'Respuesta recibida; comprobando los juegos…';
         case 'recommendations:codex:validated':
-            return 'Recomendación validada.';
+            return 'Respuesta validada.';
         case 'recommendations:complete':
             return 'Consulta completada.';
         default:
@@ -80,6 +79,8 @@ export function CopilotBar({
     setReference,
     engine,
     setEngine,
+    conversationMode,
+    setConversationMode,
     codex,
     state,
     busy,
@@ -87,6 +88,7 @@ export function CopilotBar({
     canRecommend,
     onRecommend,
     onReset,
+    renderResult,
 }: {
     text: string;
     setText: (text: string) => void;
@@ -94,16 +96,17 @@ export function CopilotBar({
     setReference: (game: Game | null) => void;
     engine: RecommendationEngine;
     setEngine: (engine: RecommendationEngine) => void;
+    conversationMode: ConversationMode;
+    setConversationMode: (mode: ConversationMode) => void;
     codex: CodexSettings;
     state: Snapshot | null;
     busy: string;
     activity: RecommendationProgress[];
     canRecommend: boolean;
-    onRecommend: (message?: string) => void;
+    onRecommend: (message?: string, mode?: ConversationMode) => void;
     onReset: () => void;
+    renderResult: (result: Recommendation) => ReactNode;
 }) {
-    const [historyOpen, setHistoryOpen] = useState(false);
-
     const suggestedPrompts = [
         'Quiero algo más corto que lo propuesto',
         'Sin combates difíciles ni estrés, prefiero explorar',
@@ -113,9 +116,12 @@ export function CopilotBar({
     ];
 
     const conversationHistory = state?.conversation ?? [];
+    const latest = conversationHistory.at(-1)?.result;
+    const clarification =
+        engine === 'codex' && latest?.needsClarification ? latest : null;
 
     return (
-        <section className="hud-copilot-dock">
+        <section id="copilot-chat" className="hud-copilot-dock">
             <div className="hud-copilot-header">
                 <div className="flex items-center gap-2">
                     <div className="hud-copilot-icon">
@@ -131,27 +137,39 @@ export function CopilotBar({
                             </span>
                         </h4>
                         <p className="text-xs text-muted-foreground">
-                            Afina tus propuestas hablándole en lenguaje natural.
+                            {engine === 'codex' && conversationMode === 'guided'
+                                ? 'La IA te hará preguntas hasta que pulses «Recomiéndame ya».'
+                                : 'Cuéntame qué te apetece y afinamos tu próximo juego.'}
                         </p>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {conversationHistory.length > 0 && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 text-xs text-muted-foreground hover:text-foreground"
-                            onClick={() => setHistoryOpen(!historyOpen)}
+                    {engine === 'codex' && (
+                        <fieldset
+                            className="flex gap-1"
+                            aria-label="Modo de conversación"
                         >
-                            <History size={13} className="mr-1" />
-                            <span>{conversationHistory.length} consultas</span>
-                            {historyOpen ? (
-                                <ChevronUp size={12} className="ml-1" />
-                            ) : (
-                                <ChevronDown size={12} className="ml-1" />
-                            )}
-                        </Button>
+                            {(['direct', 'guided'] as const).map((mode) => (
+                                <Button
+                                    key={mode}
+                                    type="button"
+                                    variant={
+                                        conversationMode === mode
+                                            ? 'secondary'
+                                            : 'ghost'
+                                    }
+                                    size="sm"
+                                    aria-pressed={conversationMode === mode}
+                                    disabled={!!busy}
+                                    onClick={() => setConversationMode(mode)}
+                                >
+                                    {mode === 'guided'
+                                        ? 'Modo guiado'
+                                        : 'Directo'}
+                                </Button>
+                            ))}
+                        </fieldset>
                     )}
 
                     <Button
@@ -219,20 +237,50 @@ export function CopilotBar({
                 </div>
             )}
 
-            {/* Expandable session history */}
-            {historyOpen && conversationHistory.length > 0 && (
-                <div className="hud-copilot-history">
-                    {conversationHistory.map((turn, index) => (
-                        <div key={index} className="hud-history-turn">
-                            <div className="hud-history-user">
-                                <strong>Tú:</strong>{' '}
-                                {turn.text || 'Búsqueda inicial'}
+            {conversationHistory.length > 0 && (
+                <div
+                    className="hud-copilot-history"
+                    role="log"
+                    aria-label="Conversación"
+                >
+                    {conversationHistory.map((turn, index) => {
+                        const isLatest =
+                            index === conversationHistory.length - 1;
+                        return (
+                            <div
+                                key={index}
+                                id={isLatest ? 'copilot-latest' : undefined}
+                                className="hud-history-turn"
+                            >
+                                <div className="hud-history-user">
+                                    <strong>Tú</strong>
+                                    <p className="whitespace-pre-wrap">
+                                        {turn.text ||
+                                            'Ayúdame a elegir mi próximo juego.'}
+                                    </p>
+                                </div>
+                                <div className="hud-history-ai">
+                                    <strong>
+                                        {turn.result.engine === 'local'
+                                            ? 'Motor local'
+                                            : 'Copiloto'}
+                                    </strong>
+                                    <p
+                                        id={
+                                            isLatest && clarification
+                                                ? 'copilot-question'
+                                                : undefined
+                                        }
+                                        className="whitespace-pre-wrap"
+                                    >
+                                        {turn.result.message}
+                                    </p>
+                                    {!turn.result.needsClarification &&
+                                        renderResult(turn.result)}
+                                </div>
                             </div>
-                            <div className="hud-history-ai">
-                                <strong>Codex:</strong> {turn.result.message}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
 
@@ -258,23 +306,56 @@ export function CopilotBar({
                 </div>
             )}
 
-            {/* Quick Suggested Prompt Chips */}
-            <div className="hud-quick-prompts">
-                {suggestedPrompts.map((prompt) => (
-                    <button
-                        key={prompt}
-                        type="button"
-                        className="hud-prompt-chip"
-                        disabled={!!busy}
-                        onClick={() => {
-                            if (engine !== 'codex') setEngine('codex');
-                            onRecommend(prompt);
-                        }}
+            {engine === 'codex' && conversationMode === 'guided' && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                    {(!latest || !clarification) && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            disabled={!canRecommend || !!busy}
+                            onClick={() =>
+                                onRecommend(
+                                    text.trim() ||
+                                        'Hazme preguntas para encontrar mi juego ideal.',
+                                )
+                            }
+                        >
+                            Empezar preguntas
+                        </Button>
+                    )}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={!canRecommend || !!busy}
+                        onClick={() =>
+                            onRecommend(
+                                text.trim() ||
+                                    'Recomiéndame ya con lo que sabes de mí, sin más preguntas.',
+                                'direct',
+                            )
+                        }
                     >
-                        {prompt}
-                    </button>
-                ))}
-            </div>
+                        Recomiéndame ya
+                    </Button>
+                </div>
+            )}
+
+            {/* Quick Suggested Prompt Chips */}
+            {engine === 'codex' && conversationMode === 'direct' && (
+                <div className="hud-quick-prompts">
+                    {suggestedPrompts.map((prompt) => (
+                        <button
+                            key={prompt}
+                            type="button"
+                            className="hud-prompt-chip"
+                            disabled={!!busy}
+                            onClick={() => onRecommend(prompt)}
+                        >
+                            {prompt}
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Form Input */}
             <form
@@ -286,11 +367,21 @@ export function CopilotBar({
             >
                 <Textarea
                     id="copilot-input"
+                    aria-label={
+                        clarification
+                            ? 'Tu respuesta'
+                            : 'Mensaje para el copiloto'
+                    }
+                    aria-describedby={
+                        clarification ? 'copilot-question' : undefined
+                    }
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={
                         engine === 'codex'
-                            ? '¿Qué cambiarías? (ej: prefiero un roguelike espacial, o algo que dure menos de 4 horas)…'
+                            ? clarification || conversationMode === 'guided'
+                                ? 'Cuéntame qué prefieres…'
+                                : '¿Qué cambiarías? (ej: prefiero un roguelike espacial, o algo que dure menos de 4 horas)…'
                             : 'El motor local usa los filtros fijos. Cambia a Codex para conversar en lenguaje natural.'
                     }
                     maxLength={2000}

@@ -1721,10 +1721,14 @@ h1 {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.hud-status-opinion-row > .flex {
+    flex-wrap: wrap;
+}
+
 /* BENTO SECONDARY CARDS */
 .hud-bento-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 18px;
     margin-bottom: 28px;
 }
@@ -1923,6 +1927,8 @@ h1 {
 
 .hud-copilot-header {
     display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 12px;
@@ -2141,30 +2147,46 @@ h1 {
 
 .hud-copilot-history {
     background: var(--theme-inset, #090d10);
-    border: 1px solid #233137;
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 12px;
-    max-height: 220px;
-    overflow-y: auto;
     margin-bottom: 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 24px;
 }
 
 .hud-history-turn {
-    font-size: 0.8125rem;
-    border-left: 2px solid var(--theme-accent, #00f0a8);
-    padding-left: 10px;
+    min-width: 0;
+    scroll-margin-top: 24px;
+    font-size: 0.875rem;
 }
 
 .hud-history-user {
-    color: #94a3b8;
-    margin-bottom: 2px;
+    color: var(--foreground);
+    background: var(--muted);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 0 0 16px auto;
+    max-width: 85%;
+    width: fit-content;
 }
 
 .hud-history-ai {
-    color: #e2e8f0;
+    color: var(--foreground);
+}
+
+.hud-history-ai > p {
+    margin: 6px 0 16px;
+}
+
+.hud-history-user > p,
+.hud-history-ai > p {
+    overflow-wrap: anywhere;
+}
+
+.hud-history-ai > strong {
+    color: var(--theme-accent, #00f0a8);
 }
 
 .hud-engine-warning-banner {
@@ -2589,6 +2611,7 @@ h1 {
         gap: 16px;
     }
     .hud-hero-poster-container {
+        width: 100%;
         max-width: 220px;
         margin: 0 auto;
     }

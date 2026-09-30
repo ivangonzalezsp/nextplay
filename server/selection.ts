@@ -23,6 +23,7 @@ import type {
     TasteAffinity,
     Recommendation,
     RecommendationEngine,
+    ConversationMode,
 } from '../lib/model.ts';
 import type { Filters, Game, Preference, State, Pick } from '../lib/model.ts';
 
@@ -537,8 +538,17 @@ export function recommendLocally(
         ],
     };
 }
-export function validatePicks(value: unknown, candidates: Game[]) {
-    const v = value as { message: string; owned: Pick[]; discoveries: Pick[] };
+export function validatePicks(
+    value: unknown,
+    candidates: Game[],
+    conversationMode?: ConversationMode,
+) {
+    const v = value as {
+        needsClarification?: boolean;
+        message: string;
+        owned: Pick[];
+        discoveries: Pick[];
+    };
     if (
         !v ||
         typeof v.message !== 'string' ||
@@ -547,7 +557,13 @@ export function validatePicks(value: unknown, candidates: Game[]) {
         !Array.isArray(v.owned) ||
         !Array.isArray(v.discoveries) ||
         v.owned.length > 3 ||
-        v.discoveries.length > 2
+        v.discoveries.length > 2 ||
+        (v.needsClarification !== undefined &&
+            typeof v.needsClarification !== 'boolean') ||
+        (conversationMode !== undefined &&
+            v.needsClarification !== (conversationMode === 'guided')) ||
+        (v.needsClarification &&
+            (v.owned.length > 0 || v.discoveries.length > 0))
     )
         throw new AppError(
             'Codex no devolvió una recomendación válida. Puedes reintentar.',
@@ -579,6 +595,7 @@ export function validatePicks(value: unknown, candidates: Game[]) {
         };
     };
     return {
+        needsClarification: v.needsClarification ?? false,
         message: v.message,
         owned: v.owned.map((p) => validate(p, true)),
         discoveries: v.discoveries.map((p) => validate(p, false)),

@@ -43,7 +43,12 @@ import {
     ComboboxList,
 } from '@/components/ui/combobox';
 import { clearFilters } from '@/lib/filters';
-import type { Filters, RecommendationEngine, State } from '@/lib/model';
+import type {
+    ConversationMode,
+    Filters,
+    RecommendationEngine,
+    State,
+} from '@/lib/model';
 
 export function QuickVibeBar({
     filters,
@@ -59,6 +64,7 @@ export function QuickVibeBar({
     busy,
     engine,
     savedGamesCount,
+    conversationMode,
 }: {
     filters: Filters;
     setFilters: (filters: Filters) => void;
@@ -78,6 +84,7 @@ export function QuickVibeBar({
     busy: string;
     engine: RecommendationEngine;
     savedGamesCount: number;
+    conversationMode: ConversationMode;
 }) {
     const [filtersSheetOpen, setFiltersSheetOpen] = useState(false);
     const [tagSearch, setTagSearch] = useState('');
@@ -746,7 +753,10 @@ export function QuickVibeBar({
                     <span>
                         {busy === 'recommend'
                             ? 'Parar búsqueda'
-                            : 'Encuentra mi próximo juego'}
+                            : engine === 'codex' &&
+                                conversationMode === 'guided'
+                              ? 'Afinar con preguntas'
+                              : 'Encuentra mi próximo juego'}
                     </span>
                     {busy !== 'recommend' && (
                         <ArrowRight size={17} className="ml-2 hud-btn-arrow" />

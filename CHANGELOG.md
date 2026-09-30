@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Modo guiado en el chat: la IA hace preguntas para acotar tu juego ideal hasta que pulses «Recomiéndame ya». Los mensajes y las fichas recomendadas aparecen como una conversación encima del cuadro de texto.
+
+### Correcciones de errores
+
+- Las fichas recomendadas ajustan las acciones y las portadas al ancho disponible en pantallas pequeñas.
+
 ## [0.7.0] - 2026-09-23
 
 ### Features

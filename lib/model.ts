@@ -1,5 +1,6 @@
 export type Mode = 'today' | 'next';
 export type RecommendationEngine = 'codex' | 'local';
+export type ConversationMode = 'direct' | 'guided';
 export type GameStatus =
     'pending' | 'playing' | 'paused' | 'completed' | 'abandoned' | 'ignored';
 export const OPINION_LABELS = {
@@ -176,13 +177,19 @@ export type Pick = {
 };
 export type Recommendation = {
     engine?: RecommendationEngine;
+    needsClarification?: boolean;
     message: string;
     owned: (Pick & { game: Game })[];
     discoveries: (Pick & { game: Game })[];
     at: number;
     warnings: string[];
 };
-export type Turn = { text: string; filters: Filters; result: Recommendation };
+export type Turn = {
+    text: string;
+    filters: Filters;
+    result: Recommendation;
+    reference?: Game;
+};
 export type HistoryEntry = Turn & { id: string };
 export type PlayEvent = {
     appId: number;
