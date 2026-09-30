@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-30
+
 ### Features
 
 - Interfaz bilingüe español/inglés con selector de banderas, idioma persistente y nuevas recomendaciones en el idioma elegido; README de desarrollo y descargas con acceso directo a ambas versiones.
