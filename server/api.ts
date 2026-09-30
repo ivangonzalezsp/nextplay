@@ -57,6 +57,7 @@ import type {
     Turn,
 } from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
+import { applyWelcome } from './welcome.ts';
 import {
     calendarDateAt,
     dateInputValue,
@@ -506,6 +507,11 @@ export async function handle(
                         state.tastes.ignoredHours.filter(
                             (appId) => appId !== payload.appId,
                         );
+                await saveState(state);
+                return snapshot(state);
+            }
+            if (path === '/api/welcome' && request.method === 'PATCH') {
+                applyWelcome(state, payload);
                 await saveState(state);
                 return snapshot(state);
             }

@@ -9,6 +9,7 @@ import GameOpinion from './opinion';
 import { TopBar } from '@/components/header/TopBar';
 import { SettingsModal } from '@/components/settings/SettingsModal';
 import { AppSetup } from '@/components/settings/AppSetup';
+import { Welcome } from '@/components/settings/Welcome';
 import { QuickVibeBar } from '@/components/recommendations/QuickVibeBar';
 import { HeroSpotlight } from '@/components/recommendations/HeroSpotlight';
 import { GameCard } from '@/components/recommendations/GameCard';
@@ -248,6 +249,7 @@ export default function Home() {
     const [tab, setTab] = useState('recommend');
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [setupOpen, setSetupOpen] = useState(false);
+    const [welcomeOpen, setWelcomeOpen] = useState(false);
 
     const activeFilters = useRef(filters);
     const activeCodex = useRef(codex);
@@ -1012,13 +1014,31 @@ export default function Home() {
                     setSettingsOpen(false);
                     setSetupOpen(true);
                 }}
+                onWelcome={() => {
+                    setSettingsOpen(false);
+                    setWelcomeOpen(true);
+                }}
             />
             <AppSetup
                 open={setupOpen}
                 onOpenChange={setSetupOpen}
                 state={state}
                 onReload={load}
+                onWelcome={setWelcomeOpen}
             />
+            {welcomeOpen && state && (
+                <Welcome
+                    state={state}
+                    onSave={async (payload) => {
+                        accept(await api('welcome', payload, 'PATCH'));
+                    }}
+                    onClose={() => setWelcomeOpen(false)}
+                    onFinish={() => {
+                        setWelcomeOpen(false);
+                        setTab('recommend');
+                    }}
+                />
+            )}
 
             <main id="main" className="workspace">
                 {/* Hero Title & Stats Bar */}

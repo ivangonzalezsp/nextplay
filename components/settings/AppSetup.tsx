@@ -38,11 +38,13 @@ export function AppSetup({
     onOpenChange,
     state,
     onReload,
+    onWelcome,
 }: {
     open: boolean;
     onOpenChange: (value: boolean) => void;
     state: Snapshot | null;
     onReload: () => Promise<void>;
+    onWelcome: (open: boolean) => void;
 }) {
     const [status, setStatus] = useState<AppStatus | null>(null);
     const [step, setStep] = useState(0);
@@ -52,6 +54,17 @@ export function AppSetup({
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [noticeDismissed, setNoticeDismissed] = useState(false);
+    useEffect(() => {
+        if (
+            status?.installed &&
+            status.onboardingComplete &&
+            !open &&
+            state &&
+            !state.welcome?.dismissed &&
+            !state.welcome?.completed
+        )
+            onWelcome(true);
+    }, [status?.installed, status?.onboardingComplete, open, state, onWelcome]);
     useEffect(() => {
         let active = true;
         void call('app')

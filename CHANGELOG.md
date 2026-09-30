@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Tutorial inicial opcional con revisión de juegos jugados y preferencias para ajustar las recomendaciones; las respuestas se guardan por paso y el recorrido puede retomarse desde Ajustes sin inventar fechas de juego.
+
+### Correcciones de errores
+
+- Ninguno.
+
 ## [0.8.0] - 2026-09-30
 
 ### Features

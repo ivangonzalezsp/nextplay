@@ -214,6 +214,7 @@ export type State = {
     shortlist?: Game[];
     preferences: Record<string, Preference>;
     tastes?: TasteSettings;
+    welcome?: { reviewed: number[]; dismissed: boolean; completed: boolean };
     codex?: CodexSettings;
     engine?: RecommendationEngine;
     history?: HistoryEntry[];

@@ -10,6 +10,8 @@ Web personal en español para elegir qué jugar de tu biblioteca de Steam. Puede
 2. El asistente permite añadir tu perfil y clave de Steam e importar tus juegos. Steam Families, IGDB y ChatGPT son opcionales. Puedes usar el algoritmo local sin IA.
 3. Si tienes una instalación anterior, ciérrala y selecciona **Importar instalación anterior** antes de configurar la nueva. Los datos originales se conservan; conecta ChatGPT de nuevo desde el asistente.
 
+Después de configurar la instalación se ofrece un tutorial opcional para revisar hasta cinco juegos jugados e indicar tus gustos. Las respuestas se guardan al confirmar cada paso; **Completar más adelante** conserva lo confirmado. Puedes retomarlo desde **Ajustes → Tutorial y preferencias iniciales**. Los estados de juegos anteriores no añaden fechas al historial.
+
 El instalador incluye Node, Codex y Python con HowLongToBeat: no necesitas Git, terminal ni instalar herramientas aparte. Cada persona conecta sus propias cuentas. Requiere Windows 10/11 de 64 bits. Esta primera distribución no tiene firma de código y Windows puede mostrar avisos o bloquearla.
 
 ### Abrir, cerrar y actualizar

@@ -55,6 +55,7 @@ export function SettingsModal({
     setCodex,
     busy,
     onSetup,
+    onWelcome,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -73,6 +74,7 @@ export function SettingsModal({
     setCodex: (settings: CodexSettings) => void;
     busy: string;
     onSetup: () => void;
+    onWelcome: () => void;
 }) {
     const [activeTab, setActiveTab] = useState('steam');
     const [draftEngine, setDraftEngine] = useState<RecommendationEngine | null>(
@@ -148,6 +150,15 @@ export function SettingsModal({
                 </DialogHeader>
                 <Button variant="outline" onClick={onSetup}>
                     Configurar cuentas y aplicación
+                </Button>
+                <Button
+                    variant="outline"
+                    onClick={() => {
+                        handleOpenChange(false);
+                        onWelcome();
+                    }}
+                >
+                    Tutorial y preferencias iniciales
                 </Button>
 
                 <Tabs
