@@ -12,26 +12,28 @@ Next Play helps you choose what to play from your library. Use the local algorit
 
 1. Download **NextPlay-Setup-…-x64.exe** from the latest release.
 2. Run the installer and open **Next Play** using the shortcut.
-3. Follow the setup wizard: add your Steam profile link and Steam Web API key. Your profile and game details must be public.
+3. Open **Settings → Accounts**: add your Steam profile link and Steam Web API key. Your profile and game details must be public.
 4. Import your games. Steam Families, IGDB and ChatGPT are optional connections.
 
 You need 64-bit Windows 10/11 and an Internet connection for external sources. Git, Node, Python and Codex do not need to be installed separately. The local algorithm uses your saved library without consuming AI usage.
 
 ## Everyday use and updates
 
-- The shortcut opens your browser. You can open it several times: the same running instance is reused.
-- Closing the tab keeps Next Play running. To stop it, select **Exit** from its Windows system tray icon.
-- In **Settings → Set up accounts and app**, you can change connections, enable startup with Windows and check for updates.
+- The shortcut opens the Next Play desktop window. You can open it several times: the same running instance is reused.
+- Closing the window keeps Next Play running. To stop it, select **Salir (Exit)** from its Windows system tray icon.
+- **Settings → General** contains language, color, version, updates and optional startup with Windows. **Accounts** contains your connections.
 - **Update and restart** verifies the download, saves a backup and reopens the application. Finish any synchronization or recommendations before updating.
 - **Allow access from my local network** displays the address for your phone. Enable it only on a trusted private network. Account management, sign-in and updates are handled from the PC.
 
-Menu labels appear in the selected application language. Older versions may display them in Spanish.
+Application labels follow the selected language; the Windows system tray menu displays Spanish labels.
+
+Version **1.0.0** replaces the browser window with the desktop app while keeping your existing library, histories and accounts. The first launch after upgrading opens a local page in your default browser once to recover language and color; close it when recovery finishes. If those preferences were stored in another browser, open that same URL there.
 
 ## Your data
 
 The application is installed in `%LOCALAPPDATA%\Programs\NextPlay`. Your library, manual games, history, connections and backups are stored in `%LOCALAPPDATA%\NextPlay`. Uninstalling keeps this folder. To make a manual backup, exit the application and copy the entire folder.
 
-If you previously ran Next Play from its source code, close the previous application and select **Import previous installation** when opening the setup wizard for the first time. Choose the folder containing `package.json`; the originals are preserved. Then connect ChatGPT through the wizard. Importing is only available before configuring a new installation.
+If you previously ran Next Play from its source code, close the previous application and select **Import previous installation** in Accounts on first launch. Choose the folder containing `package.json`; the originals are preserved. Then connect ChatGPT in Accounts. Importing is only available before configuring a new installation.
 
 Each person uses their own accounts. Do not publish keys, data folders or logs containing personal information when reporting an issue.
 
@@ -63,24 +65,26 @@ Next Play te ayuda a elegir qué jugar de tu biblioteca. Usa el algoritmo local 
 
 1. Descarga el archivo **NextPlay-Setup-…-x64.exe** de la última versión.
 2. Ejecuta el instalador y abre **Next Play** desde el acceso directo.
-3. Sigue el asistente: añade tu enlace de perfil de Steam y tu clave de Steam Web API. El perfil y los detalles de juegos deben ser públicos.
+3. Abre **Ajustes → Cuentas**: añade tu enlace de perfil de Steam y tu clave de Steam Web API. El perfil y los detalles de juegos deben ser públicos.
 4. Importa tus juegos. Steam Families, IGDB y ChatGPT son conexiones opcionales.
 
 Necesitas Windows 10/11 de 64 bits y conexión a Internet para las fuentes externas. Git, Node, Python y Codex no requieren instalación por separado. El algoritmo local utiliza la biblioteca guardada sin consumir IA.
 
 ## Uso diario y actualizaciones
 
-- El acceso directo abre el navegador. Puedes abrirlo varias veces: se reutiliza la misma instancia.
-- Cerrar la pestaña mantiene Next Play activa. Para detenerla, pulsa **Salir** en su icono de bandeja de Windows.
-- En **Ajustes → Configurar cuentas y aplicación** puedes cambiar conexiones, activar el inicio con Windows y buscar actualizaciones.
+- El acceso directo abre la ventana de escritorio de Next Play. Puedes abrirlo varias veces: se reutiliza la misma instancia.
+- Cerrar la ventana mantiene Next Play activa. Para detenerla, pulsa **Salir** en su icono de bandeja de Windows.
+- **Ajustes → General** contiene idioma, color, versión, actualizaciones e inicio opcional con Windows. **Cuentas** reúne tus conexiones.
 - **Actualizar y reiniciar** verifica la descarga, guarda una copia y vuelve a abrir la aplicación. Termina las sincronizaciones o recomendaciones antes de actualizar.
 - **Permitir acceso desde mi red local** muestra la dirección para el móvil. Actívalo solo en una red privada de confianza. La gestión de cuentas, inicio de sesión y actualizaciones se realiza desde el PC.
+
+La versión **1.0.0** sustituye la ventana del navegador por la app de escritorio y conserva tu biblioteca, historiales y cuentas. El primer arranque tras actualizar abre una página local una sola vez en el navegador predeterminado para recuperar idioma y color; ciérrala cuando termine. Si guardaste esas preferencias en otro navegador, abre allí esa misma URL.
 
 ## Tus datos
 
 El programa se instala en `%LOCALAPPDATA%\Programs\NextPlay`. La biblioteca, los juegos manuales, el historial, las conexiones y las copias se guardan en `%LOCALAPPDATA%\NextPlay`. La desinstalación conserva esta carpeta. Para una copia manual, sal de la aplicación y copia la carpeta completa.
 
-Si ya usabas Next Play desde el código, cierra la aplicación anterior y selecciona **Importar instalación anterior** al abrir el asistente por primera vez. Elige la carpeta que contiene `package.json`; los originales se conservan. Después conecta ChatGPT desde el asistente. La importación solo se permite antes de configurar una instalación nueva.
+Si ya usabas Next Play desde el código, cierra la aplicación anterior y selecciona **Importar instalación anterior** en Cuentas durante el primer arranque. Elige la carpeta que contiene `package.json`; los originales se conservan. Después conecta ChatGPT en Cuentas. La importación solo se permite antes de configurar una instalación nueva.
 
 Cada persona utiliza sus propias cuentas. No publiques claves, carpetas de datos ni registros con información personal al comunicar un problema.
 
