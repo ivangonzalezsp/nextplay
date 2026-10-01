@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-10-01
+
 ### Features
 
 - Selector de Codex actualizado con GPT-6.1 Sol, GPT-6 Sol y GPT-6 Luna; modelo y esfuerzo se pueden cambiar y guardar desde el chat sin perder la conversación. Ajustes conserva Guardar/Cancelar y las combinaciones compatibles.
