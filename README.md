@@ -80,6 +80,21 @@ npm run dev
 
 Keep the terminal open. Stop with `Ctrl+C`; run `npm run dev` again to reopen. Data remains in `data/`. Development listens only on `127.0.0.1:3000`, so sharing this link does not grant access from another computer. Each person runs their own copy. The Codex desktop app need not stay open.
 
+#### Desktop prototype (Electron)
+
+After installing dependencies, build and open the desktop window:
+
+```sh
+npm run build
+npm run desktop
+```
+
+The prototype uses the installed **Node.js 24+** and downloads Electron on first launch if needed. It starts its own server on a free loopback port, opens one Next Play window, and stops that server when you close the window or choose **File → Quit**. The profile retains that port in `desktop-server.json` so language and palette persist between launches; if another process occupies it, startup fails without stopping that process. A second launch of the same profile focuses the existing window. Web links open in your browser; **Play** links open Steam.
+
+The default profile is `work/desktop-profile/`: SQLite under `data/`, account settings in `settings.json`, a separate Codex session in `codex/`, and window preferences under `electron/`. It persists between launches and does not load the checkout's `.env.local`, library, or inherited credentials. Configure any accounts explicitly from the app; no accounts are copied automatically. To use another test profile, run `npm run desktop -- --profile "path/to/test-profile"`.
+
+This is a source-run prototype, validated on Windows, with a launcher designed for Windows, Linux, and macOS. Linux/macOS execution remains unverified. It does not replace the Windows installer: bundled runtimes, platform-specific installers, startup/LAN integrations, and desktop updates are pending. Use `npm run dev` for normal browser development.
+
 #### Enable AI recommendations (optional)
 
 Install [Codex CLI using OpenAI's official instructions](https://learn.chatgpt.com/docs/codex/cli), then sign in with your own ChatGPT account:
@@ -94,6 +109,8 @@ npm run check:codex
 The status must say **Logged in using ChatGPT**. Choose Codex in **Engine & AI**. Recommendations share your account's Codex allowance. The local algorithm works without Codex. Use `npm.cmd` or `codex.cmd` if PowerShell blocks `.ps1` launchers; do not change the global execution policy.
 
 #### Run a production build
+
+For a prebuilt Docker server with persistent data, see [Next Play Server · Docker](docs/docker-server.md#english). The **Server image** workflow runs on PRs to `main` or manually and prepares AMD64/ARM64 images and runtime checks; downloads require a successful run. This is separate from the desktop prototype.
 
 ```powershell
 npm run build
@@ -331,6 +348,21 @@ Deja la terminal abierta mientras usas la app. Para detenerla, pulsa `Ctrl+C`; p
 
 La app escucha únicamente en `127.0.0.1:3000`: compartir ese enlace no permite que tus amigos entren desde otro ordenador. Cada uno debe ejecutar su propia copia. No necesitas mantener abierta la aplicación de escritorio de Codex.
 
+### Prototipo de escritorio (Electron)
+
+Después de instalar las dependencias, compila y abre la ventana de escritorio:
+
+```sh
+npm run build
+npm run desktop
+```
+
+El prototipo utiliza el **Node.js 24+** instalado y descarga Electron en el primer arranque si hace falta. Inicia su propio servidor en un puerto loopback libre, abre una ventana de Next Play y detiene ese servidor al cerrar la ventana o elegir **Archivo → Salir**. El perfil conserva ese puerto en `desktop-server.json` para mantener idioma y paleta entre arranques; si otro proceso lo ocupa, el arranque falla sin detenerlo. Un segundo arranque del mismo perfil enfoca la ventana existente. Los enlaces web se abren en tu navegador y **Jugar** abre Steam.
+
+El perfil predeterminado es `work/desktop-profile/`: SQLite bajo `data/`, cuentas en `settings.json`, una sesión separada de Codex en `codex/` y preferencias de ventana bajo `electron/`. Se conserva entre arranques y no carga `.env.local`, la biblioteca del checkout ni las credenciales heredadas. Configura las cuentas expresamente desde la app; no se copian automáticamente. Para otro perfil de prueba, ejecuta `npm run desktop -- --profile "ruta/al/perfil-de-prueba"`.
+
+Es un prototipo ejecutado desde el código fuente, validado en Windows, con un lanzador preparado para Windows, Linux y macOS. La ejecución en Linux/macOS sigue sin verificar. No sustituye al instalador de Windows: quedan pendientes los runtimes incluidos, instaladores por plataforma, integraciones de inicio automático/LAN y actualizaciones de escritorio. Usa `npm run dev` para el desarrollo habitual en navegador.
+
 ### 4. Activar recomendaciones con IA (opcional)
 
 Instala [Codex CLI siguiendo la documentación oficial de OpenAI](https://learn.chatgpt.com/docs/codex/cli) e inicia sesión con tu propia cuenta de ChatGPT:
@@ -345,6 +377,8 @@ npm run check:codex
 El estado debe indicar **Logged in using ChatGPT**. La comprobación sin `--live` no pide una recomendación. En la app, pulsa **Comprobar conexiones** y selecciona Codex en **Motor & IA**. Las recomendaciones con IA consumen el cupo de tu cuenta; elige un modelo disponible para ella.
 
 ### Ejecutar una compilación local
+
+Para un servidor Docker ya compilado con datos persistentes, consulta [Next Play Server · Docker](docs/docker-server.md#español). El workflow **Server image**, ejecutado en las PR a `main` o manualmente, prepara imágenes AMD64/ARM64 y pruebas del contenedor; las descargas requieren una ejecución correcta. Esta distribución es independiente del prototipo de escritorio.
 
 Como alternativa al modo de desarrollo:
 

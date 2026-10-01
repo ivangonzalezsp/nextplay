@@ -10,6 +10,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
 Object.assign(process.env, { NODE_ENV: 'production' });
 const installed = process.argv.includes('--installed');
+const desktop = process.argv.includes('--desktop');
+if (desktop) process.env.NEXTPLAY_DESKTOP = '1';
 const argument = (key: string, fallback: string) =>
     process.argv[process.argv.indexOf(key) + 1] && process.argv.includes(key)
         ? process.argv[process.argv.indexOf(key) + 1]
@@ -27,7 +29,7 @@ if (installed) {
     process.env.NEXTPLAY_PYTHON = join(root, 'runtime/python/python.exe');
     process.env.CODEX_HOME = join(userDir(), 'codex');
     await mkdir(process.env.CODEX_HOME, { recursive: true });
-} else {
+} else if (!desktop) {
     try {
         loadEnvFile(join(root, '.env.local'));
     } catch (error) {
@@ -71,5 +73,22 @@ if (installed) {
         version: process.env.NEXTPLAY_VERSION,
         instance: process.env.NEXTPLAY_INSTANCE,
         token: process.env.NEXTPLAY_SESSION_TOKEN,
+    });
+}
+if (desktop && process.send) {
+    let closing = false;
+    const shutdown = () => {
+        if (closing) return;
+        closing = true;
+        setTimeout(() => process.exit(0), 5000).unref();
+        running.server.close(() => process.exit(0));
+    };
+    process.on('message', (message) => {
+        if (message === 'nextplay:shutdown') shutdown();
+    });
+    process.once('disconnect', shutdown);
+    process.send({
+        type: 'nextplay:ready',
+        url: `http://127.0.0.1:${running.port}`,
     });
 }

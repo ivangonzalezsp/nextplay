@@ -4,6 +4,15 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Prototipo de escritorio con Electron: ventana propia, perfil de prueba aislado, servidor local gestionado por la app y apertura externa de páginas web y juegos de Steam.
+- Preparación de Next Play Server para Docker: servidor compilado sin Electron, volumen persistente, configuración Compose y workflow de distribución y validación nativa AMD64/ARM64 en PR o bajo demanda.
+
+### Correcciones de errores
+
+- Ninguno.
+
 ## [0.9.1] - 2026-09-30
 
 ### Features
