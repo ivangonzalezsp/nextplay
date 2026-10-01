@@ -977,6 +977,30 @@ async function handleRequest(
                 });
                 return result;
             }
+            if (
+                path === '/api/recommendations/settings' &&
+                request.method === 'PATCH'
+            ) {
+                if (
+                    Object.keys(payload).some(
+                        (key) => key !== 'engine' && key !== 'codex',
+                    )
+                )
+                    throw new AppError(
+                        translateMessage(
+                            'El modelo o el esfuerzo de Codex no es válido.',
+                        ),
+                    );
+                const engine = parseEngine(payload.engine);
+                const codex = parseCodexSettings(
+                    payload.codex,
+                    state.codex ?? DEFAULT_CODEX_SETTINGS,
+                );
+                state.engine = engine;
+                state.codex = codex;
+                await saveState(state);
+                return snapshot(state);
+            }
             if (path === '/api/recommendations' && request.method === 'POST') {
                 phase('recommendations:start', {
                     messageLength:

@@ -6,6 +6,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
+- Selector de Codex actualizado con GPT-6.1 Sol, GPT-6 Sol y GPT-6 Luna; modelo y esfuerzo se pueden cambiar y guardar desde el chat sin perder la conversación. Ajustes conserva Guardar/Cancelar y las combinaciones compatibles.
+
 - Cambio incompatible previsto para 1.0.0: el instalador Windows incluye Electron y abre Next Play en una ventana propia. Las actualizaciones conservan el perfil existente, respaldan los datos y preferencias de escritorio y recuperan idioma/color del navegador una sola vez.
 - Prototipo de escritorio con Electron: ventana propia, perfil de prueba aislado, servidor local gestionado por la app y apertura externa de páginas web y juegos de Steam.
 - Preparación de Next Play Server para Docker: servidor compilado sin Electron, volumen persistente, configuración Compose y workflow de distribución y validación nativa AMD64/ARM64 en PR o bajo demanda.

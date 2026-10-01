@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { DEFAULT_FILTERS, EMPTY_STATE } from '../lib/model.ts';
+import { DEFAULT_FILTERS, EMPTY_STATE, CODEX_MODELS } from '../lib/model.ts';
 import type { Game, Snapshot, State } from '../lib/model.ts';
 import {
     eligible,
@@ -155,6 +155,85 @@ void test('Codex model and effort are validated at the boundary', () => {
     assert.throws(() =>
         parseCodexSettings({ model: 'gpt-5.5;bad', effort: 'high' }, fallback),
     );
+    for (const model of ['gpt-6.1-sol', 'gpt-6-sol', 'gpt-6-luna']) {
+        assert.ok(CODEX_MODELS.some((option) => option.value === model));
+        assert.deepEqual(
+            parseCodexSettings({ model, effort: 'max' }, fallback),
+            { model, effort: 'max' },
+        );
+    }
+    for (const model of ['gpt-6.1-sol', 'gpt-6-sol'])
+        assert.equal(
+            parseCodexSettings({ model, effort: 'ultra' }, fallback).effort,
+            'ultra',
+        );
+    assert.throws(() =>
+        parseCodexSettings({ model: 'gpt-6-luna', effort: 'ultra' }, fallback),
+    );
+});
+void test('AI settings persist without a recommendation or changes to the library and conversation', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'nextplay-ai-settings-'));
+    const previousDir = process.env.NEXTPLAY_DATA_DIR;
+    const previousUserDir = process.env.NEXTPLAY_USER_DIR;
+    const previousBin = process.env.NEXTPLAY_CODEX_BIN;
+    process.env.NEXTPLAY_DATA_DIR = dir;
+    process.env.NEXTPLAY_USER_DIR = dir;
+    process.env.NEXTPLAY_CODEX_BIN = join(dir, 'missing-codex.exe');
+    const request = (payload: object) =>
+        handle(
+            new Request('http://127.0.0.1:3000/api/recommendations/settings', {
+                method: 'PATCH',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(payload),
+            }),
+        );
+    try {
+        const initial = state();
+        initial.conversation = [
+            {
+                text: 'Quiero explorar.',
+                filters: DEFAULT_FILTERS,
+                result: {
+                    engine: 'codex',
+                    at: 1,
+                    warnings: [],
+                    message: '¿Con calma?',
+                    needsClarification: true,
+                    owned: [],
+                    discoveries: [],
+                },
+            },
+        ];
+        await saveState(initial);
+        const before = await readState();
+        const codex = { model: 'gpt-6.1-sol', effort: 'ultra' };
+        const response = await request({ engine: 'codex', codex });
+        assert.equal(response.status, 200);
+        assert.deepEqual(((await response.json()) as Snapshot).codex, codex);
+        const saved = await readState();
+        assert.deepEqual(saved, { ...before, engine: 'codex', codex });
+        for (const payload of [
+            { engine: 'unknown', codex },
+            {
+                engine: 'codex',
+                codex: { model: 'gpt-6-luna', effort: 'ultra' },
+            },
+            { engine: 'local', codex, conversation: [] },
+        ]) {
+            assert.equal((await request(payload)).status, 400);
+            assert.deepEqual(await readState(), saved);
+        }
+        assert.equal((await request({ engine: 'local', codex })).status, 200);
+        assert.deepEqual(await readState(), { ...saved, engine: 'local' });
+    } finally {
+        if (previousDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+        else process.env.NEXTPLAY_DATA_DIR = previousDir;
+        if (previousUserDir === undefined) delete process.env.NEXTPLAY_USER_DIR;
+        else process.env.NEXTPLAY_USER_DIR = previousUserDir;
+        if (previousBin === undefined) delete process.env.NEXTPLAY_CODEX_BIN;
+        else process.env.NEXTPLAY_CODEX_BIN = previousBin;
+        await rm(dir, { recursive: true, force: true });
+    }
 });
 void test('inaccessible, empty and malformed libraries are different', () => {
     assert.throws(() => ownedGames({ response: {} }), /no permite leer/);

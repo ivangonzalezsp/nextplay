@@ -119,6 +119,7 @@ void test('clarifications survive reload, feed the next streamed reply and do no
         discoveries: [],
     };
     let response: unknown = question;
+    let lastExecArgs: string[] = [];
     const spawn = childProcess.spawn;
     const mockedSpawn = t.mock.method(
         childProcess,
@@ -126,6 +127,7 @@ void test('clarifications survive reload, feed the next streamed reply and do no
         (command: string, args: string[], options: SpawnOptions) => {
             assert.equal(command, process.execPath);
             assert.ok(['exec', 'login'].includes(args[0]));
+            if (args[0] === 'exec') lastExecArgs = args;
             const script =
                 args[0] === 'login'
                     ? 'console.log("Logged in using ChatGPT")'
@@ -171,12 +173,18 @@ void test('clarifications survive reload, feed the next streamed reply and do no
         }
         const asked = await request('recommendations', {
             engine: 'codex',
+            codex: { model: 'gpt-6.1-sol', effort: 'high' },
             conversationMode: 'guided',
             filters,
             text: 'No sé qué jugar.',
             referenceAppId: -902,
         });
         assert.equal(asked.status, 200);
+        assert.equal(
+            lastExecArgs[lastExecArgs.indexOf('--model') + 1],
+            'gpt-6.1-sol',
+        );
+        assert.ok(lastExecArgs.includes('model_reasoning_effort="high"'));
         const first = (await asked.json()) as Snapshot;
         assert.equal(first.conversation.length, 1);
         assert.equal(first.conversation[0].result.needsClarification, true);
@@ -198,6 +206,24 @@ void test('clarifications survive reload, feed the next streamed reply and do no
         assert.equal(guidedSchema.properties.discoveries.maxItems, 0);
 
         // Answering keeps guided mode until the player explicitly requests picks.
+        assert.equal(
+            (
+                await handle(
+                    new Request(
+                        'http://127.0.0.1:3000/api/recommendations/settings',
+                        {
+                            method: 'PATCH',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({
+                                engine: 'codex',
+                                codex: { model: 'gpt-6-luna', effort: 'max' },
+                            }),
+                        },
+                    ),
+                )
+            ).status,
+            200,
+        );
         response = {
             ...question,
             message:
@@ -209,6 +235,11 @@ void test('clarifications survive reload, feed the next streamed reply and do no
             text: 'Explorar con calma, sin combates.',
         });
         assert.equal(followUp.status, 200);
+        assert.equal(
+            lastExecArgs[lastExecArgs.indexOf('--model') + 1],
+            'gpt-6-luna',
+        );
+        assert.ok(lastExecArgs.includes('model_reasoning_effort="max"'));
         const guided = await readState();
         assert.equal(guided.conversation.length, 2);
         assert.equal(guided.conversation[1].result.needsClarification, true);

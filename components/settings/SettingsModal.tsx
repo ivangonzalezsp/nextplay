@@ -5,6 +5,7 @@ import { useLanguage } from '@/components/header/LanguageSelector';
 
 import { useState } from 'react';
 import { AppSetup } from './AppSetup';
+import { CodexControls } from '@/components/ai/CodexControls';
 import { TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,8 +24,6 @@ import {
     Tags,
 } from 'lucide-react';
 import {
-    CODEX_MODELS,
-    codexEffortsForModel,
     type CodexSettings,
     type RecommendationEngine,
     type Snapshot,
@@ -40,9 +39,8 @@ export function SettingsModal({
     onFamilySync,
     onReload,
     engine,
-    setEngine,
     codex,
-    setCodex,
+    onSaveAI,
     busy,
     onWelcome,
 }: {
@@ -55,9 +53,11 @@ export function SettingsModal({
     onFamilySync: () => Promise<void>;
     onReload: () => Promise<void>;
     engine: RecommendationEngine;
-    setEngine: (engine: RecommendationEngine) => void;
     codex: CodexSettings;
-    setCodex: (settings: CodexSettings) => void;
+    onSaveAI: (
+        engine: RecommendationEngine,
+        codex: CodexSettings,
+    ) => Promise<boolean>;
     busy: string;
     onWelcome: (open: boolean) => void;
 }) {
@@ -86,35 +86,6 @@ export function SettingsModal({
         onOpenChange(nextOpen);
     }
 
-    const modelOptions = [
-        ...CODEX_MODELS.map((model) => ({ ...model, label: t(model.label) })),
-        ...(CODEX_MODELS.some((m) => m.value === selectedCodex.model)
-            ? []
-            : [
-                  {
-                      value: selectedCodex.model,
-                      label: selectedCodex.model + t(' · configurado'),
-                  },
-              ]),
-    ];
-
-    const effortOptions = codexEffortsForModel(selectedCodex.model).map(
-        (value) => ({
-            value,
-            label:
-                value === 'low'
-                    ? t('Bajo · más rápido')
-                    : value === 'medium'
-                      ? t('Medio · equilibrado')
-                      : value === 'high'
-                        ? t('Alto · más razonado')
-                        : value === 'xhigh'
-                          ? t('Muy alto')
-                          : value === 'max'
-                            ? t('Máximo')
-                            : 'Ultra',
-        }),
-    );
     const steamGames = state?.games.filter((game) => game.appId > 0) ?? [];
     const checkedSteamGames = steamGames.filter(
         (game) => game.steamTagsCheckedAt != null,
@@ -143,6 +114,7 @@ export function SettingsModal({
                             {t('Motor de Recomendación ')}
                         </label>
                         <Select
+                            disabled={!!busy}
                             value={selectedEngine}
                             onValueChange={(val) =>
                                 setDraftEngine(val as RecommendationEngine)
@@ -193,87 +165,12 @@ export function SettingsModal({
                     </div>
 
                     {selectedEngine === 'codex' && (
-                        <>
-                            <div>
-                                <label
-                                    htmlFor="settings-model"
-                                    className="text-xs font-medium text-muted-foreground mb-1 block"
-                                >
-                                    {t('Modelo de Codex ')}
-                                </label>
-                                <Select
-                                    value={selectedCodex.model}
-                                    onValueChange={(model) => {
-                                        if (!model) return;
-                                        const efforts =
-                                            codexEffortsForModel(model);
-                                        setDraftCodex({
-                                            model,
-                                            effort: efforts.includes(
-                                                selectedCodex.effort,
-                                            )
-                                                ? selectedCodex.effort
-                                                : 'medium',
-                                        });
-                                    }}
-                                    items={modelOptions}
-                                >
-                                    <SelectTrigger
-                                        id="settings-model"
-                                        className="w-full bg-black/30"
-                                    >
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {modelOptions.map((opt) => (
-                                            <SelectItem
-                                                key={opt.value}
-                                                value={opt.value}
-                                            >
-                                                {t(opt.label)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div>
-                                <label
-                                    htmlFor="settings-effort"
-                                    className="text-xs font-medium text-muted-foreground mb-1 block"
-                                >
-                                    {t('Esfuerzo de Razonamiento ')}
-                                </label>
-                                <Select
-                                    value={selectedCodex.effort}
-                                    onValueChange={(effort) => {
-                                        if (!effort) return;
-                                        setDraftCodex({
-                                            ...selectedCodex,
-                                            effort: effort as CodexSettings['effort'],
-                                        });
-                                    }}
-                                    items={effortOptions}
-                                >
-                                    <SelectTrigger
-                                        id="settings-effort"
-                                        className="w-full bg-black/30"
-                                    >
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {effortOptions.map((opt) => (
-                                            <SelectItem
-                                                key={opt.value}
-                                                value={opt.value}
-                                            >
-                                                {t(opt.label)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </>
+                        <CodexControls
+                            idPrefix="settings"
+                            value={selectedCodex}
+                            onChange={setDraftCodex}
+                            disabled={!!busy}
+                        />
                     )}
                 </div>
                 <div className="flex flex-wrap justify-end gap-3">
@@ -285,10 +182,10 @@ export function SettingsModal({
                     </Button>
                     <Button
                         type="button"
-                        onClick={() => {
-                            setEngine(selectedEngine);
-                            setCodex(selectedCodex);
-                            handleOpenChange(false);
+                        disabled={!!busy}
+                        onClick={async () => {
+                            if (await onSaveAI(selectedEngine, selectedCodex))
+                                handleOpenChange(false);
                         }}
                     >
                         {t('Guardar ')}

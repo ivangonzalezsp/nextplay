@@ -541,6 +541,11 @@ export const ENGLISH: Record<string, string> = {
     'Me encantó': 'Loved it',
     'Me gustó': 'Liked it',
     'No me gustó': 'Disliked it',
+    'GPT-6.1 Sol · profesional': 'GPT-6.1 Sol · professional',
+    'GPT-6 Sol · profesional': 'GPT-6 Sol · professional',
+    'GPT-6 Luna · rápido': 'GPT-6 Luna · fast',
+    'Se guarda al cambiar y se aplica a tu próximo mensaje.':
+        'Saved when changed and applied to your next message.',
     'GPT-5.6 Luna · rápido': 'GPT-5.6 Luna · fast',
     'GPT-6 Astra · máxima capacidad': 'GPT-6 Astra · highest capability',
     Pendiente: 'Pending',

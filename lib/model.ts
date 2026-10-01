@@ -25,14 +25,19 @@ export const CODEX_EFFORTS = [
 ] as const;
 export type CodexEffort = (typeof CODEX_EFFORTS)[number];
 export const CODEX_MODELS = [
+    { value: 'gpt-6.1-sol', label: 'GPT-6.1 Sol · profesional' },
+    { value: 'gpt-6-astra', label: 'GPT-6 Astra · máxima capacidad' },
+    { value: 'gpt-6-sol', label: 'GPT-6 Sol · profesional' },
+    { value: 'gpt-6-luna', label: 'GPT-6 Luna · rápido' },
     { value: 'gpt-5.6-luna', label: 'GPT-5.6 Luna · rápido' },
     { value: 'gpt-5.6-terra', label: 'GPT-5.6 Terra · equilibrado' },
     { value: 'gpt-5.6-sol', label: 'GPT-5.6 Sol · profesional' },
-    { value: 'gpt-6-astra', label: 'GPT-6 Astra · máxima capacidad' },
     { value: 'gpt-5.5', label: 'GPT-5.5' },
-    { value: 'gpt-5.4-mini', label: 'GPT-5.4 Mini · ligero' },
 ] as const;
 const CODEX_MODEL_EFFORTS: Record<string, readonly CodexEffort[]> = {
+    'gpt-6.1-sol': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+    'gpt-6-sol': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
+    'gpt-6-luna': ['low', 'medium', 'high', 'xhigh', 'max'],
     'gpt-6-astra': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
     'gpt-5.6-sol': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],
     'gpt-5.6-terra': ['low', 'medium', 'high', 'xhigh', 'max', 'ultra'],

@@ -542,6 +542,24 @@ export default function Home() {
         }
     }
 
+    async function saveAI(
+        nextEngine: RecommendationEngine,
+        nextCodex: CodexSettings,
+    ) {
+        let saved = false;
+        await action('ai-settings', async () => {
+            const next: Snapshot = await api(
+                'recommendations/settings',
+                { engine: nextEngine, codex: nextCodex },
+                'PATCH',
+            );
+            accept(next);
+            setEngine(nextEngine);
+            saved = true;
+        });
+        return saved;
+    }
+
     async function sync() {
         await action('sync', async () => {
             accept(await api('steam/sync', { profileUrl, force: true }));
@@ -1174,9 +1192,8 @@ export default function Home() {
                             await action('reload', load);
                         }}
                         engine={engine}
-                        setEngine={setEngine}
                         codex={codex}
-                        setCodex={setCodex}
+                        onSaveAI={saveAI}
                         busy={busy}
                         onWelcome={setWelcomeOpen}
                     />
@@ -1217,6 +1234,9 @@ export default function Home() {
                             conversationMode={conversationMode}
                             setConversationMode={setConversationMode}
                             codex={codex}
+                            onCodexChange={(next) => {
+                                void saveAI(engine, next);
+                            }}
                             state={state}
                             busy={busy}
                             activity={activity}
