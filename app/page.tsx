@@ -16,7 +16,6 @@ import Tastes from './tastes';
 import GameOpinion from './opinion';
 import { TopBar } from '@/components/header/TopBar';
 import { SettingsModal } from '@/components/settings/SettingsModal';
-import { AppSetup } from '@/components/settings/AppSetup';
 import { Welcome } from '@/components/settings/Welcome';
 import { QuickVibeBar } from '@/components/recommendations/QuickVibeBar';
 import { HeroSpotlight } from '@/components/recommendations/HeroSpotlight';
@@ -265,7 +264,6 @@ export default function Home() {
     const [result, setResult] = useState<Recommendation | null>(null);
     const [tab, setTab] = useState('recommend');
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [setupOpen, setSetupOpen] = useState(false);
     const [welcomeOpen, setWelcomeOpen] = useState(false);
 
     const activeFilters = useRef(filters);
@@ -542,6 +540,24 @@ export default function Home() {
             setBusy('');
             log('browser', 'action:end', { name, ms: Date.now() - started });
         }
+    }
+
+    async function saveAI(
+        nextEngine: RecommendationEngine,
+        nextCodex: CodexSettings,
+    ) {
+        let saved = false;
+        await action('ai-settings', async () => {
+            const next: Snapshot = await api(
+                'recommendations/settings',
+                { engine: nextEngine, codex: nextCodex },
+                'PATCH',
+            );
+            accept(next);
+            setEngine(nextEngine);
+            saved = true;
+        });
+        return saved;
     }
 
     async function sync() {
@@ -992,7 +1008,7 @@ export default function Home() {
     }
 
     return (
-        <div className="app-shell">
+        <div className={`app-shell${settingsOpen ? ' settings-open' : ''}`}>
             <a className="skip-link" href="#main">
                 {t('Ir al contenido ')}
             </a>
@@ -1006,46 +1022,6 @@ export default function Home() {
                 busy={busy}
             />
 
-            {/* 2. SETTINGS MODAL (Decouples tech configs) */}
-            <SettingsModal
-                open={settingsOpen}
-                onOpenChange={setSettingsOpen}
-                state={state}
-                profileUrl={profileUrl}
-                setProfileUrl={setProfileUrl}
-                onSync={sync}
-                onTagsSync={syncTags}
-                onRefreshHltb={refreshHltb}
-                hltbRemaining={hltbRemaining}
-                onFamilySync={async () => {
-                    await action('family', async () => {
-                        accept(await api('steam/family/sync', {}));
-                    });
-                }}
-                onReload={async () => {
-                    await action('reload', load);
-                }}
-                engine={engine}
-                setEngine={setEngine}
-                codex={codex}
-                setCodex={setCodex}
-                busy={busy}
-                onSetup={() => {
-                    setSettingsOpen(false);
-                    setSetupOpen(true);
-                }}
-                onWelcome={() => {
-                    setSettingsOpen(false);
-                    setWelcomeOpen(true);
-                }}
-            />
-            <AppSetup
-                open={setupOpen}
-                onOpenChange={setSetupOpen}
-                state={state}
-                onReload={load}
-                onWelcome={setWelcomeOpen}
-            />
             {welcomeOpen && state && (
                 <Welcome
                     state={state}
@@ -1068,21 +1044,24 @@ export default function Home() {
                             {t('CONSOLA NEXT PLAY · TU ESPACIO DE JUEGO ')}
                         </div>
                         <h1>
-                            {theme.startsWith('cinema')
-                                ? ({
-                                      library: t('Tu biblioteca'),
-                                      shortlist: t('Lista corta'),
-                                      tastes: t('Tus gustos'),
-                                      history: t('Historial'),
-                                      year: t('Mi año'),
-                                      stats: t('Estadísticas'),
-                                  }[tab] ?? t('¿Qué te apetece jugar?'))
-                                : t('¿Qué te apetece jugar hoy?')}
+                            {settingsOpen
+                                ? t('Ajustes')
+                                : theme.startsWith('cinema')
+                                  ? ({
+                                        library: t('Tu biblioteca'),
+                                        shortlist: t('Lista corta'),
+                                        tastes: t('Tus gustos'),
+                                        history: t('Historial'),
+                                        year: t('Mi año'),
+                                        stats: t('Estadísticas'),
+                                    }[tab] ?? t('¿Qué te apetece jugar?'))
+                                  : t('¿Qué te apetece jugar hoy?')}
                         </h1>
                         <p>
-                            {t(
-                                'Menos tiempo eligiendo, más tiempo disfrutando de tu catálogo. ',
-                            )}
+                            {!settingsOpen &&
+                                t(
+                                    'Menos tiempo eligiendo, más tiempo disfrutando de tu catálogo. ',
+                                )}
                         </p>
                     </div>
 
@@ -1133,8 +1112,11 @@ export default function Home() {
                     orientation={
                         theme.startsWith('cinema') ? 'vertical' : 'horizontal'
                     }
-                    value={tab}
-                    onValueChange={(v) => setTab(String(v))}
+                    value={settingsOpen ? 'settings' : tab}
+                    onValueChange={(v) => {
+                        setSettingsOpen(false);
+                        setTab(String(v));
+                    }}
                 >
                     <div className="view-navigation">
                         <TabsList
@@ -1184,14 +1166,37 @@ export default function Home() {
                                 <Button
                                     variant="ghost"
                                     className="cinema-sidebar-settings"
+                                    aria-pressed={settingsOpen}
                                     onClick={() => setSettingsOpen(true)}
                                 >
                                     <Settings size={16} aria-hidden="true" />
-                                    <span>{t('Ajustes y conexiones')}</span>
+                                    <span>{t('Ajustes')}</span>
                                 </Button>
                             </div>
                         )}
                     </div>
+
+                    <SettingsModal
+                        open={settingsOpen}
+                        onOpenChange={setSettingsOpen}
+                        state={state}
+                        onTagsSync={syncTags}
+                        onRefreshHltb={refreshHltb}
+                        hltbRemaining={hltbRemaining}
+                        onFamilySync={async () => {
+                            await action('family', async () => {
+                                accept(await api('steam/family/sync', {}));
+                            });
+                        }}
+                        onReload={async () => {
+                            await action('reload', load);
+                        }}
+                        engine={engine}
+                        codex={codex}
+                        onSaveAI={saveAI}
+                        busy={busy}
+                        onWelcome={setWelcomeOpen}
+                    />
 
                     {/* =================================================================== */}
                     {/* TAB 1: PARA TI (RECOMMENDATIONS & DISCOVERY)                       */}
@@ -1229,6 +1234,9 @@ export default function Home() {
                             conversationMode={conversationMode}
                             setConversationMode={setConversationMode}
                             codex={codex}
+                            onCodexChange={(next) => {
+                                void saveAI(engine, next);
+                            }}
                             state={state}
                             busy={busy}
                             activity={activity}

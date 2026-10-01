@@ -26,7 +26,7 @@ try {
     } elseif (Test-Path -LiteralPath (Join-Path $userData 'data/library.sqlite')) {
         $backup = Join-Path $userData ('backups\before-install-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss-fff'))
         New-Item -ItemType Directory -Path $backup -Force | Out-Null
-        foreach ($name in @('data', 'settings.json', 'codex')) {
+        foreach ($name in @('data', 'settings.json', 'codex', 'electron', 'desktop-appearance.json')) {
             $source = Join-Path $userData $name
             if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $backup -Recurse }
         }

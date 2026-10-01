@@ -72,7 +72,8 @@ async function pruneRuntimeModules(modules) {
     // Runtime imports are JavaScript/JSON/WASM/native files. TypeScript sources,
     // declarations, source maps and package documentation are build-time/legal
     // material and otherwise make every install copy thousands of dead files.
-    const removable = /\.(?:map|ts|tsx|mts|cts|flow|cpp|h|md|markdown|yml|yaml)$/i;
+    const removable =
+        /\.(?:map|ts|tsx|mts|cts|flow|cpp|h|md|markdown|yml|yaml)$/i;
     const legal = /^(?:licen[cs]e|notice|copying)(?:[._-].*)?$/i;
     for (const file of await readdir(modules, {
         recursive: true,
@@ -218,6 +219,8 @@ if (!process.argv.includes('--reuse-stage')) {
     await mkdir(join(stage, 'scripts'), { recursive: true });
     for (const name of [
         'start-server.ts',
+        'start-desktop.mjs',
+        'desktop-runtime.mjs',
         'library-mcp.ts',
         'hltb.py',
         'windows-launcher.ps1',
@@ -266,6 +269,13 @@ if (!process.argv.includes('--reuse-stage')) {
     await removeBuildDirectory(unpack);
     await mkdir(unpack, { recursive: true });
     await mkdir(join(stage, 'runtime/python'), { recursive: true });
+    await mkdir(join(stage, 'runtime/electron'), { recursive: true });
+    run('tar.exe', [
+        '-xf',
+        archives.electron,
+        '-C',
+        join(stage, 'runtime/electron'),
+    ]);
     run('tar.exe', ['-xf', archives.node, '-C', unpack]);
     const nodeFolder = (await readdir(unpack)).find((name) =>
         name.startsWith('node-'),
@@ -332,13 +342,14 @@ if (!process.argv.includes('--reuse-stage')) {
     }
     await writeFile(
         join(stage, 'licenses/README.txt'),
-        'Next Play includes Node.js, Codex CLI and Python. Their licenses are in this directory and runtime/python/LICENSE.txt. JavaScript-NOTICES.txt includes notices for compiled dependencies; runtime dependencies also retain their original licenses under node_modules. Python wheel metadata, licenses and notices are preserved under runtime/python/Lib/site-packages.\n',
+        'Next Play includes Electron, Node.js, Codex CLI and Python. Electron licenses and Chromium notices are in runtime/electron/LICENSE and runtime/electron/LICENSES.chromium.html. Other licenses are in this directory and runtime/python/LICENSE.txt. JavaScript-NOTICES.txt includes notices for compiled dependencies; runtime dependencies also retain their original licenses under node_modules. Python wheel metadata, licenses and notices are preserved under runtime/python/Lib/site-packages.\n',
     );
     await writeFile(
         join(stage, 'runtime-versions.json'),
         JSON.stringify(
             {
                 node: '24.21.0',
+                electron: '44.5.1',
                 python: '3.13.15',
                 codex: '0.154.0',
                 hltb: '1.0.23',

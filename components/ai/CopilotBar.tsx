@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { CodexControls } from './CodexControls';
 import type {
     Game,
     ConversationMode,
@@ -91,6 +92,7 @@ export function CopilotBar({
     conversationMode,
     setConversationMode,
     codex,
+    onCodexChange,
     state,
     busy,
     activity,
@@ -108,6 +110,7 @@ export function CopilotBar({
     conversationMode: ConversationMode;
     setConversationMode: (mode: ConversationMode) => void;
     codex: CodexSettings;
+    onCodexChange: (settings: CodexSettings) => void;
     state: Snapshot | null;
     busy: string;
     activity: RecommendationProgress[];
@@ -374,6 +377,22 @@ export function CopilotBar({
                             {prompt}
                         </button>
                     ))}
+                </div>
+            )}
+
+            {engine === 'codex' && (
+                <div className="mb-3 space-y-1.5">
+                    <CodexControls
+                        idPrefix="chat"
+                        value={codex}
+                        onChange={onCodexChange}
+                        disabled={!!busy}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                        {t(
+                            'Se guarda al cambiar y se aplica a tu próximo mensaje.',
+                        )}
+                    </p>
                 </div>
             )}
 

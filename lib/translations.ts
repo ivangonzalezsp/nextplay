@@ -1,5 +1,22 @@
 // English UI and service messages; Spanish source text remains the fallback.
 export const ENGLISH: Record<string, string> = {
+    Ajustes: 'Settings',
+    General: 'General',
+    Cuentas: 'Accounts',
+    Datos: 'Data',
+    'Motor e IA': 'Engine & AI',
+    'Secciones de ajustes': 'Settings sections',
+    'Idioma y color': 'Language and color',
+    'Se guardan automáticamente en este dispositivo.':
+        'Saved automatically on this device.',
+    'Todo lo que necesitas para configurar Next Play, en un solo lugar.':
+        'Everything you need to set up Next Play, in one place.',
+    'Conexiones opcionales: Steam Families e IGDB':
+        'Optional connections: Steam Families and IGDB',
+    'Inicio y red local': 'Startup and local network',
+    'Diagnóstico avanzado': 'Advanced diagnostics',
+    'Guarda tu token en Cuentas.': 'Save your token in Accounts.',
+    'Terminar configuración': 'Finish setup',
     'https://steamcommunity.com/id/tu_usuario/':
         'https://steamcommunity.com/id/your_user/',
     'Next Play · Tu próximo juego': 'Next Play · Your next game',
@@ -439,6 +456,8 @@ export const ENGLISH: Record<string, string> = {
     'Disponible: ': 'Available: ',
     'No hay una actualización disponible.': 'No update available.',
     'Buscar actualizaciones': 'Check for updates',
+    'Las actualizaciones automáticas de escritorio todavía no están disponibles.':
+        'Automatic desktop updates are not available yet.',
     'Qué cambia en esta versión': "What's new in this version",
     'Al cerrar la pestaña, Next Play sigue activa. Para cerrarla por completo, utiliza Salir en el icono de la bandeja de Windows.':
         'Closing the tab leaves Next Play running. To close it completely, choose Exit from the Windows tray icon.',
@@ -522,6 +541,11 @@ export const ENGLISH: Record<string, string> = {
     'Me encantó': 'Loved it',
     'Me gustó': 'Liked it',
     'No me gustó': 'Disliked it',
+    'GPT-6.1 Sol · profesional': 'GPT-6.1 Sol · professional',
+    'GPT-6 Sol · profesional': 'GPT-6 Sol · professional',
+    'GPT-6 Luna · rápido': 'GPT-6 Luna · fast',
+    'Se guarda al cambiar y se aplica a tu próximo mensaje.':
+        'Saved when changed and applied to your next message.',
     'GPT-5.6 Luna · rápido': 'GPT-5.6 Luna · fast',
     'GPT-6 Astra · máxima capacidad': 'GPT-6 Astra · highest capability',
     Pendiente: 'Pending',
@@ -1488,4 +1512,5 @@ export const ENGLISH: Record<string, string> = {
     Empezado: 'Started',
     Reanudado: 'Resumed',
     Familiar: 'Family member',
+    'Preferencias de escritorio no válidas.': 'Invalid desktop preferences.',
 };

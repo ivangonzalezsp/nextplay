@@ -1,11 +1,10 @@
 'use client';
 
 import { translate as t, locale } from '@/lib/i18n';
-import { useLanguage } from '@/components/header/LanguageSelector';
+import { restoreLanguage, useLanguage } from './LanguageSelector';
+import { useEffect } from 'react';
 
 import Link from 'next/link';
-import { ThemeSelector } from './ThemeSelector';
-import { LanguageSelector } from './LanguageSelector';
 import {
     Gamepad2,
     Settings,
@@ -31,6 +30,7 @@ export function TopBar({
     busy: string;
 }) {
     useLanguage();
+    useEffect(restoreLanguage, []);
     const gamesCount = state?.games?.length ?? 0;
     const familyCount = state?.games?.filter((g) => g.shared)?.length ?? 0;
 
@@ -120,8 +120,6 @@ export function TopBar({
             </div>
 
             <div className="hud-actions-group">
-                <ThemeSelector />
-                <LanguageSelector />
                 <Button
                     variant="outline"
                     size="sm"
@@ -130,9 +128,7 @@ export function TopBar({
                     aria-label={t('Abrir configuración y conexiones')}
                 >
                     <Settings size={15} className="hud-settings-icon" />
-                    <span className="hidden sm:inline">
-                        {t('Ajustes & Conexiones ')}
-                    </span>
+                    <span className="hidden sm:inline">{t('Ajustes')}</span>
                 </Button>
 
                 <div className="hud-user-profile">

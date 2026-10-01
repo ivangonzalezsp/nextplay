@@ -1,0 +1,83 @@
+name: Server image
+
+on:
+    pull_request:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: server-image-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    checks:
+        strategy:
+            fail-fast: false
+            matrix:
+                runner: [ubuntu-24.04, windows-latest, macos-latest]
+        runs-on: ${{ matrix.runner }}
+        timeout-minutes: 15
+        env:
+            ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+              with:
+                  node-version: '24.21.0'
+            - run: npm ci
+            - run: npm test
+            - run: npm run typecheck
+            - name: Lint affected code
+              run: npx --no-install oxlint scripts/start-desktop.mjs scripts/desktop-runtime.mjs scripts/start-server.ts scripts/package-windows.mjs scripts/test-package.mjs scripts/test-docker.mjs public/migrate-appearance.js server/store.ts server/desktop.ts server/api.ts components/settings/AppSetup.tsx components/settings/SettingsModal.tsx components/header/LanguageSelector.tsx components/ai/CodexControls.tsx components/ai/CopilotBar.tsx lib/desktop.ts lib/model.ts lib/translations.ts tests/desktop-runtime.test.ts tests/desktop.test.ts tests/codex.test.ts tests/flow.test.ts
+            - run: npm run build
+
+    server:
+        needs: checks
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - runner: ubuntu-24.04
+                      arch: amd64
+                    - runner: ubuntu-24.04-arm
+                      arch: arm64
+        runs-on: ${{ matrix.runner }}
+        timeout-minutes: 30
+        steps:
+            - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+              with:
+                  persist-credentials: false
+            - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+              with:
+                  node-version: '24.21.0'
+            - name: Build server image
+              run: docker build --tag nextplay-server:latest .
+            - name: Verify runtime and data preservation
+              run: node scripts/test-docker.mjs nextplay-server:latest
+            - name: Export image and source
+              env:
+                  IMAGE_ARCH: ${{ matrix.arch }}
+              run: |
+                  mkdir -p outputs/server
+                  version=$(node -p "require('./package.json').version")
+                  docker tag nextplay-server:latest "nextplay-server:$version"
+                  docker save nextplay-server:latest "nextplay-server:$version" | gzip > "outputs/server/nextplay-server-$version-$IMAGE_ARCH.tar.gz"
+                  git archive --format=tar.gz --output="outputs/server/nextplay-source-$version.tar.gz" HEAD
+                  cp compose.yaml outputs/server/
+                  cp docs/docker-server.md outputs/server/README.md
+                  cd outputs/server
+                  sha256sum *.tar.gz > SHA256SUMS.txt
+            - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+              with:
+                  name: nextplay-server-${{ matrix.arch }}
+                  path: outputs/server/
+                  if-no-files-found: error
+                  retention-days: 30

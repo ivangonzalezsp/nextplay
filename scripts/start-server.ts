@@ -1,4 +1,4 @@
-import { readFile, mkdir } from 'node:fs/promises';
+import { access, readFile, mkdir } from 'node:fs/promises';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -10,11 +10,19 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 process.chdir(root);
 Object.assign(process.env, { NODE_ENV: 'production' });
 const installed = process.argv.includes('--installed');
+const desktop = process.argv.includes('--desktop');
+if (desktop) process.env.NEXTPLAY_DESKTOP = '1';
 const argument = (key: string, fallback: string) =>
     process.argv[process.argv.indexOf(key) + 1] && process.argv.includes(key)
         ? process.argv[process.argv.indexOf(key) + 1]
         : fallback;
 if (installed) {
+    try {
+        await access(join(root, 'runtime/electron/electron.exe'));
+        process.env.NEXTPLAY_DESKTOP = '1';
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
     if (!process.env.LOCALAPPDATA && !process.env.NEXTPLAY_USER_DIR)
         throw new Error('Windows no ha indicado tu carpeta de usuario.');
     process.env.NEXTPLAY_INSTALLED = '1';
@@ -27,7 +35,7 @@ if (installed) {
     process.env.NEXTPLAY_PYTHON = join(root, 'runtime/python/python.exe');
     process.env.CODEX_HOME = join(userDir(), 'codex');
     await mkdir(process.env.CODEX_HOME, { recursive: true });
-} else {
+} else if (!desktop) {
     try {
         loadEnvFile(join(root, '.env.local'));
     } catch (error) {
@@ -71,5 +79,22 @@ if (installed) {
         version: process.env.NEXTPLAY_VERSION,
         instance: process.env.NEXTPLAY_INSTANCE,
         token: process.env.NEXTPLAY_SESSION_TOKEN,
+    });
+}
+if (desktop && process.send) {
+    let closing = false;
+    const shutdown = () => {
+        if (closing) return;
+        closing = true;
+        setTimeout(() => process.exit(0), 5000).unref();
+        running.server.close(() => process.exit(0));
+    };
+    process.on('message', (message) => {
+        if (message === 'nextplay:shutdown') shutdown();
+    });
+    process.once('disconnect', shutdown);
+    process.send({
+        type: 'nextplay:ready',
+        url: `http://127.0.0.1:${running.port}`,
     });
 }

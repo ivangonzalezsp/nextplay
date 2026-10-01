@@ -31,9 +31,25 @@ function Read-RunningApp {
 function Open-NextPlay {
     try {
         $record = Read-RunningApp
-        Start-Process -FilePath $record.url
+        $electron = Join-Path $appRoot 'runtime\electron\electron.exe'
+        if (Test-Path -LiteralPath $electron) {
+            $desktopEntry = Join-Path $appRoot 'scripts\start-desktop.mjs'
+            Start-Process -FilePath $electron -ArgumentList ('"' + $desktopEntry + '" --installed --profile "' + $UserDir + '"') -WorkingDirectory $appRoot -WindowStyle Hidden | Out-Null
+        } else { Start-Process -FilePath $record.url }
     } catch {
         [Windows.Forms.MessageBox]::Show('Next Play todavia no esta disponible. Espera unos segundos y vuelve a abrirla.', 'Next Play') | Out-Null
+    }
+}
+function Close-Desktop {
+    $desktopRecord = Join-Path $UserDir 'desktop-window.json'
+    if (-not (Test-Path -LiteralPath $desktopRecord)) { return }
+    $desktop = Get-Content -LiteralPath $desktopRecord -Raw | ConvertFrom-Json
+    $process = Get-Process -Id $desktop.pid -ErrorAction SilentlyContinue
+    if ($process -and $process.Path -eq (Join-Path $appRoot 'runtime\electron\electron.exe')) {
+        $process.CloseMainWindow() | Out-Null
+        $process.WaitForExit(5000) | Out-Null
+        if (-not $process.HasExited) { $process.Kill(); $process.WaitForExit(5000) | Out-Null }
+        if (-not $process.HasExited) { throw 'No se ha podido cerrar la ventana de Next Play.' }
     }
 }
 try {
@@ -87,6 +103,7 @@ try {
     if (-not $Background) { Open-NextPlay }
     [Windows.Forms.Application]::Run()
     $timer.Dispose()
+    Close-Desktop
     if (-not $script:command) { throw 'Next Play se ha cerrado inesperadamente. Puedes volver a abrirla desde su acceso directo.' }
     if ($script:command.action -eq 'update') {
         # Keep the single-instance mutex while the external helper replaces the application.
@@ -101,6 +118,7 @@ try {
     $_.Exception.Message | Set-Content -LiteralPath (Join-Path $UserDir 'logs\launcher-error.log') -Encoding UTF8
     if ($env:NEXTPLAY_INSTALLER_SMOKE_TEST -ne '1') { [Windows.Forms.MessageBox]::Show($_.Exception.Message + "`nRegistros: " + (Join-Path $UserDir 'logs'), 'Next Play') | Out-Null }
 } finally {
+    if ($ownsMutex) { Close-Desktop }
     if ($tray) { $tray.Visible = $false; $tray.Dispose() }
     if ($ownsMutex) { $mutex.ReleaseMutex() }
     $mutex.Dispose()

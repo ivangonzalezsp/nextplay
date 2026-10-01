@@ -4,6 +4,22 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Selector de Codex actualizado con GPT-6.1 Sol, GPT-6 Sol y GPT-6 Luna; modelo y esfuerzo se pueden cambiar y guardar desde el chat sin perder la conversación. Ajustes conserva Guardar/Cancelar y las combinaciones compatibles.
+
+- Cambio incompatible previsto para 1.0.0: el instalador Windows incluye Electron y abre Next Play en una ventana propia. Las actualizaciones conservan el perfil existente, respaldan los datos y preferencias de escritorio y recuperan idioma/color del navegador una sola vez.
+- Prototipo de escritorio con Electron: ventana propia, perfil de prueba aislado, servidor local gestionado por la app y apertura externa de páginas web y juegos de Steam.
+- Preparación de Next Play Server para Docker: servidor compilado sin Electron, volumen persistente, configuración Compose y workflow de distribución y validación nativa AMD64/ARM64 en PR o bajo demanda.
+- La ventana de escritorio abre 15 px más ancha y alta; idioma y color pasan de la cabecera a «General» en los ajustes, conservando las preferencias de cada dispositivo.
+- Ajustes se unifica en una pantalla con General, Cuentas, Motor e IA y Datos: desaparecen los diálogos encadenados y los pasos de configuración; las conexiones opcionales y el diagnóstico quedan plegados.
+
+### Correcciones de errores
+
+- La barra lateral de escritorio es más compacta y deja 24 px de separación con el contenido.
+- Ajustes se alinea con las demás opciones de la barra lateral y comparte sus estilos, sin la raya superior.
+- El prototipo Electron elimina la barra de menús, conserva los atajos de teclado y muestra la versión y la búsqueda de actualizaciones en los ajustes de la aplicación.
+
 ## [0.9.1] - 2026-09-30
 
 ### Features

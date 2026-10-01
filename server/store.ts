@@ -87,7 +87,7 @@ export async function config() {
     const settings = await userSettings();
     let local: Record<string, string | undefined> = {};
     try {
-        if (!process.env.NEXTPLAY_INSTALLED)
+        if (!process.env.NEXTPLAY_INSTALLED && !process.env.NEXTPLAY_DESKTOP)
             local = parseEnv(await readFile(resolve('.env.local'), 'utf8'));
     } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== 'ENOENT')
