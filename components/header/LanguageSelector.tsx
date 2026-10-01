@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import {
     browserLanguage,
     LANGUAGE_STORAGE_KEY,
@@ -39,18 +39,19 @@ export function useLanguage() {
     );
 }
 
+export function restoreLanguage() {
+    try {
+        applyLanguage(
+            resolveLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY)),
+        );
+    } catch {
+        applyLanguage('es');
+    }
+}
+
 export function LanguageSelector() {
     const language = useLanguage();
     const [storageError, setStorageError] = useState(false);
-    useEffect(() => {
-        try {
-            applyLanguage(
-                resolveLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY)),
-            );
-        } catch {
-            applyLanguage('es');
-        }
-    }, []);
 
     return (
         <fieldset className="language-selector" aria-label={t('Idioma')}>

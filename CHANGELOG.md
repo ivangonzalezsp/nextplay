@@ -8,10 +8,12 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 - Prototipo de escritorio con Electron: ventana propia, perfil de prueba aislado, servidor local gestionado por la app y apertura externa de páginas web y juegos de Steam.
 - Preparación de Next Play Server para Docker: servidor compilado sin Electron, volumen persistente, configuración Compose y workflow de distribución y validación nativa AMD64/ARM64 en PR o bajo demanda.
+- La ventana de escritorio abre 15 px más ancha y alta; idioma y color pasan de la cabecera a «General» en los ajustes, conservando las preferencias de cada dispositivo.
+- Ajustes se unifica en una pantalla con General, Cuentas, Motor e IA y Datos: desaparecen los diálogos encadenados y los pasos de configuración; las conexiones opcionales y el diagnóstico quedan plegados.
 
 ### Correcciones de errores
 
-- Ninguno.
+- El prototipo Electron elimina la barra de menús, conserva los atajos de teclado y muestra la versión y la búsqueda de actualizaciones en los ajustes de la aplicación.
 
 ## [0.9.1] - 2026-09-30
 

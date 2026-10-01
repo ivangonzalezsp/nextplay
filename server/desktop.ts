@@ -177,9 +177,11 @@ async function integration(action: string, enabled?: boolean) {
 }
 export async function appStatus(request: Request): Promise<AppStatus> {
     const installed = process.env.NEXTPLAY_INSTALLED === '1';
+    const desktop = process.env.NEXTPLAY_DESKTOP === '1';
     const settings = await userSettings();
     const c = await config();
-    const update = installed ? await updateStatus() : { checking: false };
+    const update =
+        installed || desktop ? await updateStatus() : { checking: false };
     const port = Number(process.env.NEXTPLAY_PORT || 3001);
     const urls =
         installed && settings.lan
@@ -204,6 +206,7 @@ export async function appStatus(request: Request): Promise<AppStatus> {
         : {};
     return {
         installed,
+        desktop,
         canManage: canManage(request),
         version: appVersion(),
         onboardingComplete: !!settings.onboardingComplete,
@@ -437,7 +440,7 @@ export async function manageApp(
         return appStatus(request);
     }
     if (path === '/api/app/updates/check') {
-        requireInstalled();
+        if (process.env.NEXTPLAY_DESKTOP !== '1') requireInstalled();
         await checkUpdates(true);
         return appStatus(request);
     }

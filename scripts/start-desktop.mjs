@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
     desktopLinkTarget,
+    desktopShortcut,
     startDesktopServer,
     stopDesktopServer,
 } from './desktop-runtime.mjs';
@@ -102,6 +103,7 @@ if (!process.versions.electron) {
                     (_contents, _permission, callback) => callback(false),
                 );
                 session.defaultSession.setPermissionCheckHandler(() => false);
+                Menu.setApplicationMenu(null);
                 // ponytail: Vinext requires inline bootstrap scripts; use nonces when its SSR supports them.
                 const csp =
                     "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; font-src 'self' data:; connect-src 'self'; frame-src https://www.youtube.com https://www.youtube-nocookie.com; object-src 'none'; base-uri 'self'; form-action 'self'";
@@ -117,8 +119,8 @@ if (!process.versions.electron) {
                 );
                 window = new BrowserWindow({
                     title: 'Next Play',
-                    width: 1440,
-                    height: 960,
+                    width: 1455,
+                    height: 975,
                     minWidth: 420,
                     minHeight: 600,
                     backgroundColor: '#101513',
@@ -168,80 +170,25 @@ if (!process.versions.electron) {
                 window.webContents.on('will-attach-webview', (event) =>
                     event.preventDefault(),
                 );
-                Menu.setApplicationMenu(
-                    Menu.buildFromTemplate([
-                        ...(process.platform === 'darwin'
-                            ? [{ role: 'appMenu' }]
-                            : []),
-                        {
-                            label: label('Archivo', 'File'),
-                            submenu: [
-                                { label: label('Salir', 'Quit'), role: 'quit' },
-                            ],
-                        },
-                        {
-                            label: label('Editar', 'Edit'),
-                            submenu: [
-                                {
-                                    label: label('Deshacer', 'Undo'),
-                                    role: 'undo',
-                                },
-                                {
-                                    label: label('Rehacer', 'Redo'),
-                                    role: 'redo',
-                                },
-                                { type: 'separator' },
-                                { label: label('Cortar', 'Cut'), role: 'cut' },
-                                {
-                                    label: label('Copiar', 'Copy'),
-                                    role: 'copy',
-                                },
-                                {
-                                    label: label('Pegar', 'Paste'),
-                                    role: 'paste',
-                                },
-                                {
-                                    label: label(
-                                        'Seleccionar todo',
-                                        'Select all',
-                                    ),
-                                    role: 'selectAll',
-                                },
-                            ],
-                        },
-                        {
-                            label: label('Ver', 'View'),
-                            submenu: [
-                                {
-                                    label: label('Recargar', 'Reload'),
-                                    role: 'reload',
-                                },
-                                {
-                                    label: label('Acercar', 'Zoom in'),
-                                    role: 'zoomIn',
-                                },
-                                {
-                                    label: label('Alejar', 'Zoom out'),
-                                    role: 'zoomOut',
-                                },
-                                {
-                                    label: label(
-                                        'Restablecer zoom',
-                                        'Reset zoom',
-                                    ),
-                                    role: 'resetZoom',
-                                },
-                                {
-                                    label: label(
-                                        'Pantalla completa',
-                                        'Full screen',
-                                    ),
-                                    role: 'togglefullscreen',
-                                },
-                            ],
-                        },
-                    ]),
-                );
+                window.webContents.on('before-input-event', (event, input) => {
+                    const shortcut = desktopShortcut(input);
+                    if (!shortcut) return;
+                    event.preventDefault();
+                    if (shortcut === 'quit') app.quit();
+                    else if (shortcut === 'close') window.close();
+                    else if (shortcut === 'fullscreen')
+                        window.setFullScreen(!window.isFullScreen());
+                    else if (shortcut === 'forceReload')
+                        window.webContents.reloadIgnoringCache();
+                    else if (shortcut === 'resetZoom')
+                        window.webContents.setZoomLevel(0);
+                    else if (shortcut === 'zoomIn' || shortcut === 'zoomOut')
+                        window.webContents.setZoomLevel(
+                            window.webContents.getZoomLevel() +
+                                (shortcut === 'zoomIn' ? 0.5 : -0.5),
+                        );
+                    else window.webContents[shortcut]();
+                });
                 window.once('ready-to-show', () => window.show());
                 await window.loadURL(server.url);
             } catch (error) {

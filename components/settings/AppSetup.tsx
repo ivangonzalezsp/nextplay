@@ -1,16 +1,14 @@
 'use client';
 
 import { languageHeaders, translate as t } from '@/lib/i18n';
-import { useLanguage } from '@/components/header/LanguageSelector';
-
-import { useEffect, useState } from 'react';
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
+    LanguageSelector,
+    useLanguage,
+} from '@/components/header/LanguageSelector';
+import { ThemeSelector } from '@/components/header/ThemeSelector';
+
+import { useEffect, useState, type ReactNode } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ExternalLink, LoaderCircle, CheckCircle2 } from 'lucide-react';
@@ -44,34 +42,35 @@ export function AppSetup({
     onOpenChange,
     state,
     onReload,
-    onWelcome,
+    activeTab,
+    onTabChange,
+    children,
 }: {
     open: boolean;
     onOpenChange: (value: boolean) => void;
     state: Snapshot | null;
     onReload: () => Promise<void>;
-    onWelcome: (open: boolean) => void;
+    activeTab: string;
+    onTabChange: (tab: string) => void;
+    children: ReactNode;
 }) {
     useLanguage();
     const [status, setStatus] = useState<AppStatus | null>(null);
-    const [step, setStep] = useState(0);
     const [draft, setDraft] = useState<Partial<Record<Key, string | null>>>({});
     const [profile, setProfile] = useState('');
     const [busy, setBusy] = useState('');
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [noticeDismissed, setNoticeDismissed] = useState(false);
-    useEffect(() => {
-        if (
-            status?.installed &&
-            status.onboardingComplete &&
-            !open &&
-            state &&
-            !state.welcome?.dismissed &&
-            !state.welcome?.completed
-        )
-            onWelcome(true);
-    }, [status?.installed, status?.onboardingComplete, open, state, onWelcome]);
+    const [previousOpen, setPreviousOpen] = useState(open);
+    if (previousOpen !== open) {
+        setPreviousOpen(open);
+        if (!open) {
+            setDraft({});
+            setError('');
+            setMessage('');
+        }
+    }
     useEffect(() => {
         let active = true;
         void call('app')
@@ -82,14 +81,16 @@ export function AppSetup({
                     next.installed &&
                     next.canManage &&
                     !next.onboardingComplete
-                )
+                ) {
+                    onTabChange('accounts');
                     onOpenChange(true);
+                }
             })
             .catch(() => {});
         return () => {
             active = false;
         };
-    }, [onOpenChange]);
+    }, [onOpenChange, onTabChange]);
     useEffect(() => {
         if (!open) return;
         let active = true;
@@ -144,7 +145,7 @@ export function AppSetup({
             setBusy('');
         }
     }
-    async function save(syncProfile = false) {
+    async function save() {
         const values = Object.fromEntries(
             Object.entries(draft).filter(
                 ([, value]) => value === null || value,
@@ -153,8 +154,6 @@ export function AppSetup({
         if (Object.keys(values).length)
             setStatus(await call('connections', values, 'PATCH'));
         setDraft({});
-        if (syncProfile && profile.trim() && profile !== state?.profile?.url)
-            await call('steam/sync', { profileUrl: profile, force: true });
         await onReload();
         setMessage(t('Conexiones guardadas en este PC.'));
     }
@@ -260,7 +259,7 @@ export function AppSetup({
     }
     return (
         <>
-            {status?.installed &&
+            {(status?.installed || status?.desktop) &&
                 status.canManage &&
                 status.update.version &&
                 !open &&
@@ -277,7 +276,7 @@ export function AppSetup({
                             <Button
                                 size="sm"
                                 onClick={() => {
-                                    setStep(2);
+                                    onTabChange('general');
                                     onOpenChange(true);
                                 }}
                             >
@@ -293,286 +292,196 @@ export function AppSetup({
                         </div>
                     </aside>
                 )}
-            <Dialog
-                open={open}
-                onOpenChange={(value) => {
-                    if (busy) return;
-                    if (!value) setDraft({});
-                    onOpenChange(value);
-                }}
-            >
-                <DialogContent className="hud-settings-modal max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>
-                            {status?.onboardingComplete
-                                ? t('Configurar Next Play')
-                                : t('Bienvenido a Next Play')}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {t(
-                                'Conecta tus cuentas y prepara la aplicación desde aquí. Puedes completar las conexiones opcionales más adelante. ',
-                            )}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <nav
-                        aria-label={t('Pasos de configuración')}
-                        className="flex flex-wrap gap-2"
-                    >
-                        {[
-                            t('Tu biblioteca'),
-                            t('Más conexiones'),
-                            t('Tu aplicación'),
-                        ].map((title, index) => (
-                            <Button
-                                key={title}
-                                size="sm"
-                                variant={step === index ? 'default' : 'outline'}
-                                onClick={() => setStep(index)}
-                                disabled={!!busy}
-                                aria-current={
-                                    step === index ? 'step' : undefined
-                                }
-                            >
-                                {index + 1}. {title}
-                            </Button>
-                        ))}
-                    </nav>
-                    {error && (
-                        <p
-                            role="alert"
-                            className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive"
-                        >
-                            {error}
-                        </p>
-                    )}
-                    {message && (
-                        <output className="block rounded-lg border border-primary/30 p-3 text-sm">
-                            {message}
-                        </output>
-                    )}
-                    {!status ? (
+            {open && (
+                <section className="settings-page" aria-label={t('Ajustes')}>
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                         <p className="text-sm text-muted-foreground">
-                            {t('Cargando configuración… ')}
-                        </p>
-                    ) : !status.canManage ? (
-                        <p className="text-sm">
                             {t(
-                                'Abre Next Play en el PC donde está instalada para gestionar cuentas, conexiones y actualizaciones. ',
+                                'Todo lo que necesitas para configurar Next Play, en un solo lugar.',
                             )}
                         </p>
-                    ) : (
-                        <>
-                            {step === 0 && (
-                                <div className="space-y-5">
-                                    {status.installed &&
-                                        !status.onboardingComplete &&
-                                        !state?.games.length && (
-                                            <div className="hud-card-subpanel space-y-2">
-                                                <p className="text-sm">
+                        <Button
+                            variant="outline"
+                            disabled={!!busy}
+                            onClick={() => onOpenChange(false)}
+                        >
+                            {t('Volver')}
+                        </Button>
+                    </div>
+                    <Tabs
+                        value={activeTab}
+                        onValueChange={(value) => onTabChange(String(value))}
+                    >
+                        <TabsList
+                            className="hud-settings-tabs settings-sections"
+                            aria-label={t('Secciones de ajustes')}
+                        >
+                            <TabsTrigger value="general">
+                                {t('General')}
+                            </TabsTrigger>
+                            <TabsTrigger value="accounts">
+                                {t('Cuentas')}
+                            </TabsTrigger>
+                            <TabsTrigger value="ai">
+                                {t('Motor e IA')}
+                            </TabsTrigger>
+                            <TabsTrigger value="data">{t('Datos')}</TabsTrigger>
+                        </TabsList>
+                        {error && (
+                            <p
+                                role="alert"
+                                className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive"
+                            >
+                                {error}
+                            </p>
+                        )}
+                        {message && (
+                            <output className="block rounded-lg border border-primary/30 p-3 text-sm">
+                                {message}
+                            </output>
+                        )}
+                        {busy && (
+                            <output className="flex items-center gap-2 text-sm">
+                                <LoaderCircle
+                                    size={16}
+                                    className="animate-spin"
+                                />
+                                {busy}
+                            </output>
+                        )}
+                        <TabsContent value="general" className="space-y-5 pt-5">
+                            <div className="hud-card-subpanel space-y-4">
+                                <h2 className="font-semibold">
+                                    {t('Idioma y color')}
+                                </h2>
+                                <div className="flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <span className="text-sm font-medium">
+                                            {t('Idioma')}
+                                        </span>
+                                        <LanguageSelector />
+                                    </div>
+                                    <ThemeSelector />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                    {t(
+                                        'Se guardan automáticamente en este dispositivo.',
+                                    )}
+                                </p>
+                            </div>
+                            {status ? (
+                                <>
+                                    <div className="hud-card-subpanel space-y-3">
+                                        <h2 className="font-semibold">
+                                            {t('Versión ')}
+                                            {status.version}
+                                        </h2>
+                                        {(status.installed || status.desktop) &&
+                                            status.canManage && (
+                                                <>
+                                                    <p className="text-sm">
+                                                        {status.update.checking
+                                                            ? t(
+                                                                  'Buscando actualizaciones…',
+                                                              )
+                                                            : status.update
+                                                                    .version
+                                                              ? t(
+                                                                    'Disponible: ',
+                                                                ) +
+                                                                status.update
+                                                                    .version
+                                                              : t(
+                                                                    'No hay una actualización disponible.',
+                                                                )}
+                                                    </p>
+                                                    {status.update.error && (
+                                                        <p className="text-sm text-amber-400">
+                                                            {
+                                                                status.update
+                                                                    .error
+                                                            }
+                                                        </p>
+                                                    )}
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            disabled={!!busy}
+                                                            onClick={() =>
+                                                                void perform(
+                                                                    t(
+                                                                        'Buscando…',
+                                                                    ),
+                                                                    async () =>
+                                                                        setStatus(
+                                                                            await call(
+                                                                                'app/updates/check',
+                                                                                {},
+                                                                            ),
+                                                                        ),
+                                                                )
+                                                            }
+                                                        >
+                                                            {t(
+                                                                'Buscar actualizaciones ',
+                                                            )}
+                                                        </Button>
+                                                        {status.installed &&
+                                                            status.update
+                                                                .version && (
+                                                                <Button
+                                                                    disabled={
+                                                                        !!busy
+                                                                    }
+                                                                    onClick={() =>
+                                                                        void perform(
+                                                                            t(
+                                                                                'Actualizando…',
+                                                                            ),
+                                                                            () =>
+                                                                                restarting(
+                                                                                    'app/update',
+                                                                                ),
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    {t(
+                                                                        'Actualizar y reiniciar ',
+                                                                    )}
+                                                                </Button>
+                                                            )}
+                                                    </div>
+                                                    {status.update.notesUrl && (
+                                                        <a
+                                                            href={
+                                                                status.update
+                                                                    .notesUrl
+                                                            }
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-xs text-primary underline"
+                                                        >
+                                                            {t(
+                                                                'Qué cambia en esta versión ',
+                                                            )}
+                                                        </a>
+                                                    )}
+                                                </>
+                                            )}
+                                        {status.desktop &&
+                                            !status.installed && (
+                                                <p className="text-xs text-muted-foreground">
                                                     {t(
-                                                        'Si ya usabas Next Play, cierra tu copia anterior antes de importar su biblioteca, historial y conexiones. ',
+                                                        'Las actualizaciones automáticas de escritorio todavía no están disponibles.',
                                                     )}
                                                 </p>
-                                                <Button
-                                                    variant="outline"
-                                                    disabled={!!busy}
-                                                    onClick={() =>
-                                                        void perform(
-                                                            t('Importando…'),
-                                                            async () => {
-                                                                await call(
-                                                                    'app/import',
-                                                                    {},
-                                                                );
-                                                                await onReload();
-                                                                setStatus(
-                                                                    await call(
-                                                                        'app',
-                                                                    ),
-                                                                );
-                                                                setMessage(
-                                                                    t(
-                                                                        'Biblioteca importada. La copia anterior se conserva.',
-                                                                    ),
-                                                                );
-                                                            },
-                                                        )
-                                                    }
-                                                >
-                                                    {t(
-                                                        'Importar instalación anterior ',
-                                                    )}
-                                                </Button>
-                                            </div>
-                                        )}
-                                    {credential(
-                                        'STEAM_API_KEY',
-                                        t('Clave de Steam'),
-                                        'https://steamcommunity.com/dev/apikey',
-                                        t(
-                                            'Steam solicita un dominio al crear la clave: puedes indicar localhost.',
-                                        ),
-                                    )}
-                                    <div className="space-y-2">
-                                        <label
-                                            htmlFor="setup-profile"
-                                            className="text-sm font-medium"
-                                        >
-                                            {t('Enlace a tu perfil de Steam ')}
-                                        </label>
-                                        <Input
-                                            id="setup-profile"
-                                            value={profile}
-                                            onChange={(e) =>
-                                                setProfile(e.target.value)
-                                            }
-                                            placeholder={t(
-                                                'https://steamcommunity.com/id/tu_usuario/',
                                             )}
-                                            disabled={!!busy}
-                                        />
-                                        <p className="text-xs text-muted-foreground">
-                                            {t(
-                                                'El perfil y los detalles de juegos deben ser públicos en Steam. ',
-                                            )}
-                                        </p>
                                     </div>
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            disabled={!!busy}
-                                            onClick={() =>
-                                                void perform(
-                                                    t('Guardando…'),
-                                                    save,
-                                                )
-                                            }
-                                        >
-                                            {t('Guardar clave ')}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            disabled={!!busy || !profile.trim()}
-                                            onClick={() =>
-                                                void perform(
-                                                    t('Importando juegos…'),
-                                                    async () => {
-                                                        await save();
-                                                        await call(
-                                                            'steam/sync',
-                                                            {
-                                                                profileUrl:
-                                                                    profile,
-                                                                force: true,
-                                                            },
-                                                        );
-                                                        await onReload();
-                                                        setMessage(
-                                                            t(
-                                                                'Tu biblioteca está lista.',
-                                                            ),
-                                                        );
-                                                    },
-                                                )
-                                            }
-                                        >
-                                            {t('Guardar e importar juegos ')}
-                                        </Button>
-                                    </div>
-                                </div>
-                            )}
-                            {step === 1 && (
-                                <div className="space-y-5">
-                                    <div className="hud-card-subpanel space-y-3">
-                                        <h3 className="font-semibold">
-                                            {t('Recomendaciones con ChatGPT ')}
-                                        </h3>
-                                        <p className="text-sm text-muted-foreground">
-                                            {t(
-                                                'Opcional. Usa tu cuenta y su cupo de Codex. También puedes recomendar con el algoritmo local. ',
-                                            )}
-                                        </p>
-                                        {(state?.setup.codex ||
-                                            status.login.state ===
-                                                'complete') && (
-                                            <p className="flex items-center gap-2 text-sm text-emerald-400">
-                                                <CheckCircle2 size={16} />{' '}
-                                                {t('ChatGPT conectado ')}
-                                            </p>
-                                        )}
-                                        {status.login.message && (
-                                            <output className="block text-sm">
-                                                {status.login.message}
-                                            </output>
-                                        )}
-                                        <Button
-                                            disabled={!!busy}
-                                            variant="outline"
-                                            onClick={() =>
-                                                void perform(
-                                                    t('Conectando…'),
-                                                    async () =>
-                                                        setStatus(
-                                                            await call(
-                                                                status.login
-                                                                    .state ===
-                                                                    'pending'
-                                                                    ? 'app/login/cancel'
-                                                                    : 'app/login',
-                                                                {},
-                                                            ),
-                                                        ),
-                                                )
-                                            }
-                                        >
-                                            {status.login.state === 'pending'
-                                                ? t('Cancelar conexión')
-                                                : t('Conectar ChatGPT')}
-                                        </Button>
-                                    </div>
-                                    {credential(
-                                        'STEAM_FAMILY_TOKEN',
-                                        t('Steam Families · opcional'),
-                                        'https://store.steampowered.com/pointssummary/ajaxgetasyncconfig',
-                                        t(
-                                            'Abre la página con tu sesión de Steam y copia el valor webapi_token. Después podrás sincronizar el grupo desde Ajustes.',
-                                        ),
-                                    )}
-                                    {credential(
-                                        'TWITCH_CLIENT_ID',
-                                        t('IGDB · identificador de aplicación'),
-                                        'https://dev.twitch.tv/console/apps',
-                                        t(
-                                            'Para metadatos y juegos de otras plataformas. En Twitch registra una aplicación Confidential con redirección http://localhost.',
-                                        ),
-                                    )}
-                                    {credential(
-                                        'TWITCH_CLIENT_SECRET',
-                                        t('IGDB · secreto de aplicación'),
-                                    )}
-                                    <Button
-                                        disabled={!!busy}
-                                        onClick={() =>
-                                            void perform(t('Guardando…'), save)
-                                        }
-                                    >
-                                        {t('Guardar conexiones ')}
-                                    </Button>
-                                    <p className="text-sm text-muted-foreground">
-                                        {t('Duraciones de HowLongToBeat:')}{' '}
-                                        {state?.setup.hltb
-                                            ? t(
-                                                  'preparadas; se consultan al recomendar.',
-                                              )
-                                            : t(
-                                                  'no disponibles en este entorno.',
-                                              )}
-                                    </p>
-                                </div>
-                            )}
-                            {step === 2 && (
-                                <div className="space-y-5">
-                                    {status.installed ? (
-                                        <>
+                                    {status.installed && status.canManage && (
+                                        <details className="hud-card-subpanel space-y-3">
+                                            <summary className="cursor-pointer font-semibold">
+                                                {t('Inicio y red local')}
+                                            </summary>
                                             <label className="flex items-center gap-3 text-sm">
                                                 <input
                                                     type="checkbox"
@@ -645,164 +554,265 @@ export function AppSetup({
                                                     </a>
                                                 </p>
                                             ))}
-                                            <div className="hud-card-subpanel space-y-3">
-                                                <h3 className="font-semibold">
-                                                    {t('Versión ')}
-                                                    {status.version}
-                                                </h3>
-                                                <p className="text-sm">
-                                                    {status.update.checking
-                                                        ? t(
-                                                              'Buscando actualizaciones…',
-                                                          )
-                                                        : status.update.version
-                                                          ? `${t('Disponible: ')}${status.update.version}`
-                                                          : t(
-                                                                'No hay una actualización disponible.',
-                                                            )}
-                                                </p>
-                                                {status.update.error && (
-                                                    <p className="text-sm text-amber-400">
-                                                        {status.update.error}
-                                                    </p>
-                                                )}
-                                                <div className="flex flex-wrap gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        disabled={!!busy}
-                                                        onClick={() =>
-                                                            void perform(
-                                                                t('Buscando…'),
-                                                                async () =>
-                                                                    setStatus(
-                                                                        await call(
-                                                                            'app/updates/check',
-                                                                            {},
-                                                                        ),
-                                                                    ),
-                                                            )
-                                                        }
-                                                    >
-                                                        {t(
-                                                            'Buscar actualizaciones ',
-                                                        )}
-                                                    </Button>
-                                                    {status.update.version && (
-                                                        <Button
-                                                            disabled={!!busy}
-                                                            onClick={() =>
-                                                                void perform(
-                                                                    t(
-                                                                        'Actualizando…',
-                                                                    ),
-                                                                    () =>
-                                                                        restarting(
-                                                                            'app/update',
-                                                                        ),
-                                                                )
-                                                            }
-                                                        >
-                                                            {t(
-                                                                'Actualizar y reiniciar ',
-                                                            )}
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                                {status.update.notesUrl && (
-                                                    <a
-                                                        href={
-                                                            status.update
-                                                                .notesUrl
-                                                        }
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="text-xs text-primary underline"
-                                                    >
-                                                        {t(
-                                                            'Qué cambia en esta versión ',
-                                                        )}
-                                                    </a>
-                                                )}
-                                            </div>
+
                                             <p className="text-xs text-muted-foreground">
                                                 {t(
                                                     'Al cerrar la pestaña, Next Play sigue activa. Para cerrarla por completo, utiliza Salir en el icono de la bandeja de Windows. ',
                                                 )}
                                             </p>
-                                        </>
-                                    ) : (
+                                        </details>
+                                    )}
+                                </>
+                            ) : (
+                                <p>{t('Cargando configuración… ')}</p>
+                            )}
+                        </TabsContent>
+                        <TabsContent
+                            value="accounts"
+                            className="space-y-5 pt-5"
+                        >
+                            {!status ? (
+                                <p>{t('Cargando configuración… ')}</p>
+                            ) : !status.canManage ? (
+                                <p className="hud-card-subpanel">
+                                    {t(
+                                        'Abre Next Play en el PC donde está instalada para gestionar cuentas, conexiones y actualizaciones. ',
+                                    )}
+                                </p>
+                            ) : (
+                                <>
+                                    <div className="hud-card-subpanel space-y-4">
+                                        <h2 className="font-semibold">Steam</h2>
+                                        {status.installed &&
+                                            !status.onboardingComplete &&
+                                            !state?.games.length && (
+                                                <div className="hud-card-subpanel space-y-2">
+                                                    <p className="text-sm">
+                                                        {t(
+                                                            'Si ya usabas Next Play, cierra tu copia anterior antes de importar su biblioteca, historial y conexiones. ',
+                                                        )}
+                                                    </p>
+                                                    <Button
+                                                        variant="outline"
+                                                        disabled={!!busy}
+                                                        onClick={() =>
+                                                            void perform(
+                                                                t(
+                                                                    'Importando…',
+                                                                ),
+                                                                async () => {
+                                                                    await call(
+                                                                        'app/import',
+                                                                        {},
+                                                                    );
+                                                                    await onReload();
+                                                                    setStatus(
+                                                                        await call(
+                                                                            'app',
+                                                                        ),
+                                                                    );
+                                                                    setMessage(
+                                                                        t(
+                                                                            'Biblioteca importada. La copia anterior se conserva.',
+                                                                        ),
+                                                                    );
+                                                                },
+                                                            )
+                                                        }
+                                                    >
+                                                        {t(
+                                                            'Importar instalación anterior ',
+                                                        )}
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        {credential(
+                                            'STEAM_API_KEY',
+                                            t('Clave de Steam'),
+                                            'https://steamcommunity.com/dev/apikey',
+                                            t(
+                                                'Steam solicita un dominio al crear la clave: puedes indicar localhost.',
+                                            ),
+                                        )}
+                                        <div className="space-y-2">
+                                            <label
+                                                htmlFor="setup-profile"
+                                                className="text-sm font-medium"
+                                            >
+                                                {t(
+                                                    'Enlace a tu perfil de Steam ',
+                                                )}
+                                            </label>
+                                            <Input
+                                                id="setup-profile"
+                                                value={profile}
+                                                onChange={(e) =>
+                                                    setProfile(e.target.value)
+                                                }
+                                                placeholder={t(
+                                                    'https://steamcommunity.com/id/tu_usuario/',
+                                                )}
+                                                disabled={!!busy}
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                {t(
+                                                    'El perfil y los detalles de juegos deben ser públicos en Steam. ',
+                                                )}
+                                            </p>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                variant="outline"
+                                                disabled={
+                                                    !!busy || !profile.trim()
+                                                }
+                                                onClick={() =>
+                                                    void perform(
+                                                        t('Importando juegos…'),
+                                                        async () => {
+                                                            await save();
+                                                            await call(
+                                                                'steam/sync',
+                                                                {
+                                                                    profileUrl:
+                                                                        profile,
+                                                                    force: true,
+                                                                },
+                                                            );
+                                                            await onReload();
+                                                            setMessage(
+                                                                t(
+                                                                    'Tu biblioteca está lista.',
+                                                                ),
+                                                            );
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                {t(
+                                                    'Guardar e importar juegos ',
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                    <div className="hud-card-subpanel space-y-3">
+                                        <h3 className="font-semibold">
+                                            {t('Recomendaciones con ChatGPT ')}
+                                        </h3>
                                         <p className="text-sm text-muted-foreground">
                                             {t(
-                                                'El inicio con Windows y las actualizaciones integradas están disponibles en la versión instalada. ',
+                                                'Opcional. Usa tu cuenta y su cupo de Codex. También puedes recomendar con el algoritmo local. ',
                                             )}
                                         </p>
-                                    )}
-                                </div>
-                            )}
-                            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
-                                {busy ? (
-                                    <output className="flex items-center gap-2 text-sm">
-                                        <LoaderCircle
-                                            size={16}
-                                            className="animate-spin"
-                                        />
-                                        {busy}
-                                    </output>
-                                ) : (
-                                    <span className="text-xs text-muted-foreground">
-                                        {t('Paso ')}
-                                        {step + 1} {t('de 3 ')}
-                                    </span>
-                                )}
-                                <div className="flex gap-2">
-                                    {step < 2 && (
+                                        {(state?.setup.codex ||
+                                            status.login.state ===
+                                                'complete') && (
+                                            <p className="flex items-center gap-2 text-sm text-emerald-400">
+                                                <CheckCircle2 size={16} />{' '}
+                                                {t('ChatGPT conectado ')}
+                                            </p>
+                                        )}
+                                        {status.login.message && (
+                                            <output className="block text-sm">
+                                                {status.login.message}
+                                            </output>
+                                        )}
                                         <Button
-                                            variant="outline"
                                             disabled={!!busy}
+                                            variant="outline"
                                             onClick={() =>
                                                 void perform(
-                                                    t('Guardando…'),
-                                                    async () => {
-                                                        await save(step === 0);
-                                                        setStep(step + 1);
-                                                    },
+                                                    t('Conectando…'),
+                                                    async () =>
+                                                        setStatus(
+                                                            await call(
+                                                                status.login
+                                                                    .state ===
+                                                                    'pending'
+                                                                    ? 'app/login/cancel'
+                                                                    : 'app/login',
+                                                                {},
+                                                            ),
+                                                        ),
                                                 )
                                             }
                                         >
-                                            {t('Continuar ')}
+                                            {status.login.state === 'pending'
+                                                ? t('Cancelar conexión')
+                                                : t('Conectar ChatGPT')}
                                         </Button>
-                                    )}
+                                    </div>
+
+                                    <details className="hud-card-subpanel space-y-4">
+                                        <summary className="cursor-pointer font-semibold">
+                                            {t(
+                                                'Conexiones opcionales: Steam Families e IGDB',
+                                            )}
+                                        </summary>
+                                        {credential(
+                                            'STEAM_FAMILY_TOKEN',
+                                            t('Steam Families · opcional'),
+                                            'https://store.steampowered.com/pointssummary/ajaxgetasyncconfig',
+                                            t(
+                                                'Abre la página con tu sesión de Steam y copia el valor webapi_token. Después podrás sincronizar el grupo desde Ajustes.',
+                                            ),
+                                        )}
+                                        {credential(
+                                            'TWITCH_CLIENT_ID',
+                                            t(
+                                                'IGDB · identificador de aplicación',
+                                            ),
+                                            'https://dev.twitch.tv/console/apps',
+                                            t(
+                                                'Para metadatos y juegos de otras plataformas. En Twitch registra una aplicación Confidential con redirección http://localhost.',
+                                            ),
+                                        )}
+                                        {credential(
+                                            'TWITCH_CLIENT_SECRET',
+                                            t('IGDB · secreto de aplicación'),
+                                        )}
+                                    </details>
                                     <Button
                                         disabled={!!busy}
                                         onClick={() =>
-                                            void perform(
-                                                t('Guardando…'),
-                                                async () => {
-                                                    await save(step === 0);
-                                                    setStatus(
-                                                        await call(
-                                                            'app/settings',
-                                                            {
-                                                                onboardingComplete: true,
-                                                            },
-                                                            'PATCH',
-                                                        ),
-                                                    );
-                                                    onOpenChange(false);
-                                                },
-                                            )
+                                            void perform(t('Guardando…'), save)
                                         }
                                     >
-                                        {step === 2
-                                            ? t('Empezar a usar')
-                                            : t('Completar más adelante')}
+                                        {t('Guardar conexiones ')}
                                     </Button>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </DialogContent>
-            </Dialog>
+                                    {status.installed &&
+                                        !status.onboardingComplete && (
+                                            <Button
+                                                disabled={!!busy}
+                                                onClick={() =>
+                                                    void perform(
+                                                        t('Guardando…'),
+                                                        async () => {
+                                                            await save();
+                                                            setStatus(
+                                                                await call(
+                                                                    'app/settings',
+                                                                    {
+                                                                        onboardingComplete: true,
+                                                                    },
+                                                                    'PATCH',
+                                                                ),
+                                                            );
+                                                            onOpenChange(false);
+                                                        },
+                                                    )
+                                                }
+                                            >
+                                                {t('Terminar configuración')}
+                                            </Button>
+                                        )}
+                                </>
+                            )}
+                        </TabsContent>
+                        {children}
+                    </Tabs>
+                </section>
+            )}
         </>
     );
 }

@@ -2,6 +2,33 @@ import { fork } from 'node:child_process';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+export function desktopShortcut(input, platform = process.platform) {
+    if (input.type !== 'keyDown' || input.alt) return null;
+    if (input.key === 'F11') return 'fullscreen';
+    if (!(platform === 'darwin' ? input.meta : input.control)) return null;
+    const key = input.key.toLowerCase();
+    if (input.shift && key === 'z') return 'redo';
+    if (input.shift && key === 'r') return 'forceReload';
+    if (input.shift && key !== '+') return null;
+    return (
+        {
+            c: 'copy',
+            x: 'cut',
+            v: 'paste',
+            a: 'selectAll',
+            z: 'undo',
+            y: 'redo',
+            r: 'reload',
+            w: 'close',
+            q: 'quit',
+            '+': 'zoomIn',
+            '=': 'zoomIn',
+            '-': 'zoomOut',
+            0: 'resetZoom',
+        }[key] || null
+    );
+}
+
 export function desktopLinkTarget(value, origin) {
     try {
         const url = new URL(value);

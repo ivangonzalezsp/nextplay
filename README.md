@@ -15,10 +15,10 @@ A personal app for choosing what to play from your Steam library. Switch between
 [**Download Next Play for Windows x64**](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest)
 
 1. Download **NextPlay-Setup-…-x64.exe**, run it, and open the **Next Play** shortcut.
-2. The wizard lets you add your Steam profile and API key and import your games. Steam Families, IGDB, and ChatGPT are optional; the local algorithm works without AI.
-3. If you have an earlier installation, close it and select **Import previous installation** before configuring the new one. Originals are kept; reconnect ChatGPT through the wizard.
+2. **Settings → Accounts** lets you add your Steam profile and API key and import your games. Steam Families, IGDB, and ChatGPT are optional; the local algorithm works without AI.
+3. If you have an earlier installation, close it and select **Import previous installation** before configuring the new one. Originals are kept; reconnect ChatGPT in **Settings → Accounts**.
 
-After setup, an optional tutorial reviews up to five played games and your tastes. Each confirmed step is saved; **Finish later** keeps those answers. Resume it through **Settings → Tutorial & initial preferences**. Reviewing earlier game statuses does not invent gaming history dates.
+An optional tutorial reviews up to five played games and your tastes. Open or resume it through **Settings → Data → Tutorial & initial preferences** when you want; finishing setup returns directly to the app. Each confirmed step is saved; **Finish later** keeps those answers. Reviewing earlier game statuses does not invent gaming history dates.
 
 The installer includes Node, Codex, and Python with HowLongToBeat. You do not need Git, a terminal, or additional tools. Requires 64-bit Windows 10/11. The distribution is not code-signed, so Windows may warn about or block it.
 
@@ -26,7 +26,7 @@ The installer includes Node, Codex, and Python with HowLongToBeat. You do not ne
 
 The shortcut starts Next Play and opens your browser. Opening it again reuses the running instance. Closing the tab leaves the app running; choose **Exit** from its tray icon to stop it completely.
 
-In **Settings → Set up accounts and app**, save connections, connect or cancel official ChatGPT sign-in, check for updates, and optionally enable Windows startup. **Update and restart** downloads the public release, checks SHA-256, and creates a backup before installation. Finish active operations first. Automatic update checks are limited to once a day.
+**Settings** is one screen: **General** contains language, color, version, updates and optional Windows startup; **Accounts** contains Steam and official ChatGPT sign-in; **Engine & AI** chooses the recommender; **Data** contains maintenance and folded advanced diagnostics. Optional connections are folded in Accounts. AI changes apply only with **Save**; **Cancel**, **Back**, or leaving settings discards them. **Update and restart** downloads the public release, checks SHA-256, and creates a backup before installation. Finish active operations first. Automatic update checks are limited to once a day.
 
 Access initially stays on your PC. **Allow access from my local network** requests Windows permission, restarts Next Play, and shows the address for your phone. Its firewall rule is limited to the program, private networks, and the local subnet. Managing credentials, authentication, updates, and processes remains restricted to the PC through the actual connection and HTTP origin.
 
@@ -74,7 +74,7 @@ npm run dev
 ```
 
 1. Open [Next Play](http://127.0.0.1:3000).
-2. Open settings, then **Set up accounts and app**. Add your Steam profile link (`https://steamcommunity.com/id/your_user/` or `https://steamcommunity.com/profiles/YOUR_STEAMID64/`) and key.
+2. Open **Settings → Accounts**. Add your Steam profile link (`https://steamcommunity.com/id/your_user/` or `https://steamcommunity.com/profiles/YOUR_STEAMID64/`) and key.
 3. Under **Diagnostics**, click **Check connections**, then **Sync** under **Steam & Families**.
 4. Check **Your library**. To start without AI, choose **Local algorithm** under **Engine & AI**, adjust filters, and request a recommendation. Start with few filters while optional metadata is missing.
 
@@ -89,7 +89,9 @@ npm run build
 npm run desktop
 ```
 
-The prototype uses the installed **Node.js 24+** and downloads Electron on first launch if needed. It starts its own server on a free loopback port, opens one Next Play window, and stops that server when you close the window or choose **File → Quit**. The profile retains that port in `desktop-server.json` so language and palette persist between launches; if another process occupies it, startup fails without stopping that process. A second launch of the same profile focuses the existing window. Web links open in your browser; **Play** links open Steam.
+The prototype uses the installed **Node.js 24+** and downloads Electron on first launch if needed. It starts its own server on a free loopback port, opens one Next Play window without a menu bar, and stops that server when you close the window or use **Ctrl/Cmd+Q**. Editing, reload and zoom shortcuts remain available. The profile retains that port in `desktop-server.json` so language and palette persist between launches; if another process occupies it, startup fails without stopping that process. A second launch of the same profile focuses the existing window. Web links open in your browser; **Play** links open Steam.
+
+**Settings → General** shows the version and checks public releases. Automatic desktop installation is pending: the prototype cannot install the previous Windows package, which opens Next Play in a browser.
 
 The default profile is `work/desktop-profile/`: SQLite under `data/`, account settings in `settings.json`, a separate Codex session in `codex/`, and window preferences under `electron/`. It persists between launches and does not load the checkout's `.env.local`, library, or inherited credentials. Configure any accounts explicitly from the app; no accounts are copied automatically. To use another test profile, run `npm run desktop -- --profile "path/to/test-profile"`.
 
@@ -171,7 +173,7 @@ Each recommendation queries up to eight candidates without current cache data, i
 
 #### Language and colors
 
-Use **🇬🇧 EN / 🇪🇸 ES** in the header to change language. Spanish is the initial fallback. The choice is saved in this browser and synchronized between its tabs. New recommendations and service messages use the selected language; personal notes, titles, and earlier AI conversations keep their original text. Steam tags use their English names when available.
+Open **Settings → General** to change language with **🇬🇧 EN / 🇪🇸 ES** and choose the **Color** palette, including when connected to a server. Spanish is the initial fallback. The choice is saved in this browser and synchronized between its tabs. New recommendations and service messages use the selected language; personal notes, titles, and earlier AI conversations keep their original text. Steam tags use their English names when available.
 
 The app has one **immersive** layout with **Mint, Ocean, Violet, Amber, and Rose** palettes. **Color** changes the palette without changing navigation or cards. The choice persists after reload; old Legacy, Steam, PS5, and Switch 2 selections fall back to Mint.
 
@@ -189,7 +191,7 @@ Family data refreshes after 24 hours when requesting recommendations, or through
 
 Tags come from public Steam pages, without keys or AI classification. Spanish names, IDs, available English names, and retrieval dates are saved. [Steamworks tags](https://partner.steamgames.com/doc/store/tags) reflect developer and community input; the top twenty describe games but do not guarantee difficulty, content, or suitability.
 
-**Settings → Steam & Families → Load Steam tags** runs a resumable sync. It keeps progress when stopped or rate-limited. Library covers and filters use the same top four tags; selection also uses them as affinity signals. Tags remain distinct from IGDB genres.
+**Settings → Data → Load Steam tags** runs a resumable sync. It keeps progress when stopped or rate-limited. Library covers and filters use the same top four tags; selection also uses them as affinity signals. Tags remain distinct from IGDB genres.
 
 #### Recommendations and tastes
 
@@ -268,10 +270,10 @@ Web personal en español e inglés para elegir qué jugar de tu biblioteca de St
 [**Descargar Next Play para Windows x64**](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest)
 
 1. Descarga **NextPlay-Setup-…-x64.exe**, ejecútalo y abre el acceso directo **Next Play**.
-2. El asistente permite añadir tu perfil y clave de Steam e importar tus juegos. Steam Families, IGDB y ChatGPT son opcionales. Puedes usar el algoritmo local sin IA.
-3. Si tienes una instalación anterior, ciérrala y selecciona **Importar instalación anterior** antes de configurar la nueva. Los datos originales se conservan; conecta ChatGPT de nuevo desde el asistente.
+2. **Ajustes → Cuentas** permite añadir tu perfil y clave de Steam e importar tus juegos. Steam Families, IGDB y ChatGPT son opcionales. Puedes usar el algoritmo local sin IA.
+3. Si tienes una instalación anterior, ciérrala y selecciona **Importar instalación anterior** antes de configurar la nueva. Los datos originales se conservan; conecta ChatGPT de nuevo desde **Ajustes → Cuentas**.
 
-Después de configurar la instalación se ofrece un tutorial opcional para revisar hasta cinco juegos jugados e indicar tus gustos. Las respuestas se guardan al confirmar cada paso; **Completar más adelante** conserva lo confirmado. Puedes retomarlo desde **Ajustes → Tutorial y preferencias iniciales**. Los estados de juegos anteriores no añaden fechas al historial.
+El tutorial opcional permite revisar hasta cinco juegos jugados e indicar tus gustos. Ábrelo o retómalo desde **Ajustes → Datos → Tutorial y preferencias iniciales** cuando quieras; terminar la configuración devuelve directamente a la app. Las respuestas se guardan al confirmar cada paso; **Completar más adelante** conserva lo confirmado. Los estados de juegos anteriores no añaden fechas al historial.
 
 El instalador incluye Node, Codex y Python con HowLongToBeat: no necesitas Git, terminal ni instalar herramientas aparte. Cada persona conecta sus propias cuentas. Requiere Windows 10/11 de 64 bits. Esta primera distribución no tiene firma de código y Windows puede mostrar avisos o bloquearla.
 
@@ -279,7 +281,7 @@ El instalador incluye Node, Codex y Python con HowLongToBeat: no necesitas Git, 
 
 El acceso directo inicia Next Play y abre el navegador. Una segunda apertura reutiliza la instancia. Cerrar la pestaña mantiene la aplicación activa; **Salir**, en su icono de bandeja, la cierra por completo.
 
-En **Ajustes → Configurar cuentas y aplicación** puedes guardar conexiones, conectar o cancelar el inicio de sesión oficial de ChatGPT, buscar actualizaciones y activar opcionalmente el inicio con Windows. **Actualizar y reiniciar** descarga la versión pública, verifica SHA-256 y guarda una copia antes de instalar. Termina cualquier operación en curso primero. La búsqueda automática se limita a una vez al día.
+**Ajustes** es una única pantalla: **General** contiene idioma, color, versión, actualizaciones e inicio opcional con Windows; **Cuentas** reúne Steam y el inicio de sesión oficial de ChatGPT; **Motor e IA** permite elegir el recomendador; **Datos** contiene mantenimiento y diagnóstico avanzado plegado. Las conexiones opcionales están plegadas en Cuentas. Los cambios de IA solo se aplican con **Guardar**; **Cancelar**, **Volver** o salir de ajustes los descarta. **Actualizar y reiniciar** descarga la versión pública, verifica SHA-256 y guarda una copia antes de instalar. Termina cualquier operación en curso primero. La búsqueda automática se limita a una vez al día.
 
 El acceso empieza limitado al PC. **Permitir acceso desde mi red local** solicita permiso de Windows, reinicia Next Play y muestra la dirección para el móvil. La regla de firewall se limita al programa, a redes privadas y a la subred local. La gestión de credenciales, autenticación, actualizaciones y procesos sigue restringida al PC por conexión real y origen HTTP.
 
@@ -340,7 +342,7 @@ npm run dev
 ```
 
 1. Abre [Next Play](http://127.0.0.1:3000).
-2. Abre la configuración desde la cabecera. En **Configurar cuentas y aplicación**, añade **tu enlace de Steam** (`https://steamcommunity.com/id/tu_usuario/` o `https://steamcommunity.com/profiles/TU_STEAMID64/`) y tu clave.
+2. Abre **Ajustes → Cuentas** desde la navegación y añade **tu enlace de Steam** (`https://steamcommunity.com/id/tu_usuario/` o `https://steamcommunity.com/profiles/TU_STEAMID64/`) y tu clave.
 3. En **Diagnóstico**, pulsa **Comprobar conexiones**; vuelve a **Steam & Familias** y pulsa **Sincronizar**.
 4. Comprueba que tus juegos aparecen en **Tu biblioteca**. Para empezar sin Codex, selecciona el **Algoritmo local** en **Motor & IA**, ajusta los filtros y pide una recomendación. Al principio conviene usar pocos filtros: faltarán metadatos si no has configurado las fuentes opcionales.
 
@@ -357,7 +359,9 @@ npm run build
 npm run desktop
 ```
 
-El prototipo utiliza el **Node.js 24+** instalado y descarga Electron en el primer arranque si hace falta. Inicia su propio servidor en un puerto loopback libre, abre una ventana de Next Play y detiene ese servidor al cerrar la ventana o elegir **Archivo → Salir**. El perfil conserva ese puerto en `desktop-server.json` para mantener idioma y paleta entre arranques; si otro proceso lo ocupa, el arranque falla sin detenerlo. Un segundo arranque del mismo perfil enfoca la ventana existente. Los enlaces web se abren en tu navegador y **Jugar** abre Steam.
+El prototipo utiliza el **Node.js 24+** instalado y descarga Electron en el primer arranque si hace falta. Inicia su propio servidor en un puerto loopback libre, abre una ventana de Next Play sin barra de menús y detiene ese servidor al cerrar la ventana o usar **Ctrl/Cmd+Q**. Se conservan los atajos de edición, recarga y zoom. El perfil conserva ese puerto en `desktop-server.json` para mantener idioma y paleta entre arranques; si otro proceso lo ocupa, el arranque falla sin detenerlo. Un segundo arranque del mismo perfil enfoca la ventana existente. Los enlaces web se abren en tu navegador y **Jugar** abre Steam.
+
+**Ajustes → General** muestra la versión y permite buscar publicaciones nuevas. La instalación automática de escritorio sigue pendiente: el prototipo no puede instalar el paquete Windows anterior, que abre Next Play en el navegador.
 
 El perfil predeterminado es `work/desktop-profile/`: SQLite bajo `data/`, cuentas en `settings.json`, una sesión separada de Codex en `codex/` y preferencias de ventana bajo `electron/`. Se conserva entre arranques y no carga `.env.local`, la biblioteca del checkout ni las credenciales heredadas. Configura las cuentas expresamente desde la app; no se copian automáticamente. Para otro perfil de prueba, ejecuta `npm run desktop -- --profile "ruta/al/perfil-de-prueba"`.
 
@@ -452,7 +456,7 @@ Cada recomendación consulta hasta ocho candidatos sin caché vigente, incluyend
 
 ### Idioma y colores
 
-Usa **🇬🇧 EN / 🇪🇸 ES** en la cabecera para cambiar de idioma. Español es el idioma inicial. La elección se guarda en este navegador y se sincroniza entre sus pestañas. Las nuevas recomendaciones y los mensajes de servicios usan el idioma elegido; las notas personales, títulos y conversaciones anteriores conservan su texto original. Las etiquetas de Steam usan su nombre inglés cuando está disponible.
+Abre **Ajustes → General** para cambiar el idioma con **🇬🇧 EN / 🇪🇸 ES** y elegir la paleta **Color**, también al conectarte a un servidor. Español es el idioma inicial. La elección se guarda en este navegador y se sincroniza entre sus pestañas. Las nuevas recomendaciones y los mensajes de servicios usan el idioma elegido; las notas personales, títulos y conversaciones anteriores conservan su texto original. Las etiquetas de Steam usan su nombre inglés cuando está disponible.
 
 Solo se conserva el diseño **Inmersivo**, con las paletas **Menta, Océano, Violeta, Ámbar y Rosa**. El selector **Color** cambia la paleta sin cambiar las tarjetas ni la navegación. Las selecciones antiguas de Legacy, Steam, PS5 y Switch 2 vuelven a Menta.
 
@@ -476,7 +480,7 @@ Los juegos marcados como **Estoy jugando** o **En pausa** muestran su progreso d
 
 En **Tu biblioteca** puedes buscar por etiquetas y seleccionar una etiqueta para filtrar tus juegos propios o compartidos. La IA también puede consultar estas etiquetas mediante `query_games`: `query` busca fragmentos, `tag` coincide con el nombre completo en español o inglés (sin distinguir tildes o mayúsculas) y `tagIds` coincide con cualquiera de los IDs indicados. Se pueden combinar con los filtros y la paginación existentes. Los géneros de IGDB y las etiquetas de Steam conservan su significado separado; dos etiquetas con la misma traducción siguen teniendo IDs distintos.
 
-La importación se inicia desde **Ajustes y Conexiones > Cargar etiquetas de Steam** o con `npm run sync:steam-tags`, y se puede reanudar: guarda resultados por lotes en la tabla `steam_tags` de SQLite, conserva las etiquetas anteriores si Steam falla y registra los juegos sin etiquetas o sin una ficha disponible. `npm run sync:steam-tags -- --force` vuelve a consultar los juegos ya comprobados. Antes de escribir se crea una copia consistente en `data/backups`. Si Steam limita las consultas, respeta la espera indicada y detiene la importación si el límite persiste. No añade una descarga completa de etiquetas a cada recomendación. Las etiquetas guardadas sobreviven a las sincronizaciones de las bibliotecas. La fuente pública utilizada no tiene un contrato de API estable y puede cambiar.
+La importación se inicia desde **Ajustes → Datos → Cargar etiquetas de Steam** o con `npm run sync:steam-tags`, y se puede reanudar: guarda resultados por lotes en la tabla `steam_tags` de SQLite, conserva las etiquetas anteriores si Steam falla y registra los juegos sin etiquetas o sin una ficha disponible. `npm run sync:steam-tags -- --force` vuelve a consultar los juegos ya comprobados. Antes de escribir se crea una copia consistente en `data/backups`. Si Steam limita las consultas, respeta la espera indicada y detiene la importación si el límite persiste. No añade una descarga completa de etiquetas a cada recomendación. Las etiquetas guardadas sobreviven a las sincronizaciones de las bibliotecas. La fuente pública utilizada no tiene un contrato de API estable y puede cambiar.
 
 ### Tus gustos
 
@@ -520,7 +524,7 @@ Si aparece «no puede localizar tu carpeta de usuario», ejecuta la aplicación 
 
 ## Compartir Next Play
 
-Comparte el [enlace público de descargas](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest). Tus conocidos no necesitan clonar el repositorio ni autenticarse en GitHub para descargar o actualizar. Cada persona usa sus propias cuentas desde el asistente. No envíes la carpeta de desarrollo ni tu carpeta de datos personales.
+Comparte el [enlace público de descargas](https://github.com/ivangonzalezsp/nextplay-releases/releases/latest). Tus conocidos no necesitan clonar el repositorio ni autenticarse en GitHub para descargar o actualizar. Cada persona usa sus propias cuentas desde Ajustes. No envíes la carpeta de desarrollo ni tu carpeta de datos personales.
 
 ## Problemas frecuentes
 

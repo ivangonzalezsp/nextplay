@@ -5,9 +5,61 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
     desktopLinkTarget,
+    desktopShortcut,
     startDesktopServer,
     stopDesktopServer,
 } from '../scripts/desktop-runtime.mjs';
+
+void test('menu-free desktop keeps editing, reload and window shortcuts without stealing plain text', () => {
+    const input = {
+        type: 'keyDown',
+        key: 'c',
+        control: true,
+        meta: false,
+        alt: false,
+        shift: false,
+    };
+    assert.equal(desktopShortcut(input, 'win32'), 'copy');
+    assert.equal(desktopShortcut({ ...input, control: false }, 'win32'), null);
+    assert.equal(desktopShortcut({ ...input, type: 'keyUp' }, 'win32'), null);
+    assert.equal(desktopShortcut({ ...input, alt: true }, 'win32'), null);
+    assert.equal(desktopShortcut({ ...input, shift: true }, 'win32'), null);
+    assert.equal(desktopShortcut(input, 'darwin'), null);
+    assert.equal(
+        desktopShortcut({ ...input, control: false, meta: true }, 'darwin'),
+        'copy',
+    );
+    for (const [key, action] of Object.entries({
+        x: 'cut',
+        v: 'paste',
+        a: 'selectAll',
+        z: 'undo',
+        y: 'redo',
+        r: 'reload',
+        w: 'close',
+        q: 'quit',
+        '+': 'zoomIn',
+        '-': 'zoomOut',
+        '0': 'resetZoom',
+    }))
+        assert.equal(desktopShortcut({ ...input, key }, 'linux'), action);
+    assert.equal(
+        desktopShortcut({ ...input, key: 'z', shift: true }, 'win32'),
+        'redo',
+    );
+    assert.equal(
+        desktopShortcut({ ...input, key: 'r', shift: true }, 'win32'),
+        'forceReload',
+    );
+    assert.equal(
+        desktopShortcut({ ...input, key: '+', shift: true }, 'win32'),
+        'zoomIn',
+    );
+    assert.equal(
+        desktopShortcut({ ...input, key: 'F11', control: false }, 'win32'),
+        'fullscreen',
+    );
+});
 
 void test('desktop links stay local or use HTTPS / Steam run; unsafe protocols and credentials are blocked', () => {
     const origin = 'http://127.0.0.1:43210';

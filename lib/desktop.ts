@@ -1,5 +1,6 @@
 export type AppStatus = {
     installed: boolean;
+    desktop: boolean;
     canManage: boolean;
     version: string;
     onboardingComplete: boolean;

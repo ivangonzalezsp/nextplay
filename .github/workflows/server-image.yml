@@ -36,7 +36,7 @@ jobs:
             - run: npm test
             - run: npm run typecheck
             - name: Lint affected code
-              run: npx --no-install oxlint scripts/start-desktop.mjs scripts/desktop-runtime.mjs scripts/start-server.ts scripts/test-docker.mjs server/store.ts tests/desktop-runtime.test.ts
+              run: npx --no-install oxlint scripts/start-desktop.mjs scripts/desktop-runtime.mjs scripts/start-server.ts scripts/test-docker.mjs server/store.ts server/desktop.ts components/settings/AppSetup.tsx components/settings/SettingsModal.tsx components/header/LanguageSelector.tsx lib/desktop.ts lib/translations.ts tests/desktop-runtime.test.ts tests/desktop.test.ts
             - run: npm run build
 
     server:

@@ -307,6 +307,54 @@ void test('updates accept only the official complete stable release and check at
     assert.equal(calls, 1);
 });
 
+void test('desktop exposes its version and checks releases locally without installing the legacy Windows package', async (t) => {
+    await isolated(t);
+    delete process.env.NEXTPLAY_INSTALLED;
+    process.env.NEXTPLAY_DESKTOP = '1';
+    let calls = 0;
+    t.mock.method(globalThis, 'fetch', async () => {
+        calls++;
+        return Response.json(release());
+    });
+    const local = request('app', {});
+    const status = await handle(
+        new Request(local.url, { headers: local.headers }),
+    );
+    assert.equal(status.status, 200);
+    const app = await status.json();
+    assert.equal(app.installed, false);
+    assert.equal(app.desktop, true);
+    assert.equal(app.version, '0.2.0');
+    assert.equal(app.canManage, true);
+    assert.equal(calls, 0);
+    const remote = request('app', {}, false);
+    const remoteStatus = await handle(
+        new Request(remote.url, { headers: remote.headers }),
+    );
+    assert.equal(remoteStatus.status, 200);
+    const remoteApp = await remoteStatus.json();
+    assert.equal(remoteApp.version, app.version);
+    assert.equal(remoteApp.canManage, false);
+    assert.equal(calls, 0);
+    assert.equal(
+        (await handle(request('app/updates/check', {}, false))).status,
+        403,
+    );
+    assert.equal(calls, 0);
+    const checked = await handle(request('app/updates/check', {}));
+    assert.equal(checked.status, 200);
+    assert.equal((await checked.json()).update.version, '0.3.0');
+    assert.equal(calls, 1);
+    assert.equal((await handle(request('app/update', {}))).status, 409);
+    assert.equal(calls, 1);
+    delete process.env.NEXTPLAY_DESKTOP;
+    const browser = await handle(
+        new Request(local.url, { headers: local.headers }),
+    );
+    assert.equal((await browser.json()).desktop, false);
+    assert.equal((await handle(request('app/updates/check', {}))).status, 409);
+});
+
 void test('interrupted, oversized and altered downloads never replace the verified installer', async (t) => {
     const dir = await isolated(t);
     const path = join(dir, 'installer.exe');
