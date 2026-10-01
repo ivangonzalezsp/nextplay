@@ -1,5 +1,7 @@
 # Actualización de Windows a la app de escritorio
 
+Esta transición se publicará como **Next Play 1.0.0**, con incremento `major` desde 0.9.1. Cambia el arranque de la instalación Windows del navegador a una ventana Electron; conserva el contrato de datos personales. El candidato de CI ensaya el salto 0.9.1 → 1.0.0, sin publicar la versión.
+
 El instalador mantiene su AppId, nombre y carpeta de programa. El supervisor existente abre el Electron incluido, conserva el inicio automático opcional y el acceso LAN, y cierra la ventana antes de reiniciar, actualizar o salir. Cerrar solo la ventana deja disponible el servidor en la bandeja; «Salir» en la bandeja detiene la aplicación.
 
 Los datos siguen en `%LOCALAPPDATA%\NextPlay`: `data/library.sqlite`, `settings.json` y `codex/`. No se copia el perfil de desarrollo. Electron guarda su sesión y preferencias en `electron/` dentro de la misma carpeta personal. El ayudante de actualización respalda también esa carpeta y `desktop-appearance.json`; el desinstalador conserva el perfil.

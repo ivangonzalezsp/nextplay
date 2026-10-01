@@ -64,7 +64,7 @@ jobs:
                   try {
                       $candidate = $manifest | ConvertFrom-Json
                       $parts = $candidate.version.Split('.')
-                      $candidate.version = $parts[0] + '.' + ([int]$parts[1] + 1) + '.0'
+                      $candidate.version = ([int]$parts[0] + 1).ToString() + '.0.0'
                       [IO.File]::WriteAllText('package.json', ($candidate | ConvertTo-Json -Depth 30))
                       $env:NEXTPLAY_BUILD_PYTHON = (Get-Command python).Source
                       npm.cmd run package:windows

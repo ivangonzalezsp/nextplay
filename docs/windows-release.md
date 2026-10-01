@@ -11,6 +11,8 @@ El token solo se entrega al último paso de publicación. En **Windows installer
 
 ## Publicar una versión
 
+La transición a la app Electron está prevista como **1.0.0**. Integra primero la PR de escritorio en `main` y después ejecuta **Release version** con `major`: desde 0.9.1 prepara 1.0.0. Los manifiestos y la sección fechada del changelog se actualizan en ese PR de release; los candidatos de CI no publican una versión.
+
 1. En cada PR, añade los cambios visibles para el usuario a `CHANGELOG.md` bajo `## [Unreleased]`, en `### Features` o `### Correcciones de errores`.
 2. Ejecuta manualmente **Release version** desde `main` y elige `patch`, `minor` o `major`. El workflow actualiza los manifiestos, promociona `Unreleased` a `## [X.Y.Z] - fecha` y abre un PR de release. Al hacer merge, crea la etiqueta `vX.Y.Z` y despacha **Windows installer** sobre ella.
 3. **Windows installer** ejecuta pruebas, tipos, compilación, HLTB con Python empaquetado, arranque del paquete y prueba del instalador. Después sube únicamente el EXE y `SHA256SUMS.txt` a la Release pública, usando la sección correspondiente de `CHANGELOG.md` como notas.
