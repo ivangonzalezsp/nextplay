@@ -990,7 +990,7 @@ export default function Home() {
     }
 
     return (
-        <div className="app-shell">
+        <div className={`app-shell${settingsOpen ? ' settings-open' : ''}`}>
             <a className="skip-link" href="#main">
                 {t('Ir al contenido ')}
             </a>
