@@ -134,6 +134,13 @@ if (!process.versions.electron) {
                 );
                 window = new BrowserWindow({
                     title: 'Next Play',
+                    icon: join(
+                        root,
+                        'dist/client',
+                        process.platform === 'win32'
+                            ? 'favicon.ico'
+                            : 'icon.png',
+                    ),
                     width: 1455,
                     height: 975,
                     minWidth: 420,

@@ -5,6 +5,13 @@ import { THEME_INIT_SCRIPT } from '@/lib/themes';
 export const metadata: Metadata = {
     title: 'Next Play · Tu próximo juego',
     description: 'Tu biblioteca, tus gustos y un juego para cada momento.',
+    icons: {
+        icon: [
+            { url: '/favicon.ico', sizes: 'any' },
+            { url: '/favicon.svg', type: 'image/svg+xml' },
+        ],
+        apple: '/icon.png',
+    },
 };
 export default function RootLayout({
     children,

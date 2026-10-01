@@ -15,6 +15,7 @@ $profileId = [BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.Get
 $mutex = New-Object Threading.Mutex($false, ('Local\NextPlay-' + $sid + '-' + $profileId))
 $ownsMutex = $false
 $tray = $null
+$trayIcon = $null
 $script:serverProcess = $null
 $script:runtime = $null
 $script:command = $null
@@ -73,7 +74,8 @@ try {
     }
     if (-not $script:runtime -or $script:runtime.pid -ne $script:serverProcess.Id) { throw 'Next Play ha tardado demasiado en arrancar.' }
     $tray = New-Object Windows.Forms.NotifyIcon
-    $tray.Icon = [Drawing.SystemIcons]::Application
+    $trayIcon = New-Object Drawing.Icon((Join-Path $appRoot 'dist\client\favicon.ico'))
+    $tray.Icon = $trayIcon
     $tray.Text = 'Next Play'
     $tray.Visible = $true
     $menu = New-Object Windows.Forms.ContextMenuStrip
@@ -120,6 +122,7 @@ try {
 } finally {
     if ($ownsMutex) { Close-Desktop }
     if ($tray) { $tray.Visible = $false; $tray.Dispose() }
+    if ($trayIcon) { $trayIcon.Dispose() }
     if ($ownsMutex) { $mutex.ReleaseMutex() }
     $mutex.Dispose()
 }

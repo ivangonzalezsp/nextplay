@@ -21,6 +21,7 @@ MinVersion=10.0.17763
 DisableDirPage=yes
 DisableProgramGroupPage=yes
 OutputBaseFilename=NextPlay-Setup-{#AppVersion}-x64
+SetupIconFile={#SourceDir}\dist\client\favicon.ico
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
@@ -29,6 +30,7 @@ RestartApplications=no
 Uninstallable=yes
 CreateUninstallRegKey=not IsSmokeTest
 UninstallDisplayName=Next Play
+UninstallDisplayIcon={app}\dist\client\favicon.ico
 SetupLogging=yes
 
 [Languages]
@@ -47,8 +49,8 @@ Type: filesandordirs; Name: "{app}\server"
 Type: filesandordirs; Name: "{app}\lib"
 
 [Icons]
-Name: "{userprograms}\Next Play"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\runtime\electron\electron.exe"; Check: not IsSmokeTest
-Name: "{userdesktop}\Next Play"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\runtime\electron\electron.exe"; Check: not IsSmokeTest
+Name: "{userprograms}\Next Play"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\dist\client\favicon.ico"; Check: not IsSmokeTest
+Name: "{userdesktop}\Next Play"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\dist\client\favicon.ico"; Check: not IsSmokeTest
 
 [Run]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; Description: "Abrir Next Play"; Flags: postinstall nowait skipifsilent runhidden; Check: not IsSmokeTest

@@ -174,6 +174,23 @@ try {
     await start();
     const html = await (await fetch(url)).text();
     assert.match(html, /Next Play/);
+    const icons = new Set([
+        '/favicon.svg',
+        ...Array.from(
+            html.matchAll(
+                /rel="(?:icon|apple-touch-icon)"[^>]*href="(\/[^"?#]+)"/g,
+            ),
+            (match) => match[1],
+        ),
+    ]);
+    for (const icon of icons) {
+        const response = await fetch(url + icon);
+        assert.equal(response.status, 200, `Missing packaged icon ${icon}`);
+        assert.deepEqual(
+            Buffer.from(await response.arrayBuffer()),
+            await readFile(join(app, 'dist/client', icon)),
+        );
+    }
     const assets = [...html.matchAll(/(?:src|href)="([^"?#]+\.(?:js|css))"/g)]
         .map((match) => match[1])
         .filter((path) => path.startsWith('/'));

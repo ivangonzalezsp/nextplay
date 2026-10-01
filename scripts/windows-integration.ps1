@@ -24,6 +24,7 @@ if ($Action -eq 'Startup') {
         $shortcut.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
         $shortcut.Arguments = '-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $appRoot 'scripts\windows-launcher.ps1') + '" -Background'
         $shortcut.WorkingDirectory = $appRoot
+        $shortcut.IconLocation = Join-Path $appRoot 'dist\client\favicon.ico'
         $shortcut.WindowStyle = 7
         $shortcut.Description = 'Next Play'
         $shortcut.Save()
