@@ -1,4 +1,4 @@
-import { readFile, mkdir } from 'node:fs/promises';
+import { access, readFile, mkdir } from 'node:fs/promises';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,6 +17,12 @@ const argument = (key: string, fallback: string) =>
         ? process.argv[process.argv.indexOf(key) + 1]
         : fallback;
 if (installed) {
+    try {
+        await access(join(root, 'runtime/electron/electron.exe'));
+        process.env.NEXTPLAY_DESKTOP = '1';
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
     if (!process.env.LOCALAPPDATA && !process.env.NEXTPLAY_USER_DIR)
         throw new Error('Windows no ha indicado tu carpeta de usuario.');
     process.env.NEXTPLAY_INSTALLED = '1';

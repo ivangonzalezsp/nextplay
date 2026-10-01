@@ -7,6 +7,7 @@ import { join, resolve } from 'node:path';
 import { networkInterfaces } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import type { AppStatus } from '../lib/desktop.ts';
+import { desktopAppearance } from '../lib/desktop.ts';
 import {
     AppError,
     atomicJson,
@@ -399,6 +400,23 @@ export async function manageApp(
             403,
         );
     const path = new URL(request.url).pathname;
+    if (path === '/api/app/appearance' && request.method === 'POST') {
+        requireInstalled();
+        let appearance;
+        try {
+            appearance = desktopAppearance(payload);
+        } catch {
+            throw new AppError(
+                translateMessage('Preferencias de escritorio no válidas.'),
+            );
+        }
+        return exclusive(async () => {
+            const destination = join(userDir(), 'desktop-appearance.json');
+            const previous = await readJson(destination, null);
+            if (previous === null) await atomicJson(destination, appearance);
+            return { migrated: true };
+        });
+    }
     if (path === '/api/connections' && request.method === 'PATCH') {
         return exclusive(async () => {
             await saveConnections(payload);

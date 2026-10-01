@@ -6,6 +6,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
+- El instalador Windows incluye Electron y abre Next Play en una ventana propia. Las actualizaciones conservan el perfil existente, respaldan los datos y preferencias de escritorio y recuperan idioma/color del navegador una sola vez.
 - Prototipo de escritorio con Electron: ventana propia, perfil de prueba aislado, servidor local gestionado por la app y apertura externa de páginas web y juegos de Steam.
 - Preparación de Next Play Server para Docker: servidor compilado sin Electron, volumen persistente, configuración Compose y workflow de distribución y validación nativa AMD64/ARM64 en PR o bajo demanda.
 - La ventana de escritorio abre 15 px más ancha y alta; idioma y color pasan de la cabecera a «General» en los ajustes, conservando las preferencias de cada dispositivo.

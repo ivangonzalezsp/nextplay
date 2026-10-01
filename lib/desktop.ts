@@ -1,3 +1,5 @@
+import { THEMES } from './themes.ts';
+
 export type AppStatus = {
     installed: boolean;
     desktop: boolean;
@@ -26,3 +28,16 @@ export type AppStatus = {
         error?: string;
     };
 };
+export function desktopAppearance(value: unknown): Record<string, string> {
+    if (!value || typeof value !== 'object' || Array.isArray(value))
+        throw new Error('Invalid desktop preferences.');
+    const result: Record<string, string> = {};
+    for (const [key, entry] of Object.entries(value)) {
+        if (key === 'language' && ['es', 'en'].includes(entry))
+            result[key] = entry;
+        else if (key === 'theme' && THEMES.some((theme) => theme.id === entry))
+            result[key] = entry;
+        else throw new Error('Invalid desktop preferences.');
+    }
+    return result;
+}

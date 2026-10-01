@@ -91,11 +91,11 @@ npm run desktop
 
 The prototype uses the installed **Node.js 24+** and downloads Electron on first launch if needed. It starts its own server on a free loopback port, opens one Next Play window without a menu bar, and stops that server when you close the window or use **Ctrl/Cmd+Q**. Editing, reload and zoom shortcuts remain available. The profile retains that port in `desktop-server.json` so language and palette persist between launches; if another process occupies it, startup fails without stopping that process. A second launch of the same profile focuses the existing window. Web links open in your browser; **Play** links open Steam.
 
-**Settings → General** shows the version and checks public releases. Automatic desktop installation is pending: the prototype cannot install the previous Windows package, which opens Next Play in a browser.
+**Settings → General** shows the version and checks public releases. The source prototype does not install updates; the Windows installer uses the existing updater and opens the bundled desktop app.
 
 The default profile is `work/desktop-profile/`: SQLite under `data/`, account settings in `settings.json`, a separate Codex session in `codex/`, and window preferences under `electron/`. It persists between launches and does not load the checkout's `.env.local`, library, or inherited credentials. Configure any accounts explicitly from the app; no accounts are copied automatically. To use another test profile, run `npm run desktop -- --profile "path/to/test-profile"`.
 
-This is a source-run prototype, validated on Windows, with a launcher designed for Windows, Linux, and macOS. Linux/macOS execution remains unverified. It does not replace the Windows installer: bundled runtimes, platform-specific installers, startup/LAN integrations, and desktop updates are pending. Use `npm run dev` for normal browser development.
+This source-run profile remains isolated. The Windows installer now bundles Electron and reuses the existing supervisor, personal folder, startup/LAN settings and updater; see [desktop upgrade](docs/desktop-upgrade.md). Linux/macOS execution and installers remain unverified. Use `npm run dev` for normal browser development.
 
 #### Enable AI recommendations (optional)
 
@@ -361,11 +361,11 @@ npm run desktop
 
 El prototipo utiliza el **Node.js 24+** instalado y descarga Electron en el primer arranque si hace falta. Inicia su propio servidor en un puerto loopback libre, abre una ventana de Next Play sin barra de menús y detiene ese servidor al cerrar la ventana o usar **Ctrl/Cmd+Q**. Se conservan los atajos de edición, recarga y zoom. El perfil conserva ese puerto en `desktop-server.json` para mantener idioma y paleta entre arranques; si otro proceso lo ocupa, el arranque falla sin detenerlo. Un segundo arranque del mismo perfil enfoca la ventana existente. Los enlaces web se abren en tu navegador y **Jugar** abre Steam.
 
-**Ajustes → General** muestra la versión y permite buscar publicaciones nuevas. La instalación automática de escritorio sigue pendiente: el prototipo no puede instalar el paquete Windows anterior, que abre Next Play en el navegador.
+**Ajustes → General** muestra la versión y permite buscar publicaciones nuevas. El prototipo desde código no instala actualizaciones; el instalador Windows reutiliza el actualizador existente y abre la app de escritorio incluida.
 
 El perfil predeterminado es `work/desktop-profile/`: SQLite bajo `data/`, cuentas en `settings.json`, una sesión separada de Codex en `codex/` y preferencias de ventana bajo `electron/`. Se conserva entre arranques y no carga `.env.local`, la biblioteca del checkout ni las credenciales heredadas. Configura las cuentas expresamente desde la app; no se copian automáticamente. Para otro perfil de prueba, ejecuta `npm run desktop -- --profile "ruta/al/perfil-de-prueba"`.
 
-Es un prototipo ejecutado desde el código fuente, validado en Windows, con un lanzador preparado para Windows, Linux y macOS. La ejecución en Linux/macOS sigue sin verificar. No sustituye al instalador de Windows: quedan pendientes los runtimes incluidos, instaladores por plataforma, integraciones de inicio automático/LAN y actualizaciones de escritorio. Usa `npm run dev` para el desarrollo habitual en navegador.
+Este perfil ejecutado desde el código fuente sigue aislado. El instalador Windows ya incluye Electron y reutiliza el supervisor, carpeta personal, ajustes de inicio/LAN y actualizador; consulta [la actualización de escritorio](docs/desktop-upgrade.md). La ejecución y los instaladores Linux/macOS siguen sin verificar. Usa `npm run dev` para el desarrollo habitual en navegador.
 
 ### 4. Activar recomendaciones con IA (opcional)
 

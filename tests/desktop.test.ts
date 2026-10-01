@@ -158,6 +158,7 @@ void test('administration uses the actual peer and rejects forged headers, origi
         'app/update',
         'app/import',
         'app/exit',
+        'app/appearance',
     ])
         assert.equal((await handle(request(path, {}, false))).status, 403);
     const crossSite = request('connections', {});
@@ -169,6 +170,51 @@ void test('administration uses the actual peer and rejects forged headers, origi
         400,
     );
     assert.deepEqual(await userSettings(), {});
+});
+
+void test('browser appearance migration accepts only local preferences once and preserves account settings', async (t) => {
+    const dir = await isolated(t);
+    await atomicJson(join(dir, 'settings.json'), {
+        onboardingComplete: true,
+        connections: { STEAM_API_KEY: '0123456789abcdef0123456789abcdef' },
+    });
+    const before = await readFile(join(dir, 'settings.json'), 'utf8');
+    for (const payload of [
+        { language: 'fr' },
+        { theme: 'other' },
+        { STEAM_API_KEY: 'secret' },
+        { theme: { value: 'cinema' } },
+    ])
+        assert.equal(
+            (await handle(request('app/appearance', payload))).status,
+            400,
+        );
+    assert.equal(
+        (
+            await handle(
+                request('app/appearance', {
+                    language: 'en',
+                    theme: 'cinema-violet',
+                }),
+            )
+        ).status,
+        200,
+    );
+    assert.equal(
+        (
+            await handle(
+                request('app/appearance', { language: 'es', theme: 'cinema' }),
+            )
+        ).status,
+        200,
+    );
+    assert.deepEqual(
+        JSON.parse(
+            await readFile(join(dir, 'desktop-appearance.json'), 'utf8'),
+        ),
+        { language: 'en', theme: 'cinema-violet' },
+    );
+    assert.equal(await readFile(join(dir, 'settings.json'), 'utf8'), before);
 });
 
 void test('connections are atomic, write-only, preserve omitted keys and require explicit removal', async (t) => {

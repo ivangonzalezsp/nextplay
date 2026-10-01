@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Next Play · Preferencias / Preferences</title>
+    <style>
+        body {
+            margin: 0;
+            background: #0b1018;
+            color: #edf3fa;
+            font: 16px system-ui;
+            display: grid;
+            min-height: 100vh;
+            place-items: center;
+        }
+        main {
+            max-width: 540px;
+            padding: 32px;
+        }
+        h1 {
+            font-size: 26px;
+        }
+        p {
+            line-height: 1.6;
+        }
+        button {
+            padding: 10px 16px;
+            font: inherit;
+            border: 0;
+            border-radius: 8px;
+            background: #74edca;
+            color: #092b25;
+            cursor: pointer;
+        }
+    </style>
+    <main>
+        <h1>Next Play</h1>
+        <p id="status">
+            Recuperando idioma y color para la nueva app…<br />Recovering
+            language and color for the new app…
+        </p>
+        <button id="retry" hidden>Reintentar / Retry</button>
+    </main>
+    <script src="/migrate-appearance.js"></script>
+</html>

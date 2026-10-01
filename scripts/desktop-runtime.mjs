@@ -2,6 +2,25 @@ import { fork } from 'node:child_process';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+export async function installedDesktop(profile) {
+    const record = JSON.parse(
+        await readFile(join(profile, 'runtime.json'), 'utf8'),
+    );
+    if (!/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(record.url))
+        throw new Error('Invalid installed server address.');
+    const response = await fetch(record.url + '/api/health', {
+        signal: AbortSignal.timeout(5000),
+    });
+    const health = await response.json();
+    if (
+        !response.ok ||
+        health.application !== 'nextplay' ||
+        health.instance !== record.instance
+    )
+        throw new Error('Installed server identity mismatch.');
+    return record;
+}
+
 export function desktopShortcut(input, platform = process.platform) {
     if (input.type !== 'keyDown' || input.alt) return null;
     if (input.key === 'F11') return 'fullscreen';

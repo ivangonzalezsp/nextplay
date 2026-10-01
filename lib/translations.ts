@@ -1507,4 +1507,5 @@ export const ENGLISH: Record<string, string> = {
     Empezado: 'Started',
     Reanudado: 'Resumed',
     Familiar: 'Family member',
+    'Preferencias de escritorio no válidas.': 'Invalid desktop preferences.',
 };

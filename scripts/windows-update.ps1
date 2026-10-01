@@ -13,7 +13,7 @@ try {
     if ($installer -ne $expected -or (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $control.digest) { throw 'El instalador no coincide con la descarga verificada.' }
     $backup = Join-Path $UserDir ('backups\before-' + $control.version + '-' + [DateTime]::UtcNow.ToString('yyyyMMdd-HHmmss'))
     New-Item -ItemType Directory -Path $backup -Force | Out-Null
-    foreach ($name in @('data', 'settings.json', 'codex')) {
+    foreach ($name in @('data', 'settings.json', 'codex', 'electron', 'desktop-appearance.json')) {
         $source = Join-Path $UserDir $name
         if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $backup -Recurse }
     }

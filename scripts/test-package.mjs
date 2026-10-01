@@ -89,6 +89,14 @@ function command(binary, args) {
     return result.stdout.trim();
 }
 assert.equal(command(node, ['--version']), 'v24.21.0');
+if ((await readdir(join(app, 'runtime'))).includes('electron')) {
+    assert.equal(
+        command(join(app, 'runtime/electron/electron.exe'), ['--version']),
+        'v44.5.1',
+    );
+    await readFile(join(app, 'runtime/electron/LICENSE'));
+    await readFile(join(app, 'runtime/electron/LICENSES.chromium.html'));
+}
 assert.match(
     command(join(app, 'runtime/codex/bin/codex.exe'), ['--version']),
     /0\.154\.0/,

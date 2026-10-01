@@ -6,9 +6,51 @@ import { pathToFileURL } from 'node:url';
 import {
     desktopLinkTarget,
     desktopShortcut,
+    installedDesktop,
     startDesktopServer,
     stopDesktopServer,
 } from '../scripts/desktop-runtime.mjs';
+import { createServer } from 'node:http';
+
+void test('installed desktop reuses the existing profile and rejects a different server identity', async (t) => {
+    const base = resolve('work/desktop-runtime-tests');
+    await mkdir(base, { recursive: true });
+    const profile = await mkdtemp(join(base, 'installed-'));
+    const server = createServer((_req, res) => {
+        res.setHeader('Content-Type', 'application/json');
+        res.end(
+            JSON.stringify({ application: 'nextplay', instance: 'actual' }),
+        );
+    });
+    await new Promise<void>((done) => server.listen(0, '127.0.0.1', done));
+    const port = (server.address() as { port: number }).port;
+    t.after(async () => {
+        await new Promise<void>((done, fail) =>
+            server.close((error) => (error ? fail(error) : done())),
+        );
+        await rm(profile, { recursive: true, force: true });
+    });
+    const record = {
+        url: `http://127.0.0.1:${port}`,
+        instance: 'actual',
+        version: '0.10.0',
+    };
+    await writeFile(join(profile, 'runtime.json'), JSON.stringify(record));
+    assert.deepEqual(await installedDesktop(profile), record);
+    await writeFile(
+        join(profile, 'runtime.json'),
+        JSON.stringify({ ...record, instance: 'forged' }),
+    );
+    await assert.rejects(installedDesktop(profile), /identity mismatch/);
+    await writeFile(
+        join(profile, 'runtime.json'),
+        JSON.stringify({ ...record, url: 'https://example.com' }),
+    );
+    await assert.rejects(
+        installedDesktop(profile),
+        /Invalid installed server address/,
+    );
+});
 
 void test('menu-free desktop keeps editing, reload and window shortcuts without stealing plain text', () => {
     const input = {

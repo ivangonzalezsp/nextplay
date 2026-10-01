@@ -1,13 +1,15 @@
 import { spawn } from 'node:child_process';
-import { access, mkdir } from 'node:fs/promises';
+import { access, mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
     desktopLinkTarget,
     desktopShortcut,
+    installedDesktop,
     startDesktopServer,
     stopDesktopServer,
 } from './desktop-runtime.mjs';
+import { desktopAppearance } from '../lib/desktop.ts';
 
 const entry = fileURLToPath(import.meta.url);
 const root = resolve(dirname(entry), '..');
@@ -20,9 +22,15 @@ if (!process.versions.electron) {
             'Ejecuta npm run build primero. Run npm run build first.',
         );
     }
-    // This prototype keeps the existing Node 24 server; packaged runtimes come later.
+    // Source runs use npm's Electron; Windows installs include its runtime.
     process.env.electron_config_cache ||= join(root, 'work/electron-cache');
-    const { default: electron } = await import('electron');
+    let electron;
+    try {
+        electron = join(root, 'runtime/electron/electron.exe');
+        await access(electron);
+    } catch {
+        ({ default: electron } = await import('electron'));
+    }
     const env = { ...process.env, NEXTPLAY_DESKTOP_NODE: process.execPath };
     delete env.ELECTRON_RUN_AS_NODE;
     const child = spawn(electron, [entry, ...process.argv.slice(2)], {
@@ -43,12 +51,16 @@ if (!process.versions.electron) {
 } else {
     const { app, BrowserWindow, dialog, Menu, session, shell } =
         await import('electron');
+    const installed = process.argv.includes('--installed');
+    const smokeTest = process.env.NEXTPLAY_INSTALLER_SMOKE_TEST === '1';
     const profileIndex = process.argv.indexOf('--profile');
     if (profileIndex !== -1 && !process.argv[profileIndex + 1])
         throw new Error('--profile requires a directory.');
     const profile = resolve(
         profileIndex === -1
-            ? join(root, 'work/desktop-profile')
+            ? installed
+                ? join(process.env.LOCALAPPDATA, 'NextPlay')
+                : join(root, 'work/desktop-profile')
             : process.argv[profileIndex + 1],
     );
     await mkdir(join(profile, 'electron'), { recursive: true });
@@ -61,7 +73,7 @@ if (!process.versions.electron) {
     let stopping = false;
     let stopped = false;
     app.on('before-quit', (event) => {
-        if (stopped || !server) return;
+        if (stopped || !server?.child) return;
         event.preventDefault();
         if (stopping) return;
         stopping = true;
@@ -72,6 +84,7 @@ if (!process.versions.electron) {
     });
     app.on('window-all-closed', () => app.quit());
     app.on('second-instance', () => {
+        if (smokeTest) return;
         if (window?.isMinimized()) window.restore();
         window?.show();
         window?.focus();
@@ -83,12 +96,14 @@ if (!process.versions.electron) {
             try {
                 const en = !app.getLocale().startsWith('es');
                 const label = (es, english) => (en ? english : es);
-                server = await startDesktopServer({
-                    root,
-                    profile,
-                    node: process.env.NEXTPLAY_DESKTOP_NODE,
-                });
-                server.child.once('close', () => {
+                server = installed
+                    ? await installedDesktop(profile)
+                    : await startDesktopServer({
+                          root,
+                          profile,
+                          node: process.env.NEXTPLAY_DESKTOP_NODE,
+                      });
+                server.child?.once('close', () => {
                     if (stopping) return;
                     dialog.showErrorBox(
                         'Next Play',
@@ -189,15 +204,103 @@ if (!process.versions.electron) {
                         );
                     else window.webContents[shortcut]();
                 });
-                window.once('ready-to-show', () => window.show());
+                window.once('ready-to-show', () => {
+                    if (!smokeTest) window.show();
+                });
                 await window.loadURL(server.url);
+                if (installed) {
+                    const desktopRecord = {
+                        pid: process.pid,
+                        instance: server.instance,
+                        url: server.url,
+                        version: server.version,
+                        electron: process.versions.electron,
+                        menu: Menu.getApplicationMenu() !== null,
+                    };
+                    const saveDesktop = async () => {
+                        const file = join(profile, 'desktop-window.json');
+                        await writeFile(
+                            file + '.tmp',
+                            JSON.stringify(desktopRecord),
+                        );
+                        await rename(file + '.tmp', file);
+                    };
+                    await saveDesktop();
+                    const appearanceFile = join(
+                        profile,
+                        'desktop-appearance.json',
+                    );
+                    try {
+                        await access(join(profile, 'settings.json'));
+                    } catch (error) {
+                        if (error.code !== 'ENOENT') throw error;
+                        await writeFile(appearanceFile, '{}', {
+                            flag: 'wx',
+                        }).catch((error) => {
+                            if (error.code !== 'EEXIST') throw error;
+                        });
+                    }
+                    const importAppearance = async () => {
+                        try {
+                            const appearance = desktopAppearance(
+                                JSON.parse(
+                                    await readFile(appearanceFile, 'utf8'),
+                                ),
+                            );
+                            const applied = await window.webContents
+                                .executeJavaScript(`(() => {
+                                const changed = !localStorage.getItem('nextplay-browser-preferences-imported');
+                                const preferences = ${JSON.stringify(appearance)};
+                                if (changed) for (const [key, value] of Object.entries(preferences)) localStorage.setItem('nextplay-' + key, value);
+                                localStorage.setItem('nextplay-browser-preferences-imported', '1');
+                                return {changed, language: localStorage.getItem('nextplay-language'), theme: localStorage.getItem('nextplay-theme')};
+                            })()`);
+                            if (applied.changed)
+                                await window.loadURL(server.url);
+                            desktopRecord.appearance = {
+                                language: applied.language,
+                                theme: applied.theme,
+                            };
+                            await saveDesktop();
+                            return true;
+                        } catch (error) {
+                            if (error.code === 'ENOENT') return false;
+                            throw error;
+                        }
+                    };
+                    if (!(await importAppearance())) {
+                        // The old browser alone can read its origin's localStorage.
+                        if (!smokeTest)
+                            await shell.openExternal(
+                                server.url + '/migrate-appearance.html',
+                            );
+                        let importing = false;
+                        const timer = setInterval(() => {
+                            if (importing) return;
+                            importing = true;
+                            void importAppearance()
+                                .then((done) => {
+                                    if (done) clearInterval(timer);
+                                })
+                                .catch((error) => {
+                                    clearInterval(timer);
+                                    console.error(error.message);
+                                })
+                                .finally(() => {
+                                    importing = false;
+                                });
+                        }, 1000);
+                        window.once('closed', () => clearInterval(timer));
+                    }
+                }
             } catch (error) {
                 console.error(error.message);
-                dialog.showErrorBox(
-                    'Next Play',
-                    'No se ha podido abrir Next Play. Revisa la terminal.\nCould not open Next Play. Check the terminal.',
-                );
-                if (server) {
+                if (!smokeTest)
+                    dialog.showErrorBox(
+                        'Next Play',
+                        'No se ha podido abrir Next Play. Revisa la terminal.\nCould not open Next Play. Check the terminal.',
+                    );
+                if (server?.child) {
                     stopping = true;
                     await stopDesktopServer(server.child);
                 }
