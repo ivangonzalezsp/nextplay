@@ -20,8 +20,8 @@ La API exige administración por conexión loopback real, valida los dos valores
 - [x] Actualización aislada desde el EXE público 0.9.1, con backup y conservación de biblioteca, juegos manuales, historiales, cuentas y ajustes.
 - [x] Ventana Electron empaquetada, recuperación de idioma/color, doble apertura, reinicio, actualización con la ventana abierta, salida y desinstalación.
 - [x] Instalación nueva aislada.
-- [x] CI preparada para generar el EXE candidato, probar la actualización desde 0.9.1 y la instalación nueva, sin publicación pública. El resultado de cada commit se comprueba en la PR.
+- [x] CI preparada para generar el EXE candidato, probar la actualización desde 0.9.1 y la instalación nueva, sin publicación pública. El workflow **Windows installer nightly** lo ejecuta cada noche sobre `main` y también admite lanzamiento manual; las PR solo ejecutan las comprobaciones de código y Docker.
 
 El ensayo local del 1 de octubre de 2026 usa el EXE público 0.9.1 y un candidato 0.10.0. Verifica SHA-256 del instalador anterior e integridad de SQLite, y sustituye la descarga de la versión futura por una transferencia offline al ayudante existente. También reinstala el candidato con Electron abierto para verificar el cierre antes de reemplazar archivos y el respaldo de sus preferencias. No prueba la descarga pública de una versión aún no publicada ni conecta cuentas reales.
 
-Los EXE candidatos de la PR usan una versión de ensayo superior; no cambian `package.json` en Git ni publican una release. Publicar exige el flujo de [Windows release](windows-release.md). Las pruebas locales no sustituyen una VM limpia ni validan instaladores para Linux/macOS.
+Los EXE candidatos de la nightly usan una versión de ensayo superior; no cambian `package.json` en Git ni publican una release. Publicar exige el flujo de [Windows release](windows-release.md). Las pruebas locales no sustituyen una VM limpia ni validan instaladores para Linux/macOS.
