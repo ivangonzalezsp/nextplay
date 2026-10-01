@@ -98,24 +98,32 @@ html[data-theme^='cinema'] .view-navigation [role='tablist'] {
     height: auto;
     gap: 4px;
 }
-html[data-theme^='cinema'] .view-navigation [role='tab'] {
+html[data-theme^='cinema']
+    .view-navigation
+    :is([role='tab'], .cinema-sidebar-settings) {
     flex: none;
     width: 100%;
     height: auto;
     min-height: 46px;
     white-space: normal;
     justify-content: start;
+    gap: 6px;
     padding: 11px 12px;
     font-size: 13px;
     border-radius: 8px;
     border-color: transparent;
+    background: transparent;
     color: #aebdcd;
     transition:
         background 0.2s ease,
         border-color 0.2s ease,
         color 0.2s ease;
 }
-html[data-theme^='cinema'] .view-navigation [role='tab'] svg {
+html[data-theme^='cinema']
+    .view-navigation
+    :is([role='tab'], .cinema-sidebar-settings)
+    svg {
+    flex: none;
     color: #8295a8;
     transition: color 0.2s ease;
 }
@@ -129,15 +137,25 @@ html[data-theme^='cinema']
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-html[data-theme^='cinema'] .view-navigation [role='tab']:hover {
+html[data-theme^='cinema']
+    .view-navigation
+    :is([role='tab'], .cinema-sidebar-settings):hover {
     border-color: rgba(var(--theme-accent-rgb), 0.16);
     background: rgba(var(--theme-accent-rgb), 0.06);
     color: var(--foreground);
 }
-html[data-theme^='cinema'] .view-navigation [role='tab']:hover svg {
+html[data-theme^='cinema']
+    .view-navigation
+    :is([role='tab'], .cinema-sidebar-settings):hover
+    svg {
     color: var(--theme-accent);
 }
-html[data-theme^='cinema'] .view-navigation [role='tab'][data-active] {
+html[data-theme^='cinema']
+    .view-navigation
+    :is(
+        [role='tab'][data-active],
+        .cinema-sidebar-settings[aria-pressed='true']
+    ) {
     background:
         linear-gradient(
             90deg,
@@ -152,7 +170,13 @@ html[data-theme^='cinema'] .view-navigation [role='tab'][data-active] {
     border-bottom-color: rgba(var(--theme-accent-rgb), 0.12);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
-html[data-theme^='cinema'] .view-navigation [role='tab'][data-active] svg {
+html[data-theme^='cinema']
+    .view-navigation
+    :is(
+        [role='tab'][data-active],
+        .cinema-sidebar-settings[aria-pressed='true']
+    )
+    svg {
     color: var(--theme-accent);
 }
 html[data-theme^='cinema'] .view-navigation [role='tab']::after {
@@ -183,25 +207,8 @@ html[data-theme^='cinema']
 }
 html[data-theme^='cinema'] .cinema-sidebar-footer {
     margin-top: auto;
-    padding-top: 14px;
-    border-top: 1px solid var(--border);
-}
-html[data-theme^='cinema'] .cinema-sidebar-settings {
-    justify-content: flex-start;
-    gap: 10px;
-    width: 100%;
-    min-height: 44px;
-    padding: 10px 12px;
-    color: #aebdcd;
-    font-size: 13px;
-}
-html[data-theme^='cinema'] .cinema-sidebar-settings:hover {
-    color: var(--foreground);
-    background: rgba(var(--theme-accent-rgb), 0.08);
-}
-html[data-theme^='cinema'] .cinema-sidebar-settings[aria-pressed='true'] {
-    color: var(--primary);
-    background: var(--secondary);
+    align-self: stretch;
+    padding: 14px 3px 0;
 }
 
 .settings-page {
@@ -224,10 +231,6 @@ html[data-theme^='cinema'] .cinema-sidebar-settings[aria-pressed='true'] {
     .settings-page .settings-sections {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-}
-html[data-theme^='cinema'] .cinema-sidebar-settings svg {
-    flex: none;
-    color: #8295a8;
 }
 html[data-theme^='cinema'] :is(.hud-quick-vibe-container, .hud-copilot-dock) {
     box-shadow: none;
