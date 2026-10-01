@@ -13,6 +13,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
+- La barra lateral de escritorio es más compacta y deja 24 px de separación con el contenido.
 - El prototipo Electron elimina la barra de menús, conserva los atajos de teclado y muestra la versión y la búsqueda de actualizaciones en los ajustes de la aplicación.
 
 ## [0.9.1] - 2026-09-30
