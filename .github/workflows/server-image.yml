@@ -36,7 +36,7 @@ jobs:
             - run: npm test
             - run: npm run typecheck
             - name: Lint affected code
-              run: npx --no-install oxlint scripts/start-desktop.mjs scripts/desktop-runtime.mjs scripts/start-server.ts scripts/package-windows.mjs scripts/test-package.mjs scripts/test-docker.mjs public/migrate-appearance.js server/store.ts server/desktop.ts components/settings/AppSetup.tsx components/settings/SettingsModal.tsx components/header/LanguageSelector.tsx lib/desktop.ts lib/translations.ts tests/desktop-runtime.test.ts tests/desktop.test.ts
+              run: npx --no-install oxlint scripts/start-desktop.mjs scripts/desktop-runtime.mjs scripts/start-server.ts scripts/package-windows.mjs scripts/test-package.mjs scripts/test-docker.mjs public/migrate-appearance.js server/store.ts server/desktop.ts server/api.ts components/settings/AppSetup.tsx components/settings/SettingsModal.tsx components/header/LanguageSelector.tsx components/ai/CodexControls.tsx components/ai/CopilotBar.tsx lib/desktop.ts lib/model.ts lib/translations.ts tests/desktop-runtime.test.ts tests/desktop.test.ts tests/codex.test.ts tests/flow.test.ts
             - run: npm run build
 
     windows-desktop:
