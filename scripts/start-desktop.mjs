@@ -6,6 +6,7 @@ import {
     desktopLinkTarget,
     desktopShortcut,
     installedDesktop,
+    showDesktopWindow,
     startDesktopServer,
     stopDesktopServer,
 } from './desktop-runtime.mjs';
@@ -85,9 +86,7 @@ if (!process.versions.electron) {
     app.on('window-all-closed', () => app.quit());
     app.on('second-instance', () => {
         if (smokeTest) return;
-        if (window?.isMinimized()) window.restore();
-        window?.show();
-        window?.focus();
+        showDesktopWindow(window);
     });
     if (!app.requestSingleInstanceLock()) {
         app.quit();
@@ -212,7 +211,7 @@ if (!process.versions.electron) {
                     else window.webContents[shortcut]();
                 });
                 window.once('ready-to-show', () => {
-                    if (!smokeTest) window.show();
+                    if (!smokeTest) showDesktopWindow(window);
                 });
                 await window.loadURL(server.url);
                 if (installed) {

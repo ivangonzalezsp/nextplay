@@ -8,10 +8,33 @@ import {
     desktopLinkTarget,
     desktopShortcut,
     installedDesktop,
+    showDesktopWindow,
     startDesktopServer,
     stopDesktopServer,
 } from '../scripts/desktop-runtime.mjs';
 import { createServer } from 'node:http';
+
+void test('opening the desktop restores a minimized window and raises hidden or background windows without creating another one', () => {
+    for (const minimized of [false, true]) {
+        const calls: string[] = [];
+        showDesktopWindow({
+            isDestroyed: () => false,
+            isMinimized: () => minimized,
+            restore: () => calls.push('restore'),
+            show: () => calls.push('show'),
+            moveTop: () => calls.push('moveTop'),
+            focus: () => calls.push('focus'),
+        });
+        assert.deepEqual(calls, [
+            ...(minimized ? ['restore'] : []),
+            'show',
+            'moveTop',
+            'focus',
+        ]);
+    }
+    showDesktopWindow(undefined);
+    showDesktopWindow({ isDestroyed: () => true });
+});
 
 void test(
     'Windows GUI launcher starts its sibling supervisor without a console and forwards background mode',
