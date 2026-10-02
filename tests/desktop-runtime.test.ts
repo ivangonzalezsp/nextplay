@@ -50,13 +50,23 @@ $record | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $PSScri
                 `result-${background ? 'True' : 'False'}.json`,
             );
             let record: { background: boolean; window: number } | undefined;
-            for (let attempt = 0; attempt < 100; attempt++) {
+            for (let attempt = 0; attempt < 600; attempt++) {
                 try {
                     record = JSON.parse(await readFile(path, 'utf8'));
                     break;
                 } catch {
                     await new Promise<void>((done) => setTimeout(done, 50));
                 }
+            }
+            if (!record) {
+                const diagnostic = spawnSync(
+                    'cscript.exe',
+                    ['//Nologo', join(dir, 'windows-launcher.vbs')],
+                    { windowsHide: true, timeout: 5000, encoding: 'utf8' },
+                );
+                assert.fail(
+                    `GUI launcher did not respond within 30s. Script host: ${diagnostic.status}; ${diagnostic.error ?? ''}; ${diagnostic.stdout}; ${diagnostic.stderr}`,
+                );
             }
             assert.deepEqual(record, { background, window: 0 });
         }
