@@ -21,6 +21,14 @@ export async function installedDesktop(profile) {
     return record;
 }
 
+export function showDesktopWindow(window) {
+    if (!window || window.isDestroyed()) return;
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.moveTop();
+    window.focus();
+}
+
 export function desktopShortcut(input, platform = process.platform) {
     if (input.type !== 'keyDown' || input.alt) return null;
     if (input.key === 'F11') return 'fullscreen';

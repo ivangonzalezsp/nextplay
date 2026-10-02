@@ -35,7 +35,7 @@ function Open-NextPlay {
         $electron = Join-Path $appRoot 'runtime\electron\electron.exe'
         if (Test-Path -LiteralPath $electron) {
             $desktopEntry = Join-Path $appRoot 'scripts\start-desktop.mjs'
-            Start-Process -FilePath $electron -ArgumentList ('"' + $desktopEntry + '" --installed --profile "' + $UserDir + '"') -WorkingDirectory $appRoot -WindowStyle Hidden | Out-Null
+            Start-Process -FilePath $electron -ArgumentList ('"' + $desktopEntry + '" --installed --profile "' + $UserDir + '"') -WorkingDirectory $appRoot | Out-Null
         } else { Start-Process -FilePath $record.url }
     } catch {
         [Windows.Forms.MessageBox]::Show('Next Play todavia no esta disponible. Espera unos segundos y vuelve a abrirla.', 'Next Play') | Out-Null

@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Ninguno.
+
+### Correcciones de errores
+
+- Abrir Next Play muestra y enfoca la ventana existente, restaura una ventana minimizada y recupera la ventana al permanecer en la bandeja sin iniciar otro servidor. Electron ya no se lanza oculto en Windows.
+
 ## [1.0.1] - 2026-10-02
 
 ### Features
