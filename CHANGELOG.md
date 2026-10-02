@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-10-02
+
 ### Features
 
 - Ninguno.
