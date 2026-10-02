@@ -10,6 +10,8 @@ Al abrir por primera vez una instalación anterior que contiene `settings.json`,
 
 La API exige administración por conexión loopback real, valida los dos valores y rechaza cualquier otro campo. La primera transferencia es idempotente y no modifica `settings.json` ni credenciales. No se intenta leer las carpetas privadas de otros navegadores.
 
+`localhost` y `127.0.0.1` guardan preferencias por separado. Si la página no encuentra idioma ni color, ofrece abrir la otra dirección local o continuar explícitamente con los valores predeterminados; no confirma una transferencia vacía automáticamente. Los valores antiguos que ya no admite la interfaz se normalizan a español y Menta, conservando el almacenamiento original del navegador. Los errores muestran el detalle devuelto por la API. Los accesos directos y el inicio automático usan `wscript.exe` para lanzar el supervisor oculto sin abrir Windows Terminal.
+
 ## To-do de aceptación
 
 - [x] Electron fijado por versión y SHA-256 oficial, con sus licencias incluidas.

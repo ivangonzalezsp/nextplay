@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Icono propio de Next Play en la ventana de escritorio, navegador, bandeja de Windows, accesos directos e instalador.
+
+### Correcciones de errores
+
+- El arranque Windows evita abrir un terminal; la migración de idioma/color permite recuperar el otro origen local, normaliza preferencias antiguas y muestra el motivo de los errores.
+
 ## [1.0.0] - 2026-10-01
 
 ### Features

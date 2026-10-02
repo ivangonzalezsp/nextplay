@@ -32,6 +32,14 @@
             color: #092b25;
             cursor: pointer;
         }
+        a {
+            color: #74edca;
+            display: block;
+            margin-bottom: 16px;
+        }
+        [hidden] {
+            display: none;
+        }
     </style>
     <main>
         <h1>Next Play</h1>
@@ -40,6 +48,12 @@
             language and color for the new app…
         </p>
         <button id="retry" hidden>Reintentar / Retry</button>
+        <a id="alternate" hidden
+            >Probar otra dirección local / Try the other local address</a
+        >
+        <button id="defaults" hidden>
+            Continuar con valores predeterminados / Continue with defaults
+        </button>
     </main>
-    <script src="/migrate-appearance.js"></script>
+    <script src="/migrate-appearance.js?v=2"></script>
 </html>

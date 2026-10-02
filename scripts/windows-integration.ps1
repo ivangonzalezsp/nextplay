@@ -21,9 +21,10 @@ if ($Action -eq 'Startup') {
     if ($Enabled -eq 'yes') {
         $shell = New-Object -ComObject WScript.Shell
         $shortcut = $shell.CreateShortcut($shortcutPath)
-        $shortcut.TargetPath = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-        $shortcut.Arguments = '-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "' + (Join-Path $appRoot 'scripts\windows-launcher.ps1') + '" -Background'
+        $shortcut.TargetPath = Join-Path $env:SystemRoot 'System32\wscript.exe'
+        $shortcut.Arguments = '"' + (Join-Path $appRoot 'scripts\windows-launcher.vbs') + '" -Background'
         $shortcut.WorkingDirectory = $appRoot
+        $shortcut.IconLocation = Join-Path $appRoot 'dist\client\favicon.ico'
         $shortcut.WindowStyle = 7
         $shortcut.Description = 'Next Play'
         $shortcut.Save()

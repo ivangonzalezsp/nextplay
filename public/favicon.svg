@@ -1,1 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="16" fill="#12231d"/><path d="M25 20 43 32 25 44Z" fill="#92e6b9"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="background" x2="1" y2="1">
+      <stop stop-color="#202c35"/>
+      <stop offset="1" stop-color="#0b131b"/>
+    </linearGradient>
+    <linearGradient id="card" x2="1" y2="1">
+      <stop stop-color="#b4fbd5"/>
+      <stop offset="1" stop-color="#36cba5"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="248" height="248" rx="56" fill="url(#background)"/>
+  <rect x="5" y="5" width="246" height="246" rx="55" fill="none" stroke="#9aeac4" stroke-opacity=".18" stroke-width="2"/>
+  <rect x="43" y="47" width="145" height="151" rx="30" transform="rotate(-12 115.5 122.5)" fill="#8ce8ba" fill-opacity=".24"/>
+  <rect x="60" y="68" width="145" height="151" rx="30" fill="#050d13" fill-opacity=".35"/>
+  <rect x="60" y="60" width="145" height="151" rx="30" fill="url(#card)"/>
+  <path d="M101 103a5 5 0 0 1 8-4l43 29a6 6 0 0 1 0 10l-43 29a5 5 0 0 1-8-4Z" fill="#102a2b"/>
+  <rect x="165" y="99" width="11" height="68" rx="5.5" fill="#102a2b"/>
+  <path d="m203 31 5 13 13 5-13 5-5 13-5-13-13-5 13-5Z" fill="#e2fff0"/>
+</svg>

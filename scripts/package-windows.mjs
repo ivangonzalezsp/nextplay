@@ -224,6 +224,7 @@ if (!process.argv.includes('--reuse-stage')) {
         'library-mcp.ts',
         'hltb.py',
         'windows-launcher.ps1',
+        'windows-launcher.vbs',
         'windows-integration.ps1',
         'windows-update.ps1',
         'windows-install-check.ps1',
