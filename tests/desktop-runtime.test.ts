@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -11,6 +12,56 @@ import {
     stopDesktopServer,
 } from '../scripts/desktop-runtime.mjs';
 import { createServer } from 'node:http';
+
+void test(
+    'Windows GUI launcher starts its sibling supervisor without a console and forwards background mode',
+    { skip: process.platform !== 'win32' },
+    async (t) => {
+        const base = resolve('work/desktop-runtime-tests');
+        await mkdir(base, { recursive: true });
+        const dir = await mkdtemp(join(base, 'launcher with spaces-'));
+        t.after(() => rm(dir, { recursive: true, force: true }));
+        await cp(
+            'scripts/windows-launcher.vbs',
+            join(dir, 'windows-launcher.vbs'),
+        );
+        await writeFile(
+            join(dir, 'windows-launcher.ps1'),
+            `param([switch] $Background)
+$record = @{background=[bool]$Background;window=(Get-Process -Id $PID).MainWindowHandle.ToInt64()}
+$record | ConvertTo-Json -Compress | Set-Content -LiteralPath (Join-Path $PSScriptRoot ('result-' + [bool]$Background + '.json'))`,
+        );
+        for (const background of [false, true]) {
+            const result = spawnSync(
+                'wscript.exe',
+                [
+                    join(dir, 'windows-launcher.vbs'),
+                    ...(background ? ['-Background'] : []),
+                ],
+                { windowsHide: true, timeout: 5000 },
+            );
+            assert.equal(
+                result.status,
+                0,
+                String(result.error ?? result.stderr),
+            );
+            const path = join(
+                dir,
+                `result-${background ? 'True' : 'False'}.json`,
+            );
+            let record: { background: boolean; window: number } | undefined;
+            for (let attempt = 0; attempt < 100; attempt++) {
+                try {
+                    record = JSON.parse(await readFile(path, 'utf8'));
+                    break;
+                } catch {
+                    await new Promise<void>((done) => setTimeout(done, 50));
+                }
+            }
+            assert.deepEqual(record, { background, window: 0 });
+        }
+    },
+);
 
 void test('installed desktop reuses the existing profile and rejects a different server identity', async (t) => {
     const base = resolve('work/desktop-runtime-tests');

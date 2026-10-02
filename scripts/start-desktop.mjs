@@ -279,7 +279,9 @@ if (!process.versions.electron) {
                         // The old browser alone can read its origin's localStorage.
                         if (!smokeTest)
                             await shell.openExternal(
-                                server.url + '/migrate-appearance.html',
+                                server.url +
+                                    '/migrate-appearance.html?v=' +
+                                    encodeURIComponent(server.version),
                             );
                         let importing = false;
                         const timer = setInterval(() => {

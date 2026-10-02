@@ -49,11 +49,11 @@ Type: filesandordirs; Name: "{app}\server"
 Type: filesandordirs; Name: "{app}\lib"
 
 [Icons]
-Name: "{userprograms}\Next Play"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\dist\client\favicon.ico"; Check: not IsSmokeTest
-Name: "{userdesktop}\Next Play"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; WorkingDir: "{app}"; IconFilename: "{app}\dist\client\favicon.ico"; Check: not IsSmokeTest
+Name: "{userprograms}\Next Play"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\scripts\windows-launcher.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\dist\client\favicon.ico"; Check: not IsSmokeTest
+Name: "{userdesktop}\Next Play"; Filename: "{sys}\wscript.exe"; Parameters: """{app}\scripts\windows-launcher.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\dist\client\favicon.ico"; Check: not IsSmokeTest
 
 [Run]
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File ""{app}\scripts\windows-launcher.ps1"""; Description: "Abrir Next Play"; Flags: postinstall nowait skipifsilent runhidden; Check: not IsSmokeTest
+Filename: "{sys}\wscript.exe"; Parameters: """{app}\scripts\windows-launcher.vbs"""; Description: "Abrir Next Play"; Flags: postinstall nowait skipifsilent runhidden; Check: not IsSmokeTest
 
 [Code]
 function IsSmokeTest: Boolean;
