@@ -66,6 +66,14 @@ docker compose up -d --force-recreate
 
 La copia con el servidor detenido incluye SQLite y sus archivos auxiliares consistentemente. Para volver a una imagen anterior, restaura también la copia si hubo una migración de esquema.
 
+Si tienes el código fuente y Node.js 24 o posterior con npm en el host, puedes ejecutar desde el checkout:
+
+```sh
+npm run update:docker
+```
+
+El comando compila la última revisión de `main` desde GitHub como `nextplay-server:latest` usando Docker, antes de detener el servicio. Después respalda los datos en una carpeta nueva `nextplay-backup-*` y recrea `nextplay` conservando el volumen y la configuración. Requiere Internet y capacidad para compilar en el servidor; `main` puede incluir cambios todavía no publicados en una release. Si la compilación falla, el servidor sigue funcionando; si la copia falla, no se recrea el servicio y permanece parado. No requiere `npm install` ni Git en el host. En PowerShell usa `npm.cmd`. Si Compose está en otra carpeta, ejecuta `npm run update:docker -- /ruta/compose`, conservando la carpeta original para usar el mismo volumen.
+
 ### Migrar desde el checkout
 
 Detén el servidor anterior y conserva una copia completa. En una instalación Docker nueva, creada con `docker compose up -d` y detenida con `docker compose stop`, copia el contenido del directorio de datos:
@@ -103,5 +111,7 @@ Extract the artifact for your server and run `docker load --input IMAGE.tar.gz`,
 The volume persists `/var/lib/nextplay`, including `data/library.sqlite`, caches, `settings.json` and `codex/`. Recreating the container preserves it; `docker compose down --volumes` deletes it. Mount your existing `.env.local` read-only at `/app/.env.local` using the override above for Steam/IGDB credentials; saved settings take precedence. Connect ChatGPT with `docker compose exec nextplay codex login --device-auth`, following [OpenAI's headless authentication instructions](https://learn.chatgpt.com/docs/auth#login-on-headless-devices). No API key is required. Administration remains restricted to actual loopback peers inside the container.
 
 Before updating, stop the service and copy `/var/lib/nextplay` to a new backup directory with `docker compose cp`. Load the new image and run `docker compose up -d --force-recreate`, keeping the volume and configuration. For migration, stop/back up the checkout, copy its data directory into `/var/lib/nextplay/data`, copy user settings into `/var/lib/nextplay/settings.json` when applicable, fix ownership to `node:node` and sign in again. Originals are not modified automatically.
+
+With the source checkout and Node.js 24+ / npm on the host, run `npm run update:docker` (PowerShell: `npm.cmd`). Docker builds the latest GitHub `main` as `nextplay-server:latest` before stopping the server, then backs up to a new `nextplay-backup-*` directory and recreates the service, preserving its volume and configuration. Internet and server build capacity are required; main may include unreleased changes. No npm installation or host Git is needed. Build failures leave the running server alone; backup failures abort recreation and leave the service stopped. For Compose in another directory, use `npm run update:docker -- /path/compose`, keeping the original directory to preserve the same volume.
 
 Maintainers build with `docker build --tag nextplay-server:latest .` and verify with `node scripts/test-docker.mjs nextplay-server:latest`. The isolated synthetic check covers assets, runtimes, read-only MCP, local administration and preservation after recreation without login or live recommendations. CI runs tests, types, focused lint and build on Windows/Linux/macOS, followed by native AMD64/ARM64 container checks. Node checks do not verify an Electron window or installer on Linux/macOS. Successful native container runs are required before claiming image validation.
