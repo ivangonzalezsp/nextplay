@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-10-02
+
 ### Features
 
 - Icono propio de Next Play en la ventana de escritorio, navegador, bandeja de Windows, accesos directos e instalador.
