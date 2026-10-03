@@ -1166,6 +1166,8 @@ export default function Home() {
                                 <Button
                                     variant="ghost"
                                     className="cinema-sidebar-settings"
+                                    aria-label={t('Ajustes')}
+                                    title={t('Ajustes')}
                                     aria-pressed={settingsOpen}
                                     onClick={() => setSettingsOpen(true)}
                                 >
@@ -1254,7 +1256,7 @@ export default function Home() {
                                 aria-labelledby="in-progress-heading"
                                 className="hud-shelf-section cinema-in-progress-shelf"
                             >
-                                <div className="flex items-center justify-between mb-3">
+                                <div className="cinema-in-progress-heading flex items-center justify-between mb-3">
                                     <h3
                                         id="in-progress-heading"
                                         className="text-sm font-bold text-foreground flex items-center gap-2"
