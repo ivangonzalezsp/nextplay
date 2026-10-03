@@ -12,6 +12,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
+- El instalador Windows actualiza Codex CLI a 0.160.0 para admitir GPT-6.1 Sol, GPT-6 Sol y GPT-6 Luna con sus esfuerzos compatibles.
 - Las tarjetas de juegos en curso se adaptan al móvil con una columna, portadas de altura limitada, títulos legibles y controles táctiles sin recortes.
 - Las portadas de la biblioteca mantienen su tamaño al desplegar logros y la navegación móvil muestra todas las secciones y Ajustes en una cuadrícula compacta.
 
