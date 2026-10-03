@@ -10,7 +10,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
-- Ninguno.
+- Las tarjetas de juegos en curso se adaptan al móvil con una columna, portadas de altura limitada, títulos legibles y controles táctiles sin recortes.
+- Las portadas de la biblioteca mantienen su tamaño al desplegar logros y la navegación móvil muestra todas las secciones y Ajustes en una cuadrícula compacta.
 
 ## [1.0.2] - 2026-10-02
 
