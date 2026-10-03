@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-10-03
+
 ### Features
 
 - Comando `npm run update:docker` para compilar la última revisión de `main`, respaldar los datos y actualizar el servidor Docker sin indicar versión.
