@@ -27,6 +27,7 @@ import {
     type CodexSettings,
     type RecommendationEngine,
     type Snapshot,
+    codexSettingsAvailable,
 } from '@/lib/model';
 
 export function SettingsModal({
@@ -168,6 +169,7 @@ export function SettingsModal({
                         <CodexControls
                             idPrefix="settings"
                             value={selectedCodex}
+                            catalog={state?.setup.codexModels}
                             onChange={setDraftCodex}
                             disabled={!!busy}
                         />
@@ -182,7 +184,14 @@ export function SettingsModal({
                     </Button>
                     <Button
                         type="button"
-                        disabled={!!busy}
+                        disabled={
+                            !!busy ||
+                            (selectedEngine === 'codex' &&
+                                !codexSettingsAvailable(
+                                    selectedCodex,
+                                    state?.setup.codexModels,
+                                ))
+                        }
                         onClick={async () => {
                             if (await onSaveAI(selectedEngine, selectedCodex))
                                 handleOpenChange(false);

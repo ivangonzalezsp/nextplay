@@ -10,16 +10,22 @@ import {
 } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { delimiter, isAbsolute, join, resolve } from 'node:path';
+import { createInterface } from 'node:readline';
 import { AppError, config, dataDir } from './store.ts';
 import { log, logError } from '../lib/log.ts';
 import type {
     CodexSettings,
+    CodexModel,
     ConversationMode,
     Filters,
     Game,
     State,
 } from '../lib/model.ts';
-import { DEFAULT_CODEX_SETTINGS, inLibrary } from '../lib/model.ts';
+import {
+    CODEX_EFFORTS,
+    DEFAULT_CODEX_SETTINGS,
+    inLibrary,
+} from '../lib/model.ts';
 import { buildTasteProfile } from '../lib/tastes.ts';
 import { openDatabase, replaceGames } from './database.ts';
 import { catalogGame, catalogIndex } from './library.ts';
@@ -359,6 +365,158 @@ export async function runProcess(
         child.stdin.end(input);
     });
 }
+export async function codexModels(): Promise<CodexModel[] | null> {
+    try {
+        const binary = await codexBinary();
+        return await new Promise<CodexModel[]>((resolveModels, reject) => {
+            const child = trackCodexProcess(
+                spawn(binary, ['app-server', '-c', 'mcp_servers={}'], {
+                    env: codexEnv(),
+                    shell: false,
+                    windowsHide: true,
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                }),
+            );
+            const lines = createInterface({ input: child.stdout });
+            const catalog: CodexModel[] = [];
+            const cursors = new Set<string>();
+            let done = false;
+            let requestId = 2;
+            const finish = (error?: Error) => {
+                if (done) return;
+                done = true;
+                clearTimeout(timer);
+                lines.close();
+                child.stdin.end();
+                child.kill();
+                if (error) reject(error);
+                else resolveModels(catalog);
+            };
+            // This bounds catalog discovery only, never an inference turn.
+            const timer = setTimeout(
+                () => finish(new Error('Codex catalog timeout')),
+                10_000,
+            );
+            const send = (message: object) =>
+                child.stdin.write(JSON.stringify(message) + '\n');
+            const list = (cursor?: string) =>
+                send({
+                    id: requestId,
+                    method: 'model/list',
+                    params: {
+                        limit: 100,
+                        includeHidden: false,
+                        ...(cursor ? { cursor } : {}),
+                    },
+                });
+            child.on('error', () =>
+                finish(new Error('Codex catalog unavailable')),
+            );
+            child.stdin.on('error', () =>
+                finish(new Error('Codex catalog unavailable')),
+            );
+            child.on('close', () => finish(new Error('Codex catalog closed')));
+            child.stderr.resume();
+            lines.on('line', (line) => {
+                if (done) return;
+                try {
+                    const message = JSON.parse(line);
+                    if (
+                        message.id !== 0 &&
+                        message.id !== 1 &&
+                        message.id !== requestId
+                    )
+                        return;
+                    if (message.error)
+                        throw new Error('Codex catalog rejected');
+                    if (message.id === 0) {
+                        send({ method: 'initialized', params: {} });
+                        send({
+                            id: 1,
+                            method: 'account/read',
+                            params: { refreshToken: false },
+                        });
+                        return;
+                    }
+                    if (message.id === 1) {
+                        if (message.result?.account?.type !== 'chatgpt')
+                            return finish();
+                        list();
+                        return;
+                    }
+                    if (!Array.isArray(message.result?.data))
+                        throw new Error('Invalid Codex catalog');
+                    for (const entry of message.result.data) {
+                        if (!entry || entry.hidden) continue;
+                        if (
+                            typeof entry.model !== 'string' ||
+                            !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}$/.test(
+                                entry.model,
+                            ) ||
+                            typeof entry.displayName !== 'string' ||
+                            !Array.isArray(entry.supportedReasoningEfforts)
+                        )
+                            throw new Error('Invalid Codex model');
+                        const efforts = CODEX_EFFORTS.filter((effort) =>
+                            entry.supportedReasoningEfforts.some(
+                                (
+                                    supported: {
+                                        reasoningEffort?: string;
+                                    } | null,
+                                ) => supported?.reasoningEffort === effort,
+                            ),
+                        );
+                        if (
+                            !efforts.length ||
+                            !efforts.includes(entry.defaultReasoningEffort)
+                        )
+                            throw new Error('Invalid Codex efforts');
+                        if (
+                            !catalog.some(
+                                (model) => model.model === entry.model,
+                            )
+                        )
+                            catalog.push({
+                                model: entry.model,
+                                displayName: entry.displayName.slice(0, 200),
+                                efforts,
+                                defaultEffort: entry.defaultReasoningEffort,
+                            });
+                    }
+                    const cursor = message.result.nextCursor;
+                    if (cursor == null) return finish();
+                    if (
+                        typeof cursor !== 'string' ||
+                        !cursor ||
+                        cursors.has(cursor) ||
+                        catalog.length > 500
+                    )
+                        throw new Error('Invalid Codex cursor');
+                    cursors.add(cursor);
+                    requestId++;
+                    list(cursor);
+                } catch {
+                    finish(new Error('Codex catalog unavailable'));
+                }
+            });
+            send({
+                id: 0,
+                method: 'initialize',
+                params: {
+                    clientInfo: {
+                        name: 'nextplay',
+                        title: 'Next Play',
+                        version: process.env.NEXTPLAY_VERSION ?? '0.0.0',
+                    },
+                },
+            });
+        });
+    } catch {
+        // Never return account details, tokens or raw protocol errors to the UI.
+        return null;
+    }
+}
+
 export async function codexStatus() {
     try {
         const message = await runProcess(['login', 'status'], '', 10_000);
@@ -366,9 +524,11 @@ export async function codexStatus() {
             ? {
                   codex: true,
                   codexMessage: translateMessage('Conectado con ChatGPT'),
+                  codexModels: await codexModels(),
               }
             : {
                   codex: false,
+                  codexModels: [],
                   codexMessage: process.env.NEXTPLAY_INSTALLED
                       ? translateMessage(
                             'Conecta ChatGPT desde Configurar cuentas y aplicación.',
@@ -378,7 +538,11 @@ export async function codexStatus() {
                         ),
               };
     } catch (e) {
-        return { codex: false, codexMessage: (e as Error).message };
+        return {
+            codex: false,
+            codexMessage: (e as Error).message,
+            codexModels: [],
+        };
     }
 }
 const textSchema = { type: 'string' };

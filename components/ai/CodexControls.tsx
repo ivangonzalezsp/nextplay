@@ -5,6 +5,8 @@ import { useLanguage } from '@/components/header/LanguageSelector';
 import {
     CODEX_MODELS,
     codexEffortsForModel,
+    codexSettingsAvailable,
+    type CodexModel,
     type CodexSettings,
 } from '@/lib/model';
 import {
@@ -20,38 +22,42 @@ export function CodexControls({
     onChange,
     idPrefix,
     disabled = false,
+    catalog,
 }: {
     value: CodexSettings;
     onChange: (settings: CodexSettings) => void;
     idPrefix: string;
     disabled?: boolean;
+    catalog?: CodexModel[] | null;
 }) {
     useLanguage();
-    const models = [
-        ...CODEX_MODELS.map((model) => ({ ...model, label: t(model.label) })),
-        ...(CODEX_MODELS.some((model) => model.value === value.model)
-            ? []
-            : [
-                  {
-                      value: value.model,
-                      label: value.model + t(' · configurado'),
-                  },
-              ]),
-    ];
-    const efforts = codexEffortsForModel(value.model).map((effort) => ({
+    const models = (catalog ?? []).map((entry) => ({
+        value: entry.model,
+        label: t(
+            CODEX_MODELS.find((model) => model.value === entry.model)?.label ??
+                entry.displayName,
+        ),
+    }));
+    const efforts = (
+        catalog ? codexEffortsForModel(value.model, catalog) : []
+    ).map((effort) => ({
         value: effort,
         label: t(
-            effort === 'low'
-                ? 'Bajo · más rápido'
-                : effort === 'medium'
-                  ? 'Medio · equilibrado'
-                  : effort === 'high'
-                    ? 'Alto · más razonado'
-                    : effort === 'xhigh'
-                      ? 'Muy alto'
-                      : effort === 'max'
-                        ? 'Máximo'
-                        : 'Ultra',
+            effort === 'none'
+                ? 'Sin razonamiento'
+                : effort === 'minimal'
+                  ? 'Mínimo'
+                  : effort === 'low'
+                    ? 'Bajo · más rápido'
+                    : effort === 'medium'
+                      ? 'Medio · equilibrado'
+                      : effort === 'high'
+                        ? 'Alto · más razonado'
+                        : effort === 'xhigh'
+                          ? 'Muy alto'
+                          : effort === 'max'
+                            ? 'Máximo'
+                            : 'Ultra',
         ),
     }));
     return (
@@ -64,18 +70,26 @@ export function CodexControls({
                     {t('Modelo de Codex ')}
                 </label>
                 <Select
-                    value={value.model}
-                    disabled={disabled}
+                    value={
+                        models.some((model) => model.value === value.model)
+                            ? value.model
+                            : null
+                    }
+                    disabled={disabled || !models.length}
                     items={models}
                     onValueChange={(model) => {
-                        if (!model) return;
+                        const selected = catalog?.find(
+                            (entry) => entry.model === model,
+                        );
+                        if (!model || !selected) return;
                         onChange({
                             model,
-                            effort: codexEffortsForModel(model).includes(
-                                value.effort,
-                            )
+                            effort: codexEffortsForModel(
+                                model,
+                                catalog,
+                            ).includes(value.effort)
                                 ? value.effort
-                                : 'medium',
+                                : selected.defaultEffort,
                         });
                     }}
                 >
@@ -83,7 +97,9 @@ export function CodexControls({
                         id={`${idPrefix}-model`}
                         className="w-full min-w-0 bg-black/30"
                     >
-                        <SelectValue />
+                        <SelectValue
+                            placeholder={t('Elige un modelo disponible')}
+                        />
                     </SelectTrigger>
                     <SelectContent>
                         {models.map((model) => (
@@ -102,8 +118,12 @@ export function CodexControls({
                     {t('Esfuerzo de Razonamiento ')}
                 </label>
                 <Select
-                    value={value.effort}
-                    disabled={disabled}
+                    value={
+                        efforts.some((effort) => effort.value === value.effort)
+                            ? value.effort
+                            : null
+                    }
+                    disabled={disabled || !efforts.length}
                     items={efforts}
                     onValueChange={(effort) => {
                         if (effort)
@@ -117,7 +137,9 @@ export function CodexControls({
                         id={`${idPrefix}-effort`}
                         className="w-full min-w-0 bg-black/30"
                     >
-                        <SelectValue />
+                        <SelectValue
+                            placeholder={t('Elige un esfuerzo disponible')}
+                        />
                     </SelectTrigger>
                     <SelectContent>
                         {efforts.map((effort) => (
@@ -128,6 +150,19 @@ export function CodexControls({
                     </SelectContent>
                 </Select>
             </div>
+            {(!catalog ||
+                !catalog.length ||
+                !codexSettingsAvailable(value, catalog)) && (
+                <output className="col-span-full text-xs text-muted-foreground">
+                    {t(
+                        !catalog
+                            ? 'No se ha podido consultar los modelos de Codex. Recarga o vuelve a conectar ChatGPT.'
+                            : !catalog.length
+                              ? 'No hay modelos disponibles en esta sesión. Conecta o revisa tu cuenta de ChatGPT.'
+                              : 'La selección guardada no aparece en el catálogo actual de Codex. Elige otro modelo o esfuerzo.',
+                    )}
+                </output>
+            )}
         </div>
     );
 }

@@ -99,7 +99,7 @@ if ((await readdir(join(app, 'runtime'))).includes('electron')) {
 }
 assert.match(
     command(join(app, 'runtime/codex/bin/codex.exe'), ['--version']),
-    /0\.154\.0/,
+    /^codex-cli 0\.160\.0$/,
 );
 assert.equal(
     command(join(app, 'runtime/python/python.exe'), [

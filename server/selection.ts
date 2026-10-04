@@ -47,6 +47,7 @@ export function parseEngine(value: unknown): RecommendationEngine {
 export function parseCodexSettings(
     value: unknown,
     fallback: CodexSettings,
+    catalog?: import('../lib/model.ts').CodexModel[] | null,
 ): CodexSettings {
     const v = (value === undefined ? fallback : value) as {
         model?: unknown;
@@ -57,7 +58,12 @@ export function parseCodexSettings(
     if (
         !codexModelPattern.test(model) ||
         !CODEX_EFFORTS.includes(effort) ||
-        !codexEffortsForModel(model).includes(effort)
+        (!(
+            catalog === null &&
+            model === fallback.model &&
+            effort === fallback.effort
+        ) &&
+            !codexEffortsForModel(model, catalog).includes(effort))
     )
         throw new AppError(
             translateMessage('El modelo o el esfuerzo de Codex no es válido.'),

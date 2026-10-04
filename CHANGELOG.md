@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Los selectores de Codex en el chat y Ajustes consultan los modelos y esfuerzos del catálogo de la sesión conectada, y avisan si una selección guardada ya no está disponible.
+
+### Correcciones de errores
+
+- El instalador Windows actualiza Codex CLI a 0.160.0 para admitir GPT-6.1 Sol, GPT-6 Sol y GPT-6 Luna con sus esfuerzos compatibles.
+
 ## [1.0.3] - 2026-10-03
 
 ### Features

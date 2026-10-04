@@ -332,7 +332,7 @@ if (!process.argv.includes('--reuse-stage')) {
     ]);
     for (const name of ['LICENSE', 'NOTICE']) {
         const license = await fetch(
-            `https://raw.githubusercontent.com/openai/codex/rust-v0.154.0/${name}`,
+            `https://raw.githubusercontent.com/openai/codex/rust-v0.160.0/${name}`,
             { signal: AbortSignal.timeout(30_000) },
         );
         if (!license.ok) throw new Error('Codex license unavailable.');
@@ -352,7 +352,7 @@ if (!process.argv.includes('--reuse-stage')) {
                 node: '24.21.0',
                 electron: '44.5.1',
                 python: '3.13.15',
-                codex: '0.154.0',
+                codex: '0.160.0',
                 hltb: '1.0.23',
             },
             null,

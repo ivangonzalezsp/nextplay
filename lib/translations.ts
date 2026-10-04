@@ -1,5 +1,15 @@
 // English UI and service messages; Spanish source text remains the fallback.
 export const ENGLISH: Record<string, string> = {
+    'Sin razonamiento': 'No reasoning',
+    Mínimo: 'Minimal',
+    'Elige un modelo disponible': 'Choose an available model',
+    'Elige un esfuerzo disponible': 'Choose an available effort',
+    'No se ha podido consultar los modelos de Codex. Recarga o vuelve a conectar ChatGPT.':
+        'Could not load Codex models. Reload or reconnect ChatGPT.',
+    'No hay modelos disponibles en esta sesión. Conecta o revisa tu cuenta de ChatGPT.':
+        'No models are available in this session. Connect or check your ChatGPT account.',
+    'La selección guardada no aparece en el catálogo actual de Codex. Elige otro modelo o esfuerzo.':
+        'The saved selection is absent from the current Codex catalog. Choose another model or effort.',
     Ajustes: 'Settings',
     General: 'General',
     Cuentas: 'Accounts',
