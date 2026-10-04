@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-10-04
+
 ### Features
 
 - Los selectores de Codex en el chat y Ajustes consultan los modelos y esfuerzos del catálogo de la sesión conectada, y avisan si una selección guardada ya no está disponible.
