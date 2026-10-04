@@ -37,7 +37,7 @@ import {
     validatePicks,
     updateShortlist,
 } from './selection.ts';
-import { askCodex, buildPrompt, codexStatus } from './codex.ts';
+import { askCodex, buildPrompt, codexStatus, codexModels } from './codex.ts';
 import {
     DEFAULT_CODEX_SETTINGS,
     tracksSteamAchievements,
@@ -995,6 +995,7 @@ async function handleRequest(
                 const codex = parseCodexSettings(
                     payload.codex,
                     state.codex ?? DEFAULT_CODEX_SETTINGS,
+                    engine === 'codex' ? await codexModels() : null,
                 );
                 state.engine = engine;
                 state.codex = codex;
@@ -1114,10 +1115,11 @@ async function handleRequest(
                 const c = await config();
                 const codex = parseCodexSettings(
                     payload.codex,
-                    parseCodexSettings(state.codex, {
+                    state.codex ?? {
                         model: c.model,
                         effort: DEFAULT_CODEX_SETTINGS.effort,
-                    }),
+                    },
+                    await codexModels(),
                 );
                 phase('recommendations:settings', {
                     filters,

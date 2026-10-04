@@ -56,6 +56,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import {
     DEFAULT_FILTERS,
     DEFAULT_CODEX_SETTINGS,
+    codexSettingsAvailable,
     STATUS_LABELS,
     gameUrl,
     inLibrary,
@@ -870,7 +871,10 @@ export default function Home() {
     );
 
     const canRecommend =
-        games.length > 0 && (engine === 'local' || !!state?.setup.codex);
+        games.length > 0 &&
+        (engine === 'local' ||
+            (!!state?.setup.codex &&
+                codexSettingsAvailable(codex, state.setup.codexModels)));
 
     function renderResult(result: Recommendation) {
         return (

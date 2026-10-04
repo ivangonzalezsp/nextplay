@@ -385,6 +385,7 @@ export function CopilotBar({
                     <CodexControls
                         idPrefix="chat"
                         value={codex}
+                        catalog={state?.setup.codexModels}
                         onChange={onCodexChange}
                         disabled={!!busy}
                     />

@@ -16,6 +16,8 @@ export type Preference = {
     opinionReason?: string;
 };
 export const CODEX_EFFORTS = [
+    'none',
+    'minimal',
     'low',
     'medium',
     'high',
@@ -24,6 +26,12 @@ export const CODEX_EFFORTS = [
     'ultra',
 ] as const;
 export type CodexEffort = (typeof CODEX_EFFORTS)[number];
+export type CodexModel = {
+    model: string;
+    displayName: string;
+    efforts: CodexEffort[];
+    defaultEffort: CodexEffort;
+};
 export const CODEX_MODELS = [
     { value: 'gpt-6.1-sol', label: 'GPT-6.1 Sol · profesional' },
     { value: 'gpt-6-astra', label: 'GPT-6 Astra · máxima capacidad' },
@@ -45,9 +53,20 @@ const CODEX_MODEL_EFFORTS: Record<string, readonly CodexEffort[]> = {
     'gpt-5.5': ['low', 'medium', 'high', 'xhigh'],
     'gpt-5.4-mini': ['low', 'medium', 'high', 'xhigh'],
 };
-export const codexEffortsForModel = (model: string) =>
-    CODEX_MODEL_EFFORTS[model] ?? CODEX_EFFORTS;
+export const codexEffortsForModel = (
+    model: string,
+    catalog?: CodexModel[] | null,
+) =>
+    catalog
+        ? (catalog.find((entry) => entry.model === model)?.efforts ?? [])
+        : (CODEX_MODEL_EFFORTS[model] ?? CODEX_EFFORTS);
 export type CodexSettings = { model: string; effort: CodexEffort };
+export const codexSettingsAvailable = (
+    settings: CodexSettings,
+    catalog?: CodexModel[] | null,
+) =>
+    !catalog ||
+    codexEffortsForModel(settings.model, catalog).includes(settings.effort);
 export const DEFAULT_CODEX_SETTINGS: CodexSettings = {
     model: 'gpt-5.6-luna',
     effort: 'medium',
@@ -236,6 +255,7 @@ export type Setup = {
     codexMessage: string;
     codexModel: string;
     codexEffort: CodexEffort;
+    codexModels?: CodexModel[] | null;
 };
 export type Snapshot = State & {
     setup: Setup;
