@@ -4,16 +4,22 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
-## [1.0.3] - 2026-10-03
-
 ### Features
 
 - Los selectores de Codex en el chat y Ajustes consultan los modelos y esfuerzos del catálogo de la sesión conectada, y avisan si una selección guardada ya no está disponible.
-- Comando `npm run update:docker` para compilar la última revisión de `main`, respaldar los datos y actualizar el servidor Docker sin indicar versión.
 
 ### Correcciones de errores
 
 - El instalador Windows actualiza Codex CLI a 0.160.0 para admitir GPT-6.1 Sol, GPT-6 Sol y GPT-6 Luna con sus esfuerzos compatibles.
+
+## [1.0.3] - 2026-10-03
+
+### Features
+
+- Comando `npm run update:docker` para compilar la última revisión de `main`, respaldar los datos y actualizar el servidor Docker sin indicar versión.
+
+### Correcciones de errores
+
 - Las tarjetas de juegos en curso se adaptan al móvil con una columna, portadas de altura limitada, títulos legibles y controles táctiles sin recortes.
 - Las portadas de la biblioteca mantienen su tamaño al desplegar logros y la navegación móvil muestra todas las secciones y Ajustes en una cuadrícula compacta.
 
