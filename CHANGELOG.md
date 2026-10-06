@@ -6,6 +6,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
+- El calendario de Mi año integra los eventos en la cuadrícula de días con barras de color al estilo Google Calendar, detalles al pulsar y días de la semana en el idioma elegido.
 - Los selectores de Codex en el chat y Ajustes consultan los modelos y esfuerzos del catálogo de la sesión conectada, y avisan si una selección guardada ya no está disponible.
 
 ### Correcciones de errores

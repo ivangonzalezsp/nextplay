@@ -734,11 +734,17 @@ export function PlayHistory({
                                     className={styles.weekdays}
                                     aria-hidden="true"
                                 >
-                                    {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(
-                                        (day) => (
-                                            <span key={day}>{day}</span>
-                                        ),
-                                    )}
+                                    {Array.from({ length: 7 }, (_, day) => (
+                                        <span key={day}>
+                                            {new Date(
+                                                2024,
+                                                0,
+                                                day + 1,
+                                            ).toLocaleDateString(locale(), {
+                                                weekday: 'short',
+                                            })}
+                                        </span>
+                                    ))}
                                 </div>
                                 {Array.from(
                                     { length: Math.ceil((offset + days) / 7) },
