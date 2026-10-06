@@ -10,7 +10,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
-- Ninguno.
+- Las actualizaciones de etiquetas, logros y metadatos permiten seguir editando estados, opiniones y gustos sin bloquear todo el servidor ni sobrescribir los cambios paralelos.
 
 ## [1.0.4] - 2026-10-04
 

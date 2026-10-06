@@ -258,6 +258,7 @@ export type Setup = {
     codexModels?: CodexModel[] | null;
 };
 export type Snapshot = State & {
+    snapshotId?: { instance: string; sequence: number };
     setup: Setup;
     warnings: string[];
     tasteProfile?: TasteAffinity[];

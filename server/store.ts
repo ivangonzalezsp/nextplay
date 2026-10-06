@@ -186,11 +186,23 @@ export function validState(state: State): State {
     }));
     return state;
 }
-export async function saveState(state: State) {
+export async function saveState(state: State, base?: State) {
     validState(state);
     await mkdir(dataDir(), { recursive: true });
     const db = openDatabase(join(dataDir(), 'library.sqlite'));
     try {
+        if (base) {
+            const current = loadState(db);
+            if (current) {
+                // Resource locks protect changed fields; retain unrelated concurrent edits.
+                for (const key of Object.keys(current) as (keyof State)[]) {
+                    if (
+                        JSON.stringify(state[key]) === JSON.stringify(base[key])
+                    )
+                        Object.assign(state, { [key]: current[key] });
+                }
+            }
+        }
         if (needsManualGameMigration(db, state.games))
             backupDatabase(
                 db,
@@ -205,26 +217,35 @@ export async function saveState(state: State) {
     }
 }
 
-// ponytail: one local user; reject concurrent mutations instead of adding a job queue.
-let busy = false;
+// Reject conflicting operations; unrelated resources can run concurrently.
+const busy = new Set<string>();
 let maintenance = false;
-export const isBusy = () => busy;
+export const isBusy = () => busy.size > 0;
 export const isMaintenance = () => maintenance;
 export const enterMaintenance = () => {
     maintenance = true;
 };
-export async function exclusive<T>(fn: () => Promise<T>): Promise<T> {
-    if (busy || maintenance)
+export async function exclusive<T>(
+    fn: () => Promise<T>,
+    resources: string[] = ['*'],
+): Promise<T> {
+    if (
+        maintenance ||
+        busy.has('*') ||
+        resources.some(
+            (resource) => busy.has(resource) || (resource === '*' && isBusy()),
+        )
+    )
         throw new AppError(
             translateMessage(
                 'Hay una operación en curso. Espera a que termine e inténtalo de nuevo.',
             ),
             409,
         );
-    busy = true;
+    for (const resource of resources) busy.add(resource);
     try {
         return await fn();
     } finally {
-        busy = false;
+        for (const resource of resources) busy.delete(resource);
     }
 }

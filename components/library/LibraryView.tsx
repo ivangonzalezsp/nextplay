@@ -178,6 +178,7 @@ export function LibraryView({
     onAdd,
     onRemove,
     onRefreshAchievements,
+    operations = [],
     busy,
 }: {
     state: Snapshot | null;
@@ -203,6 +204,7 @@ export function LibraryView({
     onRemove: (game: Game) => Promise<void>;
     onRefreshAchievements?: (game: Game) => Promise<void>;
     busy: string;
+    operations?: string[];
 }) {
     useLanguage();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -831,10 +833,9 @@ export function LibraryView({
                                         game.appId > 0 && (
                                             <AchievementProgress
                                                 game={game}
-                                                busy={
-                                                    busy ===
-                                                    `achievements-${game.appId}`
-                                                }
+                                                busy={operations.includes(
+                                                    `achievements-${game.appId}`,
+                                                )}
                                                 onRefresh={
                                                     onRefreshAchievements
                                                 }

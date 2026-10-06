@@ -5,7 +5,7 @@ import {
     dataDir,
     exclusive,
     readState,
-    saveState,
+    saveState as persistState,
 } from './store.ts';
 import { isMaintenance } from './store.ts';
 import { appStatus, manageApp } from './desktop.ts';
@@ -295,12 +295,22 @@ async function body(request: Request): Promise<Record<string, unknown>> {
         );
     }
 }
-async function snapshot(
-    state: State,
-    warnings: string[] = [],
-): Promise<Snapshot> {
+const snapshotInstance = randomUUID();
+let snapshotSequence = 0;
+async function snapshot(warnings: string[] = []): Promise<Snapshot> {
     const c = await config();
+    const setup = {
+        steam: !!c.steam,
+        family: !!c.familyToken,
+        igdb: !!c.clientId && !!c.clientSecret,
+        hltb: await hltbAvailable(),
+        codexModel: c.model,
+        codexEffort: DEFAULT_CODEX_SETTINGS.effort,
+        ...(await codexStatus()),
+    };
     const durations = await getHltbCache();
+    // Status checks can take time; return the latest persisted edits afterwards.
+    const state = await readState();
     const visible: State = {
         ...state,
         games: withHltb(state.games, durations),
@@ -310,20 +320,20 @@ async function snapshot(
     };
     return {
         ...visible,
-        tasteProfile: buildTasteProfile(visible),
-        setup: {
-            steam: !!c.steam,
-            family: !!c.familyToken,
-            igdb: !!c.clientId && !!c.clientSecret,
-            hltb: await hltbAvailable(),
-            codexModel: c.model,
-            codexEffort: DEFAULT_CODEX_SETTINGS.effort,
-            ...(await codexStatus()),
+        snapshotId: {
+            instance: snapshotInstance,
+            sequence: ++snapshotSequence,
         },
+        tasteProfile: buildTasteProfile(visible),
+        setup,
         warnings,
     };
 }
-async function saveRecommendation(state: State, turn: Turn) {
+async function saveRecommendation(
+    state: State,
+    turn: Turn,
+    saveState: (state: State) => Promise<void>,
+) {
     const next: State = {
         ...state,
         filters: turn.filters,
@@ -334,7 +344,47 @@ async function saveRecommendation(state: State, turn: Turn) {
             : [...(state.history ?? []), { ...turn, id: randomUUID() }],
     };
     await saveState(next);
-    return snapshot(next, turn.result.warnings);
+    return snapshot(turn.result.warnings);
+}
+
+function operationResources(path: string): string[] {
+    switch (path) {
+        case '/api/steam/tags/sync':
+            return ['tags'];
+        case '/api/steam/achievements/sync':
+            return ['achievements'];
+        case '/api/hltb/sync':
+            return ['hltb'];
+        case '/api/state':
+        case '/api/play-history':
+            return ['preferences'];
+        case '/api/tastes':
+            return ['tastes'];
+        case '/api/welcome':
+            return ['preferences', 'tastes', 'welcome'];
+        case '/api/shortlist':
+            return ['shortlist'];
+        case '/api/conversation/reset':
+            return ['conversation'];
+        case '/api/recommendations/settings':
+            return ['settings'];
+        case '/api/library/games':
+            return ['library', 'preferences', 'shortlist', 'tastes'];
+        case '/api/steam/sync':
+        case '/api/steam/family/sync':
+            return ['library', 'sources', 'hltb'];
+        case '/api/recommendations':
+            return [
+                'library',
+                'sources',
+                'hltb',
+                'conversation',
+                'settings',
+                'shortlist',
+            ];
+        default:
+            return ['*'];
+    }
 }
 async function handleRequest(
     request: Request,
@@ -444,7 +494,7 @@ async function handleRequest(
         }
         if (path === '/api/state' && request.method === 'GET') {
             phase('state:read:start');
-            const next = await snapshot(await readState());
+            const next = await snapshot();
             phase('state:read:complete', {
                 games: next.games.length,
                 conversation: next.conversation.length,
@@ -457,6 +507,11 @@ async function handleRequest(
         const result = await exclusive(async () => {
             phase('operation:start');
             const state = await readState();
+            let base = structuredClone(state);
+            const saveState = async (next: State) => {
+                await persistState(next, base);
+                base = structuredClone(next);
+            };
             phase('state:loaded', {
                 games: state.games.length,
                 conversation: state.conversation.length,
@@ -520,7 +575,7 @@ async function handleRequest(
                 state.games.push(game);
                 recordPreference(state, game, preference);
                 await saveState(state);
-                return snapshot(state);
+                return snapshot();
             }
             if (path === '/api/library/games' && request.method === 'DELETE') {
                 if (
@@ -556,18 +611,18 @@ async function handleRequest(
                             (appId) => appId !== payload.appId,
                         );
                 await saveState(state);
-                return snapshot(state);
+                return snapshot();
             }
             if (path === '/api/welcome' && request.method === 'PATCH') {
                 applyWelcome(state, payload);
                 await saveState(state);
-                return snapshot(state);
+                return snapshot();
             }
             if (path === '/api/tastes' && request.method === 'PATCH') {
                 phase('tastes:update:start');
                 state.tastes = parseTastes(payload, state);
                 await saveState(state);
-                const next = await snapshot(state);
+                const next = await snapshot();
                 phase('tastes:update:complete');
                 return next;
             }
@@ -604,7 +659,7 @@ async function handleRequest(
                     parsePreference(payload.preference),
                 );
                 await saveState(state);
-                const next = await snapshot(state);
+                const next = await snapshot();
                 phase('preference:update:complete', { appId: payload.appId });
                 return next;
             }
@@ -678,7 +733,7 @@ async function handleRequest(
                 } finally {
                     db.close();
                 }
-                return snapshot(await readState());
+                return snapshot();
             }
             if (path === '/api/steam/tags/sync' && request.method === 'POST') {
                 phase('steam:tags:sync:start', { force: payload.force });
@@ -725,7 +780,7 @@ async function handleRequest(
                         409,
                     );
                 phase('steam:tags:sync:complete', result);
-                return snapshot(await readState());
+                return snapshot();
             }
             if (path === '/api/hltb/sync' && request.method === 'POST') {
                 if (
@@ -759,7 +814,7 @@ async function handleRequest(
                         remaining,
                     });
                     return {
-                        ...(await snapshot(state, warnings)),
+                        ...(await snapshot(warnings)),
                         hltbSync: {
                             remaining,
                             stopped: candidates.length > 0 && !progressed,
@@ -801,7 +856,7 @@ async function handleRequest(
                     appId,
                     found: Boolean(durations[appId]?.data),
                 });
-                return snapshot(state, warnings);
+                return snapshot(warnings);
             }
             if (path === '/api/play-history' && request.method === 'PATCH') {
                 const events = state.playHistory ?? [];
@@ -821,12 +876,12 @@ async function handleRequest(
                     );
                 events[payload.index].at = at;
                 await saveState(state);
-                return snapshot(state);
+                return snapshot();
             }
             if (path === '/api/shortlist' && request.method === 'PATCH') {
                 updateShortlist(state, payload.appId, payload.saved);
                 await saveState(state);
-                return snapshot(state);
+                return snapshot();
             }
             if (
                 path === '/api/conversation/reset' &&
@@ -836,7 +891,7 @@ async function handleRequest(
                 state.filters = parseFilters(payload.filters);
                 state.conversation = [];
                 await saveState(state);
-                const next = await snapshot(state);
+                const next = await snapshot();
                 phase('conversation:reset:complete');
                 return next;
             }
@@ -855,7 +910,7 @@ async function handleRequest(
                     state.syncedAt &&
                     Date.now() - state.syncedAt < DAY
                 )
-                    return snapshot(state);
+                    return snapshot();
                 const c = await config();
                 const fresh = await syncSteam(parsed.url, c.steam);
                 phase('steam:sync:profile-complete', {
@@ -932,7 +987,7 @@ async function handleRequest(
                 }
                 await saveCache(cache);
                 await saveState(next);
-                const result = await snapshot(next, [
+                const result = await snapshot([
                     ...warnings,
                     ...enriched.warnings,
                 ]);
@@ -967,7 +1022,7 @@ async function handleRequest(
                 };
                 await saveCache(cache);
                 await saveState(next);
-                const result = await snapshot(next, [
+                const result = await snapshot([
                     ...refreshed.warnings,
                     ...enriched.warnings,
                 ]);
@@ -1000,7 +1055,7 @@ async function handleRequest(
                 state.engine = engine;
                 state.codex = codex;
                 await saveState(state);
-                return snapshot(state);
+                return snapshot();
             }
             if (path === '/api/recommendations' && request.method === 'POST') {
                 phase('recommendations:start', {
@@ -1100,11 +1155,15 @@ async function handleRequest(
                             ),
                         );
                     ensureActive();
-                    const next = await saveRecommendation(state, {
-                        text: payload.text.trim(),
-                        filters,
-                        result: recommendation,
-                    });
+                    const next = await saveRecommendation(
+                        state,
+                        {
+                            text: payload.text.trim(),
+                            filters,
+                            result: recommendation,
+                        },
+                        saveState,
+                    );
                     phase('recommendations:local:complete', {
                         owned: recommendation.owned.length,
                         discoveries: recommendation.discoveries.length,
@@ -1412,6 +1471,7 @@ async function handleRequest(
                             ? { reference }
                             : {}),
                     },
+                    saveState,
                 );
                 phase('recommendations:complete', {
                     owned:
@@ -1429,7 +1489,7 @@ async function handleRequest(
                 translateMessage('Esta operación no existe.'),
                 404,
             );
-        });
+        }, operationResources(path));
         return complete(Response.json(result, { headers }));
     } catch (e) {
         const status = e instanceof AppError ? e.status : 500;

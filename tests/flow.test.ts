@@ -653,6 +653,149 @@ void test('atomic state survives restart and failures without losing preferences
     }
 });
 
+void test('resource locks allow independent work and retain global maintenance exclusion', async () => {
+    await exclusive(async () => {
+        await exclusive(async () => {}, ['preferences']);
+        await assert.rejects(
+            exclusive(async () => {}, ['tags']),
+            /operación en curso/,
+        );
+        await assert.rejects(
+            exclusive(async () => {}),
+            /operación en curso/,
+        );
+    }, ['tags']);
+    await exclusive(async () => {
+        await assert.rejects(
+            exclusive(async () => {}, ['preferences']),
+            /operación en curso/,
+        );
+    });
+    await assert.rejects(
+        exclusive(async () => {
+            throw new Error('failed');
+        }, ['tags']),
+        /failed/,
+    );
+    await exclusive(async () => {}, ['tags']);
+});
+
+void test('delayed library saves preserve concurrent preferences, history and tastes', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'nextplay-concurrent-state-'));
+    const previous = process.env.NEXTPLAY_DATA_DIR;
+    process.env.NEXTPLAY_DATA_DIR = dir;
+    try {
+        await saveState(state());
+        const base = await readState();
+        const refreshed = structuredClone(base);
+        refreshed.games[0].name = 'Metadatos actualizados';
+        const edited = await readState();
+        edited.preferences['1'].status = 'completed';
+        edited.tastes = {
+            overrides: {},
+            ignoredHours: [1],
+            notes: 'Preferencia paralela',
+        };
+        edited.playHistory = [
+            { appId: 1, name: 'Juego 1', kind: 'completed', at: Date.now() },
+        ];
+        await saveState(edited);
+        await saveState(refreshed, base);
+        const saved = await readState();
+        assert.equal(saved.games[0].name, 'Metadatos actualizados');
+        assert.deepEqual(saved.preferences, edited.preferences);
+        assert.deepEqual(saved.playHistory, edited.playHistory);
+        assert.deepEqual(saved.tastes, edited.tastes);
+        assert.deepEqual(refreshed.preferences, edited.preferences);
+    } finally {
+        if (previous === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+        else process.env.NEXTPLAY_DATA_DIR = previous;
+        await rm(dir, { recursive: true, force: true });
+    }
+});
+
+void test('a pending Steam tag request permits completing a game and keeps both changes', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'nextplay-concurrent-tags-'));
+    const previous = {
+        data: process.env.NEXTPLAY_DATA_DIR,
+        user: process.env.NEXTPLAY_USER_DIR,
+        bin: process.env.NEXTPLAY_CODEX_BIN,
+    };
+    const originalFetch = globalThis.fetch;
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    process.env.NEXTPLAY_DATA_DIR = dir;
+    process.env.NEXTPLAY_USER_DIR = dir;
+    process.env.NEXTPLAY_CODEX_BIN = join(dir, 'missing-codex.exe');
+    const request = (
+        path: string,
+        payload: object,
+        method: 'POST' | 'PATCH' = 'POST',
+    ) =>
+        handle(
+            new Request(`http://localhost:3000/api/${path}`, {
+                method,
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(payload),
+            }),
+        );
+    let syncing: Promise<Response> | undefined;
+    try {
+        const initial = state();
+        initial.games = [game(1)];
+        await saveState(initial);
+        globalThis.fetch = async (url) => {
+            const address =
+                typeof url === 'string'
+                    ? url
+                    : url instanceof URL
+                      ? url.href
+                      : url.url;
+            if (address.includes('/tagdata/'))
+                return Response.json([{ tagid: 1664, name: 'Puzzle' }]);
+            assert.match(address, /apphoverpublic\/1/);
+            entered.resolve();
+            await release.promise;
+            return new Response(
+                '<div id="hover_app_1"><div class="app_tag">Puzzle</div></div>',
+            );
+        };
+        syncing = request('steam/tags/sync', {});
+        await entered.promise;
+        assert.equal((await request('steam/tags/sync', {})).status, 409);
+        const edit = await request(
+            'state',
+            { appId: 1, preference: { status: 'completed', favorite: true } },
+            'PATCH',
+        );
+        assert.equal(edit.status, 200);
+        assert.equal((await readState()).preferences['1'].status, 'completed');
+        release.resolve();
+        const response = await syncing;
+        assert.equal(response.status, 200);
+        const final = (await response.json()) as Snapshot;
+        assert.equal(final.preferences['1'].status, 'completed');
+        assert.equal(final.games[0].steamTags?.[0].id, 1664);
+        assert.equal(
+            (await readState()).playHistory?.at(-1)?.kind,
+            'completed',
+        );
+    } finally {
+        release.resolve();
+        await syncing;
+        globalThis.fetch = originalFetch;
+        for (const [key, value] of [
+            ['NEXTPLAY_DATA_DIR', previous.data],
+            ['NEXTPLAY_USER_DIR', previous.user],
+            ['NEXTPLAY_CODEX_BIN', previous.bin],
+        ]) {
+            if (value === undefined) delete process.env[key!];
+            else process.env[key!] = value;
+        }
+        await rm(dir, { recursive: true, force: true });
+    }
+});
+
 void test('manual review refresh preserves the last valid data when Steam fails', async () => {
     const at = Date.now() - 1000;
     const cache = {

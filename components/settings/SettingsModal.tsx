@@ -59,7 +59,7 @@ export function SettingsModal({
         engine: RecommendationEngine,
         codex: CodexSettings,
     ) => Promise<boolean>;
-    busy: string;
+    busy: string[];
     onWelcome: (open: boolean) => void;
 }) {
     useLanguage();
@@ -115,7 +115,9 @@ export function SettingsModal({
                             {t('Motor de Recomendación ')}
                         </label>
                         <Select
-                            disabled={!!busy}
+                            disabled={busy.some((name) =>
+                                ['recommend', 'ai-settings'].includes(name),
+                            )}
                             value={selectedEngine}
                             onValueChange={(val) =>
                                 setDraftEngine(val as RecommendationEngine)
@@ -171,7 +173,9 @@ export function SettingsModal({
                             value={selectedCodex}
                             catalog={state?.setup.codexModels}
                             onChange={setDraftCodex}
-                            disabled={!!busy}
+                            disabled={busy.some((name) =>
+                                ['recommend', 'ai-settings'].includes(name),
+                            )}
                         />
                     )}
                 </div>
@@ -185,7 +189,9 @@ export function SettingsModal({
                     <Button
                         type="button"
                         disabled={
-                            !!busy ||
+                            busy.some((name) =>
+                                ['recommend', 'ai-settings'].includes(name),
+                            ) ||
                             (selectedEngine === 'codex' &&
                                 !codexSettingsAvailable(
                                     selectedCodex,
@@ -226,20 +232,29 @@ export function SettingsModal({
                             variant="outline"
                             size="sm"
                             onClick={() => void onRefreshHltb()}
-                            disabled={!!busy}
+                            disabled={busy.some((name) =>
+                                [
+                                    'hltb-all',
+                                    'recommend',
+                                    'sync',
+                                    'family',
+                                ].includes(name),
+                            )}
                             className="w-full"
                             title={t(
                                 'Buscar en HowLongToBeat los juegos que aún no tienen duración',
                             )}
-                            aria-busy={busy === 'hltb-all'}
+                            aria-busy={busy.includes('hltb-all')}
                         >
                             <RefreshCw
                                 size={13}
                                 className={
-                                    busy === 'hltb-all' ? 'spin mr-2' : 'mr-2'
+                                    busy.includes('hltb-all')
+                                        ? 'spin mr-2'
+                                        : 'mr-2'
                                 }
                             />
-                            {busy === 'hltb-all'
+                            {busy.includes('hltb-all')
                                 ? hltbRemaining === null
                                     ? t('Buscando HLTB…')
                                     : `${t('Buscando HLTB… (')}${hltbRemaining}${t(' restantes)')}`
@@ -270,14 +285,16 @@ export function SettingsModal({
                         variant="outline"
                         size="sm"
                         onClick={onTagsSync}
-                        disabled={!!busy || !steamGames.length}
+                        disabled={busy.includes('tags') || !steamGames.length}
                         className="w-full"
                     >
                         <RefreshCw
                             size={13}
-                            className={busy === 'tags' ? 'spin mr-2' : 'mr-2'}
+                            className={
+                                busy.includes('tags') ? 'spin mr-2' : 'mr-2'
+                            }
                         />
-                        {busy === 'tags'
+                        {busy.includes('tags')
                             ? t('Cargando etiquetas…')
                             : t('Cargar etiquetas de Steam')}
                     </Button>
@@ -334,16 +351,25 @@ export function SettingsModal({
                                 variant="outline"
                                 size="sm"
                                 onClick={onFamilySync}
-                                disabled={!!busy}
+                                disabled={busy.some((name) =>
+                                    [
+                                        'family',
+                                        'sync',
+                                        'recommend',
+                                        'add-game',
+                                    ].includes(name),
+                                )}
                                 className="w-full mt-2"
                             >
                                 <RefreshCw
                                     size={13}
                                     className={
-                                        busy === 'family' ? 'spin mr-2' : 'mr-2'
+                                        busy.includes('family')
+                                            ? 'spin mr-2'
+                                            : 'mr-2'
                                     }
                                 />
-                                {busy === 'family'
+                                {busy.includes('family')
                                     ? t('Actualizando familias…')
                                     : t('Actualizar Steam Families')}
                             </Button>
@@ -373,7 +399,14 @@ export function SettingsModal({
                                 variant="outline"
                                 size="sm"
                                 disabled={
-                                    !!busy ||
+                                    busy.some((name) =>
+                                        [
+                                            'family',
+                                            'sync',
+                                            'recommend',
+                                            'add-game',
+                                        ].includes(name),
+                                    ) ||
                                     !state?.profile ||
                                     !state?.setup.family
                                 }
@@ -535,16 +568,18 @@ export function SettingsModal({
                             variant="outline"
                             size="sm"
                             onClick={onReload}
-                            disabled={!!busy}
+                            disabled={busy.includes('reload')}
                             className="w-full mt-2"
                         >
                             <RefreshCw
                                 size={13}
                                 className={
-                                    busy === 'reload' ? 'spin mr-2' : 'mr-2'
+                                    busy.includes('reload')
+                                        ? 'spin mr-2'
+                                        : 'mr-2'
                                 }
                             />
-                            {busy === 'reload'
+                            {busy.includes('reload')
                                 ? t('Comprobando…')
                                 : t('Comprobar conexiones')}
                         </Button>

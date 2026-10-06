@@ -74,7 +74,7 @@ Reutiliza el servidor existente si corresponde a la prueba. Si un puerto está o
 
 ## Límites de la API y servicios externos
 
-- Mantén las validaciones de `server/api.ts`: host/origen, solicitudes JSON, tamaño del cuerpo y campos de entrada. Las mutaciones comparten `exclusive`; las actualizaciones y reinicios respetan el estado de operación/mantenimiento.
+- Mantén las validaciones de `server/api.ts`: host/origen, solicitudes JSON, tamaño del cuerpo y campos de entrada. Las mutaciones usan `exclusive` por recurso y conservan los campos de estado no modificados al guardar; la administración usa exclusión global; las actualizaciones y reinicios respetan el estado de operación/mantenimiento.
 - Administrar credenciales, login, importaciones, actualizaciones o procesos requiere `canManage`. La confianza procede de la conexión loopback real que certifica `attestLocalPeer` en Vite y en el servidor de producción, además de las comprobaciones HTTP. No la sustituyas por `Host`, `Origin` o cabeceras reenviadas declaradas por el cliente.
 - El acceso LAN es para una red privada de confianza, sin exposición a Internet. Activar inicio automático, firewall, login o instalar una actualización debe estar dentro de lo solicitado/autorizado; no lo ejecutes como efecto lateral de probar otra función. Usa los scripts existentes, que limitan la gestión a los procesos propios.
 - Codex se integra mediante su CLI y sesión de ChatGPT; esta app no requiere `OPENAI_API_KEY`. Conserva el catálogo temporal de solo lectura, la paginación MCP, el filtrado previo y la validación de resultados contra candidatos reales. No incluyas SteamID ni credenciales en ese catálogo ni habilites comandos, conectores adicionales o acceso a la base personal para el modelo.

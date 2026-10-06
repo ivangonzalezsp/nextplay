@@ -236,10 +236,11 @@ export async function syncSteamTags(
             return { ...current, stopReason };
         }
 
-        const after = loadState(db);
-        if (!after || identity(after) !== beforeIdentity)
+        // Only steam_tags is written: library edits during network waits are expected.
+        const integrity = db.prepare('PRAGMA integrity_check').get();
+        if (integrity?.integrity_check !== 'ok')
             throw new Error(
-                `${translateMessage('La biblioteca cambió durante la importación. Se conserva la copia en ')}${backupPath}.`,
+                `SQLite integrity check failed; backup=${backupPath}`,
             );
         const current = result();
         log(

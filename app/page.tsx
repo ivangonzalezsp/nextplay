@@ -257,7 +257,32 @@ export default function Home() {
     const [libraryOrderBy, setLibraryOrderBy] =
         useState<LibraryOrderBy>('original');
     const [limit, setLimit] = useState(36);
-    const [busy, setBusy] = useState('');
+    const [operations, setOperations] = useState<string[]>([]);
+    const beginOperation = (name: string) =>
+        setOperations((current) => [...current, name]);
+    const endOperation = (name: string) =>
+        setOperations((current) => {
+            const index = current.indexOf(name);
+            return index < 0 ? current : current.toSpliced(index, 1);
+        });
+    const busy =
+        operations.find(
+            (name) =>
+                ![
+                    'tags',
+                    'hltb-all',
+                    'family',
+                    'sync',
+                    'recommend',
+                    'reload',
+                ].includes(name) && !name.startsWith('achievements-'),
+        ) ?? '';
+    const recommendationBusy =
+        operations.find((name) =>
+            ['recommend', 'sync', 'family', 'hltb-all', 'add-game'].includes(
+                name,
+            ),
+        ) ?? busy;
     const [hltbRemaining, setHltbRemaining] = useState<number | null>(null);
     const [loading, setLoading] = useState(true);
     const [activity, setActivity] = useState<RecommendationProgress[]>([]);
@@ -307,7 +332,16 @@ export default function Home() {
         log('browser', 'view:changed', { tab });
     }, [tab]);
 
+    const acceptedSnapshot = useRef<Snapshot['snapshotId']>(undefined);
     function accept(next: Snapshot, scrollToResults = false) {
+        const previous = acceptedSnapshot.current;
+        if (
+            next.snapshotId &&
+            previous?.instance === next.snapshotId.instance &&
+            previous.sequence > next.snapshotId.sequence
+        )
+            return;
+        acceptedSnapshot.current = next.snapshotId;
         log('browser', 'state:accepted', {
             games: next.games.length,
             conversation: next.conversation.length,
@@ -478,7 +512,7 @@ export default function Home() {
                     throw new Error(
                         t('Indica un mensaje de hasta 2000 caracteres.'),
                     );
-                setBusy('recommend');
+                beginOperation('recommend');
                 setActivity([]);
                 setError('');
                 const controller = new AbortController();
@@ -508,7 +542,7 @@ export default function Home() {
                 } finally {
                     if (recommendationAbort.current === controller)
                         recommendationAbort.current = null;
-                    setBusy('');
+                    endOperation('recommend');
                 }
             },
         });
@@ -518,7 +552,7 @@ export default function Home() {
     async function action(name: string, fn: () => Promise<void>) {
         const started = Date.now();
         log('browser', 'action:start', { name });
-        setBusy(name);
+        beginOperation(name);
         setError('');
         try {
             await fn();
@@ -538,7 +572,7 @@ export default function Home() {
                         : t('No se ha podido completar la solicitud.'),
                 );
         } finally {
-            setBusy('');
+            endOperation(name);
             log('browser', 'action:end', { name, ms: Date.now() - started });
         }
     }
@@ -705,7 +739,7 @@ export default function Home() {
     }
 
     async function addGame(input: AddGameInput) {
-        setBusy('add-game');
+        beginOperation('add-game');
         try {
             const next: Snapshot = await api('library/games', input);
             accept(next);
@@ -720,7 +754,7 @@ export default function Home() {
             setLibraryTag('');
             setLimit(36);
         } finally {
-            setBusy('');
+            endOperation('add-game');
         }
     }
 
@@ -1200,7 +1234,7 @@ export default function Home() {
                         engine={engine}
                         codex={codex}
                         onSaveAI={saveAI}
-                        busy={busy}
+                        busy={operations}
                         onWelcome={setWelcomeOpen}
                     />
 
@@ -1223,7 +1257,7 @@ export default function Home() {
                             onStop={stopRecommendation}
                             onSurpriseMe={surpriseMe}
                             canRecommend={canRecommend}
-                            busy={busy}
+                            busy={recommendationBusy}
                             engine={engine}
                             savedGamesCount={savedGames.length}
                             conversationMode={conversationMode}
@@ -1244,7 +1278,7 @@ export default function Home() {
                                 void saveAI(engine, next);
                             }}
                             state={state}
-                            busy={busy}
+                            busy={recommendationBusy}
                             activity={activity}
                             canRecommend={canRecommend}
                             onRecommend={(msg, mode) =>
@@ -1488,10 +1522,9 @@ export default function Home() {
                                                     {game.appId > 0 && (
                                                         <AchievementProgress
                                                             game={game}
-                                                            busy={
-                                                                busy ===
-                                                                `achievements-${game.appId}`
-                                                            }
+                                                            busy={operations.includes(
+                                                                `achievements-${game.appId}`,
+                                                            )}
                                                             onRefresh={
                                                                 refreshAchievements
                                                             }
@@ -1592,6 +1625,7 @@ export default function Home() {
                             onAdd={addGame}
                             onRemove={removeGame}
                             onRefreshAchievements={refreshAchievements}
+                            operations={operations}
                             busy={busy}
                         />
                     </TabsContent>
