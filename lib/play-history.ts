@@ -111,6 +111,20 @@ export const playEventLabel = (event: PlayEvent) =>
           ? 'Reanudado'
           : STATUS_LABELS[event.kind];
 
+export function filterPlayEvents(
+    events: PlayEvent[],
+    query: string,
+    label: (event: PlayEvent) => string = playEventLabel,
+) {
+    const normalize = (text: string) =>
+        text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+    const words = normalize(query).trim().split(/\s+/).filter(Boolean);
+    return events.filter((event) => {
+        const text = normalize(`${event.name} ${label(event)}`);
+        return words.every((word) => text.includes(word));
+    });
+}
+
 const statusOfEvent = (event: PlayEvent): GameStatus =>
     event.kind === 'started' ? 'playing' : event.kind;
 

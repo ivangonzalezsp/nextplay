@@ -1,5 +1,10 @@
 // English UI and service messages; Spanish source text remains the fallback.
 export const ENGLISH: Record<string, string> = {
+    'Buscar cambios de estado': 'Search status changes',
+    'Nombre del juego o estado…': 'Game name or status…',
+    'cambios de estado': 'status changes',
+    'No hay cambios de estado que coincidan con la búsqueda.':
+        'No status changes match your search.',
     '¿En qué fecha lo completaste?': 'On what date did you complete it?',
     'Fecha de finalización': 'Completion date',
     'Última semana': 'Last week',

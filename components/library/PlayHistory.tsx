@@ -17,6 +17,7 @@ import {
     Gamepad2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import {
     Popover,
@@ -29,6 +30,7 @@ import {
     calendarDateAt,
     dateInputValue,
     eventsInYear,
+    filterPlayEvents,
     playEventLabel,
     playEventPhase,
     gameColor,
@@ -318,6 +320,7 @@ export function PlayHistory({
     const currentYear = new Date(now).getFullYear();
     const [year, setYear] = useState(currentYear);
     const [view, setView] = useState<'timeline' | 'calendar'>('timeline');
+    const [eventSearch, setEventSearch] = useState('');
     const earliestYear = Math.min(
         currentYear,
         ...events.map((event) => new Date(event.at).getFullYear()),
@@ -328,6 +331,9 @@ export function PlayHistory({
     );
     const visibleEvents = withoutSameDayRoundTrips(events);
     const selected = eventsInYear(visibleEvents, year);
+    const filteredEvents = filterPlayEvents(selected, eventSearch, (event) =>
+        t(playEventLabel(event)),
+    );
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year, 11, 31);
     const yearDays =
@@ -584,13 +590,55 @@ export function PlayHistory({
                             {t('Todos los cambios de estado (')}
                             {selected.length})
                         </summary>
+                        <div className="mt-4 flex flex-wrap items-end gap-3">
+                            <div className="min-w-0 flex-1 basis-64 space-y-2">
+                                <label
+                                    htmlFor="play-event-search"
+                                    className="text-sm font-medium"
+                                >
+                                    {t('Buscar cambios de estado')}
+                                </label>
+                                <Input
+                                    id="play-event-search"
+                                    type="search"
+                                    value={eventSearch}
+                                    onChange={(event) =>
+                                        setEventSearch(event.target.value)
+                                    }
+                                    placeholder={t(
+                                        'Nombre del juego o estado…',
+                                    )}
+                                />
+                            </div>
+                            <Button
+                                variant="outline"
+                                onClick={() => setEventSearch('')}
+                                disabled={!eventSearch}
+                            >
+                                {t('Limpiar')}
+                            </Button>
+                        </div>
+                        <p
+                            role="status"
+                            className="mt-3 text-sm text-muted-foreground"
+                        >
+                            {filteredEvents.length} {t('de ')}
+                            {selected.length} {t('cambios de estado')}
+                        </p>
+                        {filteredEvents.length === 0 && (
+                            <p className="mt-4 rounded-xl border border-border p-4">
+                                {t(
+                                    'No hay cambios de estado que coincidan con la búsqueda.',
+                                )}
+                            </p>
+                        )}
                         <ol className="ml-2 mt-4 space-y-4 border-l border-border pl-6">
-                            {selected.map((event, index) => {
+                            {filteredEvents.map((event) => {
                                 const eventIndex = events.indexOf(event);
                                 const currentDate = dateInputValue(event.at);
                                 return (
                                     <li
-                                        key={`${event.at}-${index}`}
+                                        key={eventIndex}
                                         className="relative rounded-xl border border-l-4 bg-card p-4"
                                         style={{
                                             borderColor: gameColor(event.appId),

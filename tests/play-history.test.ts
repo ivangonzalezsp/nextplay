@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { EMPTY_STATE } from '../lib/model.ts';
 import {
     eventsInYear,
+    filterPlayEvents,
     playEventLabel,
     playEventPhase,
     recordPreference,
@@ -17,6 +18,24 @@ import {
     standalonePlayEvents,
 } from '../lib/play-history.ts';
 import type { PlayEvent } from '../lib/model.ts';
+
+void test('event search matches names and localized statuses without changing event identity or order', () => {
+    const events: PlayEvent[] = [
+        { appId: 1, name: 'Pokémon', kind: 'playing', from: 'paused', at: 2 },
+        { appId: 2, name: 'Portal', kind: 'completed', at: 1 },
+    ];
+    assert.deepEqual(filterPlayEvents(events, '  POKEMON reanudado  '), [
+        events[0],
+    ]);
+    assert.deepEqual(filterPlayEvents(events, 'terminado'), [events[1]]);
+    assert.deepEqual(
+        filterPlayEvents(events, 'completed', () => 'Completed'),
+        events,
+    );
+    assert.deepEqual(filterPlayEvents(events, '  '), events);
+    assert.deepEqual(filterPlayEvents(events, 'missing'), []);
+    assert.equal(filterPlayEvents(events, 'portal')[0], events[1]);
+});
 
 test('colored play periods pair each game independently and clip calendar ranges inclusively', () => {
     const at = (day: number, month = 8, year = 2026) =>
