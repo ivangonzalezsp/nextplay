@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- El calendario de Mi año integra los eventos en la cuadrícula de días con barras de color al estilo Google Calendar, detalles al pulsar y días de la semana en el idioma elegido.
+
+### Correcciones de errores
+
+- Ninguno.
+
 ## [1.0.4] - 2026-10-04
 
 ### Features
