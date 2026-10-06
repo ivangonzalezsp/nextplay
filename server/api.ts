@@ -653,10 +653,24 @@ async function handleRequest(
                             ...turn.result.discoveries,
                         ])
                         .find((pick) => pick.appId === payload.appId)!.game;
+                const at =
+                    payload.date === undefined
+                        ? Date.now()
+                        : calendarDateAt(payload.date);
+                if (
+                    at === null ||
+                    dateInputValue(at) > dateInputValue(Date.now())
+                )
+                    throw new AppError(
+                        translateMessage(
+                            'La fecha del cambio de estado no es válida.',
+                        ),
+                    );
                 recordPreference(
                     state,
                     game,
                     parsePreference(payload.preference),
+                    at,
                 );
                 await saveState(state);
                 const next = await snapshot();

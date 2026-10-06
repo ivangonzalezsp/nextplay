@@ -171,6 +171,55 @@ void test('Codex model and effort are validated at the boundary', () => {
         parseCodexSettings({ model: 'gpt-6-luna', effort: 'ultra' }, fallback),
     );
 });
+void test('direct completion saves the selected calendar date atomically and rejects invalid dates', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'nextplay-completion-date-'));
+    const previousDir = process.env.NEXTPLAY_DATA_DIR;
+    const previousUserDir = process.env.NEXTPLAY_USER_DIR;
+    process.env.NEXTPLAY_DATA_DIR = dir;
+    process.env.NEXTPLAY_USER_DIR = dir;
+    const request = (date: unknown) =>
+        handle(
+            new Request('http://127.0.0.1:3000/api/state', {
+                method: 'PATCH',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                    appId: 1,
+                    preference: { favorite: true, status: 'completed' },
+                    date,
+                }),
+            }),
+        );
+    try {
+        const initial = state();
+        initial.preferences[1] = { status: 'pending', favorite: true };
+        await saveState(initial);
+        const before = await readState();
+        for (const date of ['2026-02-30', '2099-01-01', '', null, 42]) {
+            assert.equal((await request(date)).status, 400);
+            assert.deepEqual(await readState(), before);
+        }
+        const response = await request('2025-12-31');
+        assert.equal(response.status, 200);
+        const saved = await readState();
+        assert.deepEqual(saved.preferences[1], {
+            status: 'completed',
+            favorite: true,
+        });
+        assert.equal(saved.playHistory?.length, 1);
+        assert.equal(saved.playHistory![0].from, 'pending');
+        assert.equal(saved.playHistory![0].kind, 'completed');
+        assert.equal(dateInputValue(saved.playHistory![0].at), '2025-12-31');
+        assert.deepEqual(saved.games, before.games);
+        assert.deepEqual(saved.conversation, before.conversation);
+    } finally {
+        if (previousDir === undefined) delete process.env.NEXTPLAY_DATA_DIR;
+        else process.env.NEXTPLAY_DATA_DIR = previousDir;
+        if (previousUserDir === undefined) delete process.env.NEXTPLAY_USER_DIR;
+        else process.env.NEXTPLAY_USER_DIR = previousUserDir;
+        await rm(dir, { recursive: true, force: true });
+    }
+});
+
 void test('AI settings persist without a recommendation or changes to the library and conversation', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'nextplay-ai-settings-'));
     const previousDir = process.env.NEXTPLAY_DATA_DIR;

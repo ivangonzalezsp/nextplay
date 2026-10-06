@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Al pasar un juego directamente de pendiente a completado, se pregunta la fecha de finalización y se guarda en Mi año; cancelar conserva el estado anterior.
+
+### Correcciones de errores
+
+- Ninguno.
+
 ## [1.0.5] - 2026-10-06
 
 ### Features

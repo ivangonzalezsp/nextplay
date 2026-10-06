@@ -51,6 +51,16 @@ import {
     Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { dateInputValue } from '@/lib/play-history';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 import {
@@ -291,6 +301,11 @@ export default function Home() {
     const [tab, setTab] = useState('recommend');
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [welcomeOpen, setWelcomeOpen] = useState(false);
+    const [completion, setCompletion] = useState<{
+        game: Game;
+        change: Partial<Preference>;
+        today: string;
+    } | null>(null);
 
     const activeFilters = useRef(filters);
     const activeCodex = useRef(codex);
@@ -647,13 +662,29 @@ export default function Home() {
         recommendationAbort.current.abort();
     }
 
-    async function preference(game: Game, change: Partial<Preference>) {
+    async function preference(
+        game: Game,
+        change: Partial<Preference>,
+        date?: string,
+    ) {
+        if (
+            change.status === 'completed' &&
+            (state?.preferences[game.appId]?.status ?? 'pending') ===
+                'pending' &&
+            date === undefined
+        ) {
+            setError('');
+            const today = dateInputValue(new Date().getTime());
+            setCompletion({ game, change, today });
+            return;
+        }
         await action('pref-' + game.appId, async () => {
             accept(
                 await api(
                     'state',
                     {
                         appId: game.appId,
+                        ...(date !== undefined ? { date } : {}),
                         preference: {
                             ...(state?.preferences[game.appId] ?? {
                                 favorite: false,
@@ -665,6 +696,7 @@ export default function Home() {
                     'PATCH',
                 ),
             );
+            setCompletion(null);
         });
     }
 
@@ -1047,6 +1079,65 @@ export default function Home() {
 
     return (
         <div className={`app-shell${settingsOpen ? ' settings-open' : ''}`}>
+            <Dialog
+                open={completion !== null}
+                onOpenChange={(open) => {
+                    if (!open && !busy) setCompletion(null);
+                }}
+            >
+                <DialogContent showCloseButton={!busy}>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {t('¿En qué fecha lo completaste?')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {completion?.game.name}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <form
+                        className="grid gap-4"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            if (completion && !busy)
+                                void preference(
+                                    completion.game,
+                                    completion.change,
+                                    String(
+                                        new FormData(event.currentTarget).get(
+                                            'completionDate',
+                                        ),
+                                    ),
+                                );
+                        }}
+                    >
+                        <label className="grid gap-2">
+                            {t('Fecha de finalización')}
+                            <Input
+                                type="date"
+                                name="completionDate"
+                                required
+                                max={completion?.today}
+                                defaultValue={completion?.today}
+                                disabled={!!busy}
+                            />
+                        </label>
+                        {error && <p role="alert">{error}</p>}
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={!!busy}
+                                onClick={() => setCompletion(null)}
+                            >
+                                {t('Cancelar')}
+                            </Button>
+                            <Button type="submit" disabled={!!busy}>
+                                {t('Guardar')}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
             <a className="skip-link" href="#main">
                 {t('Ir al contenido ')}
             </a>

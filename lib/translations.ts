@@ -1,5 +1,7 @@
 // English UI and service messages; Spanish source text remains the fallback.
 export const ENGLISH: Record<string, string> = {
+    '¿En qué fecha lo completaste?': 'On what date did you complete it?',
+    'Fecha de finalización': 'Completion date',
     'Última semana': 'Last week',
     'Último mes': 'Last month',
     'Últimos 3 meses': 'Last 3 months',
