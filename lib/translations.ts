@@ -354,6 +354,7 @@ export const ENGLISH: Record<string, string> = {
     'Los estados son los que has marcado; las horas no indican que un juego esté terminado.':
         'Statuses are the ones you set; hours do not indicate that a game is completed.',
     'Ver juegos que aportan horas a ': 'View games contributing hours to ',
+    'Ver juegos en ': 'View games in ',
     'juegos aportan': 'games contribute',
     'Ningún juego tiene horas registradas.': 'No games have recorded hours.',
     'TUS MÁS JUGADOS': 'YOUR MOST PLAYED',

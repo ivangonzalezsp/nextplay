@@ -6,6 +6,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
+- Las estadísticas muestran los juegos de cada rango de horas y estado de Biblioteca hoy al pasar el cursor por los gráficos o la leyenda de estados.
 - Al pasar un juego directamente de pendiente a completado, se pregunta la fecha de finalización y se guarda en Mi año; cancelar conserva el estado anterior.
 
 ### Correcciones de errores

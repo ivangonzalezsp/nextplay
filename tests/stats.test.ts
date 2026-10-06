@@ -77,6 +77,18 @@ void test('stats periods include boundaries and ongoing playthroughs, excluding 
         assert.equal(stats.totalGames, 2, period);
         assert.equal(stats.totalMinutes, 120, period);
         assert.deepEqual(
+            stats.playtimeBands.flatMap(({ games }) =>
+                games.map(({ appId }) => appId),
+            ),
+            [1, 3],
+        );
+        assert.deepEqual(
+            stats.statuses
+                .find(({ status }) => status === 'completed')
+                ?.games.map(({ appId }) => appId),
+            [1],
+        );
+        assert.deepEqual(
             stats.topGames.map(({ appId }) => appId),
             [1, 3],
         );
@@ -179,6 +191,22 @@ void test('library stats use recorded profile time and keep unknown, zero and sh
     assert.deepEqual(
         stats.playtimeBands.map((band) => band.count),
         [0, 1, 0, 1, 0, 0],
+    );
+    assert.deepEqual(
+        stats.playtimeBands.map(({ games }) => games.map(({ appId }) => appId)),
+        [[], [1], [], [4], [], []],
+    );
+    assert.deepEqual(
+        stats.statuses
+            .find(({ status }) => status === 'pending')
+            ?.games.map(({ appId }) => appId),
+        [4, 2],
+    );
+    assert.deepEqual(
+        stats.statuses
+            .find(({ status }) => status === 'completed')
+            ?.games.map(({ appId }) => appId),
+        [-3],
     );
     assert.deepEqual(
         stats.topGenres.map(({ name, count }) => [name, count]),

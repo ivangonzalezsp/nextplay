@@ -80,10 +80,14 @@ export function libraryStats(
         (game) =>
             inLibrary(game) && (period === 'all' || activeIds.has(game.appId)),
     );
-    const statusCounts = Object.fromEntries(
-        STATS_STATUS_ORDER.map((status) => [status, 0]),
-    ) as Record<GameStatus, number>;
-    const playtimeBands = PLAYTIME_BANDS.map((band) => ({ ...band, count: 0 }));
+    const statusGames = Object.fromEntries(
+        STATS_STATUS_ORDER.map((status) => [status, [] as Game[]]),
+    ) as Record<GameStatus, Game[]>;
+    const playtimeBands = PLAYTIME_BANDS.map((band) => ({
+        ...band,
+        count: 0,
+        games: [] as Game[],
+    }));
     const genres = new Map<
         number,
         { name: string; count: number; minutes: number; games: Game[] }
@@ -99,7 +103,9 @@ export function libraryStats(
     let tagCoverage = 0;
 
     for (const game of games) {
-        statusCounts[state.preferences[game.appId]?.status ?? 'pending']++;
+        statusGames[state.preferences[game.appId]?.status ?? 'pending'].push(
+            game,
+        );
 
         const minutes = game.playtimeMinutes;
         const playedMinutes =
@@ -111,8 +117,11 @@ export function libraryStats(
             totalMinutes += minutes;
             if (minutes > 0) {
                 playedGames.push(game);
-                playtimeBands.find((band) => minutes < band.maxMinutes)!
-                    .count++;
+                const band = playtimeBands.find(
+                    (band) => minutes < band.maxMinutes,
+                )!;
+                band.count++;
+                band.games.push(game);
             }
         }
 
@@ -207,11 +216,15 @@ export function libraryStats(
             )
             .slice(0, 8)
             .map((tag) => ({ ...tag, games: tag.games.sort(byPlaytime) })),
-        playtimeBands,
+        playtimeBands: playtimeBands.map((band) => ({
+            ...band,
+            games: band.games.sort(byPlaytime),
+        })),
         statuses: STATS_STATUS_ORDER.map((status) => ({
             status,
             label: STATUS_LABELS[status],
-            count: statusCounts[status],
+            count: statusGames[status].length,
+            games: statusGames[status].sort(byPlaytime),
         })),
         topGames,
         topShare:

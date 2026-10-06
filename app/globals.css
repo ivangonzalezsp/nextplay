@@ -2911,13 +2911,23 @@ h1 {
     flex: 1;
     min-width: 0;
 }
-.stats-status-list li {
+.stats-status-trigger {
     display: grid;
     grid-template-columns: 8px minmax(0, 1fr) auto;
     align-items: center;
     gap: 9px;
     color: var(--muted-foreground);
     font-size: 0.75rem;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+}
+.stats-status-trigger:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
 }
 .stats-status-dot {
     width: 8px;
@@ -3002,6 +3012,9 @@ h1 {
 }
 .stats-contributors-card > strong {
     font-size: 0.92rem;
+}
+.stats-chart-contributors {
+    width: min(70vw, 360px);
 }
 .stats-contributors-card > p {
     margin-top: 4px;

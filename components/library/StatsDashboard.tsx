@@ -11,6 +11,7 @@ import {
     LabelList,
     Pie,
     PieChart,
+    Tooltip,
     XAxis,
     YAxis,
 } from 'recharts';
@@ -27,7 +28,7 @@ import {
     HoverCardContent,
     HoverCardTrigger,
 } from '@/components/ui/hover-card';
-import type { GameStatus, Snapshot } from '@/lib/model';
+import type { Game, GameStatus, Snapshot } from '@/lib/model';
 import { libraryStats, STATS_PERIODS, type StatsPeriod } from '@/lib/stats';
 
 const formatHours = (minutes: number) =>
@@ -53,6 +54,31 @@ const statusColors: Record<GameStatus, string> = {
     ignored: 'var(--stats-blue)',
 };
 
+function StatsGroupGames({ label, games }: { label: string; games: Game[] }) {
+    return (
+        <>
+            <strong>{label}</strong>
+            <p>
+                {games.length.toLocaleString(locale())} {t('juegos')}
+            </p>
+            <ol>
+                {games.map((game) => (
+                    <li key={game.appId}>
+                        <span>{game.name}</span>
+                        <strong>
+                            {game.playtimeMinutes !== null &&
+                            Number.isFinite(game.playtimeMinutes) &&
+                            game.playtimeMinutes >= 0
+                                ? formatHours(game.playtimeMinutes)
+                                : t('Sin datos')}
+                        </strong>
+                    </li>
+                ))}
+            </ol>
+        </>
+    );
+}
+
 export function StatsDashboard({ state }: { state: Snapshot }) {
     const language = useLanguage();
     const [period, setPeriod] = useState<StatsPeriod>('all');
@@ -75,6 +101,24 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
         ...band,
         fill: bandColors[index],
     }));
+    const gamesTooltip = (
+        <Tooltip
+            cursor={false}
+            wrapperStyle={{ zIndex: 50, pointerEvents: 'auto' }}
+            content={({ active, payload }) => {
+                const group = payload?.[0]?.payload as
+                    { label: string; games: Game[] } | undefined;
+                return active && group ? (
+                    <div className="stats-contributors-card stats-chart-contributors rounded-lg">
+                        <StatsGroupGames
+                            label={group.label}
+                            games={group.games}
+                        />
+                    </div>
+                ) : null;
+            }}
+        />
+    );
     const metrics = [
         {
             label: t('En tu biblioteca'),
@@ -237,7 +281,6 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                             <ChartContainer
                                 config={chartConfig}
                                 className="stats-playtime-chart"
-                                aria-hidden="true"
                             >
                                 <BarChart
                                     data={playtimeBands}
@@ -265,6 +308,7 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                         }}
                                     />
                                     <YAxis hide />
+                                    {gamesTooltip}
                                     <Bar
                                         dataKey="count"
                                         radius={[8, 8, 0, 0]}
@@ -323,9 +367,9 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                                 config={chartConfig}
                                 className="stats-donut-chart"
                                 initialDimension={{ width: 220, height: 220 }}
-                                aria-hidden="true"
                             >
                                 <PieChart>
+                                    {gamesTooltip}
                                     <Pie
                                         data={visibleStatuses}
                                         dataKey="count"
@@ -346,19 +390,49 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
                             </div>
                         </div>
                         <ul className="stats-status-list">
-                            {visibleStatuses.map(({ status, label, count }) => (
-                                <li key={status}>
-                                    <span
-                                        className="stats-status-dot"
-                                        style={{
-                                            background: statusColors[status],
-                                        }}
-                                        aria-hidden="true"
-                                    />
-                                    <span>{t(label)}</span>
-                                    <strong>{number.format(count)}</strong>
-                                </li>
-                            ))}
+                            {visibleStatuses.map(
+                                ({ status, label, count, games }) => (
+                                    <li key={status}>
+                                        <HoverCard>
+                                            <HoverCardTrigger
+                                                delay={150}
+                                                render={
+                                                    <button
+                                                        type="button"
+                                                        className="stats-status-trigger"
+                                                        aria-label={`${t('Ver juegos en ')}${label}`}
+                                                    />
+                                                }
+                                            >
+                                                <span
+                                                    className="stats-status-dot"
+                                                    style={{
+                                                        background:
+                                                            statusColors[
+                                                                status
+                                                            ],
+                                                    }}
+                                                    aria-hidden="true"
+                                                />
+                                                <span>{t(label)}</span>
+                                                <strong>
+                                                    {number.format(count)}
+                                                </strong>
+                                            </HoverCardTrigger>
+                                            <HoverCardContent
+                                                className="stats-contributors-card"
+                                                side="bottom"
+                                                align="start"
+                                            >
+                                                <StatsGroupGames
+                                                    label={label}
+                                                    games={games}
+                                                />
+                                            </HoverCardContent>
+                                        </HoverCard>
+                                    </li>
+                                ),
+                            )}
                         </ul>
                     </div>
                     <p className="stats-panel-note">
