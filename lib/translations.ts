@@ -1,5 +1,19 @@
 // English UI and service messages; Spanish source text remains the fallback.
 export const ENGLISH: Record<string, string> = {
+    'Última semana': 'Last week',
+    'Último mes': 'Last month',
+    'Últimos 3 meses': 'Last 3 months',
+    'Últimos 6 meses': 'Last 6 months',
+    'Último año': 'Last year',
+    'Últimos 3 años': 'Last 3 years',
+    'All time': 'All time',
+    'Periodo de estadísticas': 'Statistics period',
+    'El periodo filtra juegos con actividad en Mi año, incluidas partidas en curso. Las horas son sus totales acumulados y los estados son los actuales; no son las horas jugadas dentro del periodo.':
+        'The period filters games with activity in My year, including ongoing playthroughs. Hours are their lifetime totals and statuses are current; these are not hours played within the period.',
+    'No hay actividad registrada en este periodo':
+        'No activity recorded in this period',
+    'Registra las fechas de tus juegos en Mi año o elige otro periodo.':
+        'Record your game dates in My year or choose another period.',
     'Sin razonamiento': 'No reasoning',
     Mínimo: 'Minimal',
     'Elige un modelo disponible': 'Choose an available model',

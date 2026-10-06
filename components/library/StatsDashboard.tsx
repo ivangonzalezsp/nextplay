@@ -2,6 +2,7 @@
 
 import { locale, translate as t } from '@/lib/i18n';
 import { useLanguage } from '@/components/header/LanguageSelector';
+import { useState } from 'react';
 
 import {
     Bar,
@@ -27,7 +28,7 @@ import {
     HoverCardTrigger,
 } from '@/components/ui/hover-card';
 import type { GameStatus, Snapshot } from '@/lib/model';
-import { libraryStats } from '@/lib/stats';
+import { libraryStats, STATS_PERIODS, type StatsPeriod } from '@/lib/stats';
 
 const formatHours = (minutes: number) =>
     minutes > 0 && minutes < 3
@@ -54,12 +55,13 @@ const statusColors: Record<GameStatus, string> = {
 
 export function StatsDashboard({ state }: { state: Snapshot }) {
     const language = useLanguage();
+    const [period, setPeriod] = useState<StatsPeriod>('all');
     const number = new Intl.NumberFormat(locale());
     const chartConfig = {
         count: { label: t('Juegos'), color: 'var(--stats-teal)' },
     } satisfies ChartConfig;
     // ponytail: O(n) stats on rerender; memoize if measured with large libraries.
-    const stats = libraryStats(state, language);
+    const stats = libraryStats(state, language, period);
     const completed =
         stats.statuses.find(({ status }) => status === 'completed')?.count ?? 0;
     const visibleStatuses = stats.statuses
@@ -138,21 +140,51 @@ export function StatsDashboard({ state }: { state: Snapshot }) {
         },
     ];
 
-    if (!stats.totalGames)
-        return (
-            <section className="stats-empty">
-                <ChartNoAxesCombined size={32} />
-                <h2>{t('Aún no hay estadísticas')}</h2>
-                <p>
-                    {t(
-                        'Añade juegos o conecta Steam para ver tu biblioteca aquí.',
-                    )}
-                </p>
-            </section>
-        );
-
     return (
         <div className="stats-dashboard">
+            <fieldset
+                className="stats-periods"
+                aria-label={t('Periodo de estadísticas')}
+            >
+                {(Object.entries(STATS_PERIODS) as [StatsPeriod, string][]).map(
+                    ([value, label]) => (
+                        <button
+                            key={value}
+                            type="button"
+                            aria-pressed={period === value}
+                            onClick={() => setPeriod(value)}
+                        >
+                            {t(label)}
+                        </button>
+                    ),
+                )}
+            </fieldset>
+            {period !== 'all' && (
+                <p className="stats-panel-note">
+                    {t(
+                        'El periodo filtra juegos con actividad en Mi año, incluidas partidas en curso. Las horas son sus totales acumulados y los estados son los actuales; no son las horas jugadas dentro del periodo.',
+                    )}
+                </p>
+            )}
+            {!stats.totalGames && (
+                <section className="stats-empty">
+                    <ChartNoAxesCombined size={32} />
+                    <h2>
+                        {t(
+                            period === 'all'
+                                ? 'Aún no hay estadísticas'
+                                : 'No hay actividad registrada en este periodo',
+                        )}
+                    </h2>
+                    <p>
+                        {t(
+                            period === 'all'
+                                ? 'Añade juegos o conecta Steam para ver tu biblioteca aquí.'
+                                : 'Registra las fechas de tus juegos en Mi año o elige otro periodo.',
+                        )}
+                    </p>
+                </section>
+            )}
             <section className="stats-hero" aria-labelledby="stats-heading">
                 <div className="stats-hero-copy">
                     <span className="stats-kicker">

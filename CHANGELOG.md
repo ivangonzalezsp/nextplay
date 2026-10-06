@@ -6,6 +6,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Features
 
+- Las estadísticas permiten filtrar los juegos con actividad en Mi año por última semana, mes, 3 o 6 meses, año, 3 años y All time; las horas se identifican como acumuladas.
 - El calendario de Mi año integra los eventos en la cuadrícula de días con barras de color al estilo Google Calendar, detalles al pulsar y días de la semana en el idioma elegido.
 
 ### Correcciones de errores

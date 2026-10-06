@@ -6,6 +6,43 @@ import {
     type GameStatus,
     type State,
 } from './model.ts';
+import { playPeriods } from './play-history.ts';
+
+export const STATS_PERIODS = {
+    week: 'Última semana',
+    month: 'Último mes',
+    '3months': 'Últimos 3 meses',
+    '6months': 'Últimos 6 meses',
+    year: 'Último año',
+    '3years': 'Últimos 3 años',
+    all: 'All time',
+} as const;
+export type StatsPeriod = keyof typeof STATS_PERIODS;
+
+export function statsPeriodStart(period: StatsPeriod, now: number) {
+    if (period === 'all') return -Infinity;
+    const date = new Date(now);
+    if (period === 'week') date.setDate(date.getDate() - 7);
+    else {
+        const months = {
+            month: 1,
+            '3months': 3,
+            '6months': 6,
+            year: 12,
+            '3years': 36,
+        };
+        const day = date.getDate();
+        date.setDate(1);
+        date.setMonth(date.getMonth() - months[period]);
+        const lastDay = new Date(
+            date.getFullYear(),
+            date.getMonth() + 1,
+            0,
+        ).getDate();
+        date.setDate(Math.min(day, lastDay));
+    }
+    return date.getTime();
+}
 
 export const STATS_STATUS_ORDER: GameStatus[] = [
     'pending',
@@ -26,10 +63,23 @@ const PLAYTIME_BANDS = [
 ];
 
 export function libraryStats(
-    state: Pick<State, 'games' | 'preferences'>,
+    state: Pick<State, 'games' | 'preferences' | 'playHistory'>,
     language: 'es' | 'en' = 'es',
+    period: StatsPeriod = 'all',
+    now = Date.now(),
 ) {
-    const games = state.games.filter(inLibrary);
+    const from = statsPeriodStart(period, now);
+    const events = (state.playHistory ?? []).filter((event) => event.at <= now);
+    const activeIds = new Set(
+        events.filter((event) => event.at >= from).map((event) => event.appId),
+    );
+    for (const span of playPeriods(events)) {
+        if ((span.end?.at ?? now) >= from) activeIds.add(span.start.appId);
+    }
+    const games = state.games.filter(
+        (game) =>
+            inLibrary(game) && (period === 'all' || activeIds.has(game.appId)),
+    );
     const statusCounts = Object.fromEntries(
         STATS_STATUS_ORDER.map((status) => [status, 0]),
     ) as Record<GameStatus, number>;
