@@ -29,7 +29,7 @@
         "format:prettier": "prettier --write \"{app,components,lib,scripts,tests}/**/*.{ts,tsx,js,jsx,json,css,scss,md}\""
     },
     "dependencies": {
-        "@modelcontextprotocol/sdk": "1.30.0",
+        "@modelcontextprotocol/sdk": "1.32.1",
         "react": "19.2.8",
         "react-dom": "19.2.8",
         "vinext": "1.0.0-beta.9",
