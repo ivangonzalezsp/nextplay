@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-07
+
 ### Features
 
 - El timeline de Mi año muestra una cabecera única, ayuda desplegable, tramos más visibles, referencias temporales y una vista mensual para explorar las partidas cortas; la lista de cambios de estado y su búsqueda siguen el mes o año seleccionado.
