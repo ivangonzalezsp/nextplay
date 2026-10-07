@@ -198,8 +198,15 @@ export function recordPreference(
 export function eventsInYear(
     events: NonNullable<State['playHistory']>,
     year: number,
+    month?: number,
 ) {
     return events
-        .filter((event) => new Date(event.at).getFullYear() === year)
+        .filter((event) => {
+            const date = new Date(event.at);
+            return (
+                date.getFullYear() === year &&
+                (month === undefined || date.getMonth() === month)
+            );
+        })
         .sort((a, b) => b.at - a.at);
 }
