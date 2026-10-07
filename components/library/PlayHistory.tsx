@@ -25,7 +25,12 @@ import {
     PopoverTitle,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import { gameUrl, type PlayEvent, type State } from '@/lib/model';
+import {
+    gameUrl,
+    STATUS_LABELS,
+    type PlayEvent,
+    type State,
+} from '@/lib/model';
 import {
     calendarDateAt,
     dateInputValue,
@@ -320,6 +325,8 @@ export function PlayHistory({
     const currentYear = new Date(now).getFullYear();
     const [year, setYear] = useState(currentYear);
     const [view, setView] = useState<'timeline' | 'calendar'>('timeline');
+    const [scale, setScale] = useState<'year' | 'month'>('year');
+    const [month, setMonth] = useState(() => new Date(now).getMonth());
     const [eventSearch, setEventSearch] = useState('');
     const earliestYear = Math.min(
         currentYear,
@@ -331,17 +338,51 @@ export function PlayHistory({
     );
     const visibleEvents = withoutSameDayRoundTrips(events);
     const selected = eventsInYear(visibleEvents, year);
-    const filteredEvents = filterPlayEvents(selected, eventSearch, (event) =>
-        t(playEventLabel(event)),
+    const periodEvents =
+        scale === 'month' ? eventsInYear(selected, year, month) : selected;
+    const filteredEvents = filterPlayEvents(
+        periodEvents,
+        eventSearch,
+        (event) => t(playEventLabel(event)),
     );
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year, 11, 31);
-    const yearDays =
-        (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / 86400000;
+    const rangeStart = scale === 'month' ? new Date(year, month, 1) : yearStart;
+    const rangeEnd = scale === 'month' ? new Date(year, month + 1, 0) : yearEnd;
+    const dayIndex = (date: Date) =>
+        Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) /
+        86400000;
+    const rangeDays = dayIndex(rangeEnd) - dayIndex(rangeStart) + 1;
+    const ticks =
+        scale === 'year'
+            ? months().map((label, index) => ({
+                  label: label.slice(0, 3),
+                  position:
+                      ((dayIndex(new Date(year, index, 1)) -
+                          dayIndex(rangeStart)) /
+                          rangeDays) *
+                      100,
+              }))
+            : [1, 5, 10, 15, 20, 25, rangeDays].map((day) => ({
+                  label: String(day),
+                  position: ((day - 1) / rangeDays) * 100,
+              }));
+    const todayPosition =
+        ((dayIndex(new Date(now)) - dayIndex(rangeStart) + 0.5) / rangeDays) *
+        100;
+    const showToday = todayPosition >= 0 && todayPosition < 100;
     const periods = playPeriods(visibleEvents).filter((period) =>
         periodSpan(period, yearStart, yearEnd, now),
     );
     const periodGroups = groupPlayPeriods(periods);
+    const timelineGroups = groupPlayPeriods(
+        periods.filter((period) =>
+            periodSpan(period, rangeStart, rangeEnd, now),
+        ),
+    );
+    const latestEvents = new Map(
+        visibleEvents.map((event) => [event.appId, event]),
+    );
     const standaloneEvents = standalonePlayEvents(visibleEvents, periods);
     const dateLabel = (at: number) =>
         new Date(at).toLocaleDateString(locale(), {
@@ -350,7 +391,7 @@ export function PlayHistory({
             year: 'numeric',
         });
     const periodRangeLabel = (period: PlayPeriod) =>
-        `Start ${dateLabel(period.start.at)} · ${period.end ? `${t(playEventLabel(period.end))} ${dateLabel(period.end.at)}` : t('En curso')}`;
+        `${t('Inicio')} ${dateLabel(period.start.at)} · ${period.end ? `${t(playEventLabel(period.end))} ${dateLabel(period.end.at)}` : t('En curso')}`;
     const periodDescription = (period: PlayPeriod) =>
         `${period.start.name}: ${periodRangeLabel(period)}${period.end ? '' : t(' hasta hoy')}`;
     const periodCalendarLabel = (period: PlayPeriod) =>
@@ -375,7 +416,9 @@ export function PlayHistory({
             <div className={styles.header}>
                 <div>
                     <p className={styles.eyebrow}>{t('Actividad de juego')}</p>
-                    <h2 className={styles.title}>{t('Mi año')}</h2>
+                    <h1 className={styles.title}>
+                        {t('Mi año')} <span>· {year}</span>
+                    </h1>
                     <p className={styles.subtitle}>
                         {view === 'calendar'
                             ? `${t('Actividad registrada en ')}${year}`
@@ -429,23 +472,31 @@ export function PlayHistory({
                     </span>
                 </div>
             ) : (
-                <>
-                    <p className="text-sm text-muted-foreground">
-                        {t(
-                            'Cada cambio de estado queda registrado: inicios, pausas, reanudaciones, finales y abandonos, también al volver a Pendiente o marcar No me interesa. Puedes corregir la fecha de cada evento desde la lista de cambios. ',
-                        )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                        {t(
-                            'Un color por juego. Cada juego aparece en una sola línea y cada Start-End conserva su propio tramo; al reanudar comienza otro tramo del mismo color. Los tramos abiertos llegan hasta hoy. Sin un inicio registrado no se dibuja un tramo. ',
-                        )}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                        {t(
-                            'Las idas y vueltas que regresan al estado inicial el mismo día se consideran un clic accidental y no crean un tramo. ',
-                        )}
-                    </p>
-                </>
+                <details className={styles.help}>
+                    <summary>{t('Cómo funciona')}</summary>
+                    <div className="space-y-2 pt-3">
+                        <p className="text-sm text-muted-foreground">
+                            {t(
+                                'Cada cambio de estado queda registrado: inicios, pausas, reanudaciones, finales y abandonos, también al volver a Pendiente o marcar No me interesa. Puedes corregir la fecha de cada evento desde la lista de cambios. ',
+                            )}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {t(
+                                'Un color por juego. Cada juego aparece en una sola línea y cada Start-End conserva su propio tramo; al reanudar comienza otro tramo del mismo color. Los tramos abiertos llegan hasta hoy. Sin un inicio registrado no se dibuja un tramo. ',
+                            )}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {t(
+                                'Las idas y vueltas que regresan al estado inicial el mismo día se consideran un clic accidental y no crean un tramo. ',
+                            )}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {t(
+                                'Los estados junto a los juegos son los actuales. Las fechas de cada tramo aparecen al pulsarlo.',
+                            )}
+                        </p>
+                    </div>
+                </details>
             )}
             {selected.length === 0 && periods.length === 0 && (
                 <p className="rounded-xl border border-border p-6">
@@ -455,140 +506,295 @@ export function PlayHistory({
             )}
             {view === 'timeline' ? (
                 <div className="space-y-6">
-                    <div
-                        className="overflow-x-auto rounded-xl border border-border bg-card p-4"
-                        role="region"
-                        aria-label={`${t('Tramos de juego de ')}${year}`}
-                        tabIndex={0}
-                    >
-                        <div className="min-w-[640px] space-y-4">
-                            <div className="ml-52 grid grid-cols-12 text-xs text-muted-foreground">
-                                {months().map((month) => (
-                                    <span key={month}>{month.slice(0, 3)}</span>
+                    <div className={styles.timelinePanel}>
+                        <div className={styles.timelineToolbar}>
+                            <p>
+                                {t(
+                                    'Un color por juego. Pulsa un tramo para ver sus fechas.',
+                                )}
+                            </p>
+                            <div className={styles.controls}>
+                                <fieldset
+                                    className={styles.scale}
+                                    aria-label={t('Escala del timeline')}
+                                >
+                                    {(['year', 'month'] as const).map(
+                                        (value) => (
+                                            <Button
+                                                key={value}
+                                                variant={
+                                                    scale === value
+                                                        ? 'default'
+                                                        : 'ghost'
+                                                }
+                                                aria-pressed={scale === value}
+                                                onClick={() => setScale(value)}
+                                            >
+                                                {t(
+                                                    value === 'year'
+                                                        ? 'Anual'
+                                                        : 'Mensual',
+                                                )}
+                                            </Button>
+                                        ),
+                                    )}
+                                </fieldset>
+                                {scale === 'month' && (
+                                    <>
+                                        <label htmlFor="play-month">
+                                            {t('Mes')}
+                                        </label>
+                                        <select
+                                            id="play-month"
+                                            value={month}
+                                            onChange={(event) =>
+                                                setMonth(
+                                                    Number(event.target.value),
+                                                )
+                                            }
+                                        >
+                                            {months().map((name, index) => (
+                                                <option
+                                                    key={name}
+                                                    value={index}
+                                                >
+                                                    {name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                        <section
+                            aria-label={`${t('Tramos de juego de ')}${scale === 'month' ? months()[month] + ' ' : ''}${year}`}
+                        >
+                            <div
+                                className={styles.timelineAxis}
+                                aria-hidden="true"
+                            >
+                                {ticks.map((tick) => (
+                                    <span
+                                        key={tick.label}
+                                        style={{ left: `${tick.position}%` }}
+                                    >
+                                        {tick.label}
+                                    </span>
                                 ))}
                             </div>
-                            {periodGroups.map((group) => {
+                            {timelineGroups.length === 0 && (
+                                <p className={styles.timelineEmpty}>
+                                    {t(
+                                        'No hay tramos de juego en este periodo.',
+                                    )}
+                                </p>
+                            )}
+                            {timelineGroups.map((group) => {
                                 const first = group[0];
-                                const color = gameColor(first.start.appId);
-                                const description = group
-                                    .map(periodDescription)
-                                    .join(' · ');
+                                const appId = first.start.appId;
+                                const color = gameColor(appId);
+                                const latest = latestEvents.get(appId)!;
+                                const status =
+                                    state.preferences[appId]?.status ??
+                                    (latest.kind === 'started'
+                                        ? 'playing'
+                                        : latest.kind);
                                 return (
                                     <div
-                                        key={first.start.appId}
-                                        className="flex items-center gap-4"
+                                        key={appId}
+                                        className={styles.timelineRow}
+                                        style={
+                                            {
+                                                '--game-color': color,
+                                            } as CSSProperties
+                                        }
                                     >
                                         <a
                                             href={eventUrl(first.start)}
                                             target="_blank"
                                             rel="noreferrer"
-                                            className="flex w-48 shrink-0 items-center gap-2 hover:underline"
+                                            className={styles.timelineGame}
                                         >
-                                            <span className="w-9 shrink-0">
+                                            <span
+                                                className={styles.timelineCover}
+                                            >
                                                 <EventCover
                                                     src={
-                                                        covers.get(
-                                                            first.start.appId,
-                                                        ) ?? first.start.cover
+                                                        covers.get(appId) ??
+                                                        first.start.cover
                                                     }
                                                 />
                                             </span>
-                                            <span className="text-sm">
-                                                {first.start.name}
+                                            <span
+                                                className={
+                                                    styles.timelineGameText
+                                                }
+                                            >
+                                                <span
+                                                    className={
+                                                        styles.timelineName
+                                                    }
+                                                >
+                                                    {first.start.name}
+                                                </span>
+                                                <span
+                                                    className={
+                                                        styles.timelineStatus
+                                                    }
+                                                    aria-label={`${t('Estado actual')}: ${t(STATUS_LABELS[status])}`}
+                                                >
+                                                    {t(STATUS_LABELS[status])}
+                                                </span>
                                             </span>
                                         </a>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="mb-2 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                                                {group.map(
-                                                    (period, periodIndex) => (
-                                                        <span
+                                        <div className={styles.timelineTrack}>
+                                            {ticks.map((tick) => (
+                                                <span
+                                                    aria-hidden="true"
+                                                    key={tick.label}
+                                                    className={
+                                                        styles.timelineGridLine
+                                                    }
+                                                    style={{
+                                                        left: `${tick.position}%`,
+                                                    }}
+                                                />
+                                            ))}
+                                            {showToday && (
+                                                <span
+                                                    aria-hidden="true"
+                                                    className={styles.todayLine}
+                                                    style={{
+                                                        left: `${todayPosition}%`,
+                                                    }}
+                                                />
+                                            )}
+                                            {group.map(
+                                                (period, periodIndex) => {
+                                                    const span = periodSpan(
+                                                        period,
+                                                        rangeStart,
+                                                        rangeEnd,
+                                                        now,
+                                                    )!;
+                                                    return (
+                                                        <PeriodPopover
                                                             key={`${period.start.at}-${periodIndex}`}
-                                                        >
-                                                            {periodRangeLabel(
+                                                            period={period}
+                                                            periodIndex={
+                                                                periodIndex
+                                                            }
+                                                            groupLength={
+                                                                group.length
+                                                            }
+                                                            color={color}
+                                                            description={periodDescription(
                                                                 period,
                                                             )}
-                                                        </span>
-                                                    ),
-                                                )}
-                                            </p>
-                                            <div
-                                                className="relative h-5 rounded bg-muted/40"
-                                                aria-label={description}
-                                                title={description}
-                                            >
-                                                {group.map(
-                                                    (period, periodIndex) => {
-                                                        const span = periodSpan(
-                                                            period,
-                                                            yearStart,
-                                                            yearEnd,
-                                                            now,
-                                                        )!;
-                                                        return (
-                                                            <PeriodPopover
-                                                                key={`${period.start.at}-${periodIndex}`}
-                                                                period={period}
-                                                                periodIndex={
-                                                                    periodIndex
+                                                            dateLabel={
+                                                                dateLabel
+                                                            }
+                                                            gameHref={eventUrl(
+                                                                period.start,
+                                                            )}
+                                                            className={
+                                                                styles.timelineSegment
+                                                            }
+                                                            style={{
+                                                                left: `${(span.start / rangeDays) * 100}%`,
+                                                                width: `min(max(10px, ${((span.end - span.start + 1) / rangeDays) * 100}%), ${100 - (span.start / rangeDays) * 100}%)`,
+                                                            }}
+                                                        >
+                                                            <span
+                                                                className={
+                                                                    styles.segmentBar
                                                                 }
-                                                                groupLength={
-                                                                    group.length
-                                                                }
-                                                                color={color}
-                                                                description={periodDescription(
-                                                                    period,
-                                                                )}
-                                                                dateLabel={
-                                                                    dateLabel
-                                                                }
-                                                                gameHref={eventUrl(
-                                                                    period.start,
-                                                                )}
-                                                                className="absolute top-2 h-1 cursor-pointer rounded-full border-0 p-0 opacity-70 focus-visible:-top-0.5 focus-visible:h-2 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                                style={{
-                                                                    left: `${(span.start / yearDays) * 100}%`,
-                                                                    width: `${((span.end - span.start + 1) / yearDays) * 100}%`,
-                                                                    backgroundColor:
-                                                                        color,
-                                                                }}
+                                                                aria-hidden="true"
                                                             >
-                                                                <span
-                                                                    aria-hidden="true"
-                                                                    className="absolute -left-0.5 -top-0.5 h-2 w-2 rounded-full"
-                                                                    style={{
-                                                                        backgroundColor:
-                                                                            color,
-                                                                    }}
-                                                                />
-                                                                <span
-                                                                    aria-hidden="true"
-                                                                    className={`absolute -right-0.5 -top-0.5 h-2 w-2 border ${period.end ? 'rounded-sm' : 'rounded-full bg-card'}`}
-                                                                    style={{
-                                                                        borderColor:
-                                                                            color,
-                                                                        ...(period.end
-                                                                            ? {
-                                                                                  backgroundColor:
-                                                                                      color,
-                                                                              }
-                                                                            : {}),
-                                                                    }}
-                                                                />
-                                                            </PeriodPopover>
-                                                        );
-                                                    },
-                                                )}
-                                            </div>
+                                                                {dayIndex(
+                                                                    new Date(
+                                                                        period
+                                                                            .start
+                                                                            .at,
+                                                                    ),
+                                                                ) >=
+                                                                    dayIndex(
+                                                                        rangeStart,
+                                                                    ) && (
+                                                                    <span
+                                                                        className={
+                                                                            styles.segmentStart
+                                                                        }
+                                                                    />
+                                                                )}
+                                                                {dayIndex(
+                                                                    new Date(
+                                                                        period
+                                                                            .end
+                                                                            ?.at ??
+                                                                            now,
+                                                                    ),
+                                                                ) <=
+                                                                    dayIndex(
+                                                                        rangeEnd,
+                                                                    ) && (
+                                                                    <span
+                                                                        className={
+                                                                            period.end
+                                                                                ? styles.segmentEnd
+                                                                                : styles.segmentOpen
+                                                                        }
+                                                                    />
+                                                                )}
+                                                            </span>
+                                                        </PeriodPopover>
+                                                    );
+                                                },
+                                            )}
                                         </div>
                                     </div>
                                 );
                             })}
+                        </section>
+                        <div className={styles.timelineLegend}>
+                            <span>
+                                <i
+                                    className={styles.legendStart}
+                                    aria-hidden="true"
+                                />
+                                {t('Inicio')}
+                            </span>
+                            <span>
+                                <i
+                                    className={styles.legendEnd}
+                                    aria-hidden="true"
+                                />
+                                {t('Fin')}
+                            </span>
+                            <span>
+                                <i
+                                    className={styles.legendOpen}
+                                    aria-hidden="true"
+                                />
+                                {t('En curso')}
+                            </span>
+                            {showToday && (
+                                <span className={styles.todayLegend}>
+                                    <i aria-hidden="true" />
+                                    {t('Hoy')} ·{' '}
+                                    {new Date(now).toLocaleDateString(
+                                        locale(),
+                                        { day: 'numeric', month: 'short' },
+                                    )}
+                                </span>
+                            )}
                         </div>
                     </div>
                     <details>
                         <summary className="cursor-pointer text-sm">
-                            {t('Todos los cambios de estado (')}
-                            {selected.length})
+                            {t('Cambios de estado')} ·{' '}
+                            {scale === 'month' ? months()[month] : year} (
+                            {periodEvents.length})
                         </summary>
                         <div className="mt-4 flex flex-wrap items-end gap-3">
                             <div className="min-w-0 flex-1 basis-64 space-y-2">
@@ -623,12 +829,14 @@ export function PlayHistory({
                             className="mt-3 text-sm text-muted-foreground"
                         >
                             {filteredEvents.length} {t('de ')}
-                            {selected.length} {t('cambios de estado')}
+                            {periodEvents.length} {t('cambios de estado')}
                         </p>
                         {filteredEvents.length === 0 && (
                             <p className="mt-4 rounded-xl border border-border p-4">
                                 {t(
-                                    'No hay cambios de estado que coincidan con la búsqueda.',
+                                    periodEvents.length === 0
+                                        ? 'No hay cambios de estado en este periodo.'
+                                        : 'No hay cambios de estado que coincidan con la búsqueda.',
                                 )}
                             </p>
                         )}

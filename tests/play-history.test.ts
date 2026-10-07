@@ -19,6 +19,37 @@ import {
 } from '../lib/play-history.ts';
 import type { PlayEvent } from '../lib/model.ts';
 
+void test('monthly status changes use local dates, preserve identity and scope search to the period', () => {
+    const event = (
+        year: number,
+        month: number,
+        day: number,
+        hour: number,
+    ): PlayEvent => ({
+        appId: 1,
+        name: 'Portal',
+        kind: 'completed',
+        at: new Date(year, month, day, hour).getTime(),
+    });
+    const events = [
+        event(2026, 0, 31, 23),
+        event(2026, 1, 1, 0),
+        event(2025, 1, 1, 0),
+        event(2026, 1, 28, 23),
+        event(2026, 2, 1, 0),
+    ];
+    const original = structuredClone(events);
+    const february = eventsInYear(events, 2026, 1);
+    assert.deepEqual(february, [events[3], events[1]]);
+    assert.equal(february[1], events[1]);
+    assert.deepEqual(eventsInYear(events, 2026, 0), [events[0]]);
+    assert.deepEqual(eventsInYear(events, 2026, 3), []);
+    assert.equal(eventsInYear(events, 2026).length, 4);
+    assert.deepEqual(filterPlayEvents(february, 'portal'), february);
+    assert.deepEqual(filterPlayEvents(february, 'missing'), []);
+    assert.deepEqual(events, original);
+});
+
 void test('event search matches names and localized statuses without changing event identity or order', () => {
     const events: PlayEvent[] = [
         { appId: 1, name: 'Pokémon', kind: 'playing', from: 'paused', at: 2 },
@@ -134,6 +165,47 @@ test('colored play periods pair each game independently and clip calendar ranges
     );
     assert.equal(gameColor(1), gameColor(periods[0].start.appId));
     assert.notEqual(gameColor(1), gameColor(2));
+});
+
+void test('monthly timeline clips boundary periods and keeps resumed segments separate', () => {
+    const at = (month: number, day: number) =>
+        new Date(2024, month, day, 12).getTime();
+    const events: PlayEvent[] = [
+        { appId: 1, name: 'Test', kind: 'started', at: at(0, 31) },
+        { appId: 1, name: 'Test', kind: 'paused', at: at(1, 2) },
+        {
+            appId: 1,
+            name: 'Test',
+            kind: 'playing',
+            from: 'paused',
+            at: at(1, 28),
+        },
+        { appId: 1, name: 'Test', kind: 'completed', at: at(2, 3) },
+        { appId: 2, name: 'Open', kind: 'started', at: at(1, 29) },
+    ];
+    const original = structuredClone(events);
+    const from = new Date(2024, 1, 1);
+    const to = new Date(2024, 1, 29);
+    const periods = playPeriods(events);
+    assert.deepEqual(
+        periods.map((period) => periodSpan(period, from, to, at(2, 10))),
+        [
+            { start: 0, end: 1 },
+            { start: 27, end: 28 },
+            { start: 28, end: 28 },
+        ],
+    );
+    assert.equal(groupPlayPeriods(periods)[0].length, 2);
+    assert.equal(
+        periodSpan(
+            periods[2],
+            new Date(2024, 0, 1),
+            new Date(2024, 0, 31),
+            at(2, 10),
+        ),
+        null,
+    );
+    assert.deepEqual(events, original);
 });
 
 test('play history records transitions, survives storage and groups by local year', () => {

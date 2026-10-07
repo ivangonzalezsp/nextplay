@@ -1,5 +1,20 @@
 // English UI and service messages; Spanish source text remains the fallback.
 export const ENGLISH: Record<string, string> = {
+    'Cambios de estado': 'Status changes',
+    'No hay cambios de estado en este periodo.':
+        'No status changes in this period.',
+    'Cómo funciona': 'How it works',
+    'Un color por juego. Pulsa un tramo para ver sus fechas.':
+        'One color per game. Select a segment to see its dates.',
+    'Los estados junto a los juegos son los actuales. Las fechas de cada tramo aparecen al pulsarlo.':
+        'The statuses next to games are current. Select a segment to see its dates.',
+    'Escala del timeline': 'Timeline scale',
+    Anual: 'Yearly',
+    Mensual: 'Monthly',
+    Mes: 'Month',
+    'Estado actual': 'Current status',
+    'No hay tramos de juego en este periodo.':
+        'No play segments in this period.',
     'Buscar cambios de estado': 'Search status changes',
     'Nombre del juego o estado…': 'Game name or status…',
     'cambios de estado': 'status changes',

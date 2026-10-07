@@ -1167,7 +1167,14 @@ export default function Home() {
 
             <main id="main" className="workspace">
                 {/* Hero Title & Stats Bar */}
-                <div className="page-heading">
+                <div
+                    className="page-heading"
+                    style={
+                        !settingsOpen && tab === 'year'
+                            ? { display: 'none' }
+                            : undefined
+                    }
+                >
                     <div>
                         <div className="eyebrow">
                             {t('CONSOLA NEXT PLAY · TU ESPACIO DE JUEGO ')}
