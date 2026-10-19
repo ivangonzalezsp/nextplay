@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import childProcess, { type SpawnOptions } from 'node:child_process';
 import { syncBuiltinESMExports } from 'node:module';
+import { once } from 'node:events';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -472,6 +473,127 @@ void test('Codex processes stop when the request is cancelled', async () => {
         else process.env.NEXTPLAY_CODEX_BIN = previous;
     }
 });
+
+void test(
+    'closing a recommendation stream stops running Codex without saving a reply',
+    { timeout: 15_000 },
+    async (t) => {
+        const dir = await mkdtemp(join(tmpdir(), 'nextplay-cancel-stream-'));
+        const previous = {
+            NEXTPLAY_DATA_DIR: process.env.NEXTPLAY_DATA_DIR,
+            NEXTPLAY_USER_DIR: process.env.NEXTPLAY_USER_DIR,
+            NEXTPLAY_CODEX_BIN: process.env.NEXTPLAY_CODEX_BIN,
+        };
+        process.env.NEXTPLAY_DATA_DIR = dir;
+        process.env.NEXTPLAY_USER_DIR = dir;
+        process.env.NEXTPLAY_CODEX_BIN = process.execPath;
+        const spawn = childProcess.spawn;
+        let running: ReturnType<typeof spawn> | undefined;
+        let ready: () => void = () => {};
+        const mockedSpawn = t.mock.method(
+            childProcess,
+            'spawn',
+            (command: string, args: string[], options: SpawnOptions) => {
+                assert.equal(command, process.execPath);
+                assert.ok(['exec', 'login'].includes(args[0]));
+                const child = spawn(
+                    command,
+                    [
+                        '-e',
+                        args[0] === 'login'
+                            ? 'console.log("Logged in using ChatGPT")'
+                            : 'setInterval(() => {}, 1000); console.log("ready")',
+                    ],
+                    options,
+                );
+                if (args[0] === 'exec') {
+                    running = child;
+                    child.stdout!.once('data', () => ready());
+                }
+                return child;
+            },
+        );
+        syncBuiltinESMExports();
+        t.mock.method(globalThis, 'fetch', () => {
+            throw new Error('No network calls expected');
+        });
+        try {
+            await atomicJson(join(dir, 'settings.json'), {
+                connections: {
+                    STEAM_API_KEY: null,
+                    STEAM_FAMILY_TOKEN: null,
+                    TWITCH_CLIENT_ID: null,
+                    TWITCH_CLIENT_SECRET: null,
+                },
+            });
+            const initial = structuredClone(EMPTY_STATE);
+            initial.games = [
+                {
+                    appId: -901,
+                    igdbId: 901,
+                    name: 'Isla tranquila',
+                    owned: true,
+                    platform: 'PC',
+                    playtimeMinutes: 0,
+                    recentMinutes: 0,
+                },
+            ];
+            await saveState(initial);
+            for (const cancelRequest of [false, true]) {
+                const started = new Promise<void>((resolve) => {
+                    ready = resolve;
+                });
+                const controller = new AbortController();
+                const response = await handle(
+                    new Request(
+                        'http://127.0.0.1:3000/api/recommendations/stream',
+                        {
+                            method: 'POST',
+                            headers: { 'content-type': 'application/json' },
+                            body: JSON.stringify({
+                                engine: 'codex',
+                                conversationMode: 'guided',
+                                text: 'Ayúdame a elegir.',
+                                filters: DEFAULT_FILTERS,
+                            }),
+                            signal: controller.signal,
+                        },
+                    ),
+                );
+                await started;
+                assert.ok(running?.pid);
+                assert.equal(running.exitCode, null);
+                const closed = once(running, 'close');
+                if (cancelRequest) {
+                    controller.abort();
+                    const frames = await response.text();
+                    assert.match(frames, /"status":499/);
+                    assert.doesNotMatch(frames, /"type":"result"/);
+                } else {
+                    // Vinext cancels the response body when the browser disconnects.
+                    await response.body!.cancel();
+                    assert.equal(controller.signal.aborted, false);
+                }
+                await closed;
+                assert.ok(
+                    running.exitCode !== null || running.signalCode !== null,
+                );
+                const state = await readState();
+                assert.deepEqual(state.conversation, []);
+                assert.deepEqual(state.history, []);
+            }
+        } finally {
+            running?.kill();
+            mockedSpawn.mock.restore();
+            syncBuiltinESMExports();
+            for (const [key, value] of Object.entries(previous)) {
+                if (value === undefined) delete process.env[key];
+                else process.env[key] = value;
+            }
+            await rm(dir, { recursive: true, force: true });
+        }
+    },
+);
 
 void test('Codex errors identify the failure without leaking raw output', async (t) => {
     const previous = process.env.NEXTPLAY_CODEX_BIN;

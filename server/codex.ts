@@ -176,8 +176,15 @@ export async function runProcess(
             };
             if (error) {
                 logError('server', 'codex:process:failed', error, details);
-                child.kill();
-                reject(error);
+                if (
+                    child.pid &&
+                    child.exitCode === null &&
+                    child.signalCode === null
+                ) {
+                    // Wait until Codex releases its working directory before cleanup.
+                    child.once('close', () => reject(error));
+                    child.kill();
+                } else reject(error);
             } else {
                 log('server', 'codex:process:complete', details);
                 resolveRun(stdout || stderr);

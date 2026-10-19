@@ -121,6 +121,9 @@ function publicProgress(progress: RecommendationProgress) {
 }
 export function streamRecommendations(request: Request): Response {
     const encoder = new TextEncoder();
+    const cancellation = new AbortController();
+    const signal = AbortSignal.any([request.signal, cancellation.signal]);
+    let completion = Promise.resolve();
     const stream = new ReadableStream<Uint8Array>({
         start(controller) {
             const send = (frame: RecommendationStreamFrame) => {
@@ -155,11 +158,11 @@ export function streamRecommendations(request: Request): Response {
                 close();
                 return;
             }
-            void handle(
+            completion = handle(
                 inner,
                 (progress) =>
                     send({ type: 'progress', ...publicProgress(progress) }),
-                request.signal,
+                signal,
             )
                 .then(async (response) => {
                     let payload: unknown;
@@ -205,6 +208,10 @@ export function streamRecommendations(request: Request): Response {
                     }),
                 )
                 .finally(close);
+        },
+        cancel() {
+            cancellation.abort();
+            return completion;
         },
     });
     return new Response(stream, {

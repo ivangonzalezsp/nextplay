@@ -13,7 +13,7 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ### Correcciones de errores
 
-- Ninguno.
+- Parar una consulta de IA detiene también el proceso de Codex en segundo plano cuando el navegador cierra el flujo de respuesta.
 
 ## [1.0.5] - 2026-10-06
 
