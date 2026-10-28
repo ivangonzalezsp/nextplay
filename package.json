@@ -32,7 +32,7 @@
         "@modelcontextprotocol/sdk": "1.32.1",
         "react": "19.2.8",
         "react-dom": "19.2.8",
-        "vinext": "1.0.0-beta.9",
+        "vinext": "1.4.0",
         "zod": "3.25.76"
     },
     "devDependencies": {
