@@ -4,6 +4,14 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Los juegos en curso de Para ti permiten cambiar a cualquier estado desde su tarjeta, además de pausar o reanudar.
+
+### Correcciones de errores
+
+- Ninguno.
+
 ## [1.1.0] - 2026-10-07
 
 ### Features

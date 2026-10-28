@@ -53,6 +53,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import {
     Dialog,
     DialogContent,
     DialogDescription,
@@ -1598,6 +1605,9 @@ export default function Home() {
                                                             variant="ghost"
                                                             size="sm"
                                                             className="h-7 text-xs ml-auto"
+                                                            disabled={operations.includes(
+                                                                `pref-${game.appId}`,
+                                                            )}
                                                             onClick={() =>
                                                                 preference(
                                                                     game,
@@ -1616,6 +1626,70 @@ export default function Home() {
                                                                 ? t('Pausar')
                                                                 : t('Reanudar')}
                                                         </Button>
+                                                    </div>
+                                                    <div className="mt-2 pt-2 border-t border-border/40">
+                                                        <Select
+                                                            value={
+                                                                currentStatus
+                                                            }
+                                                            onValueChange={(
+                                                                status,
+                                                            ) =>
+                                                                status &&
+                                                                preference(
+                                                                    game,
+                                                                    {
+                                                                        status: status as GameStatus,
+                                                                    },
+                                                                )
+                                                            }
+                                                            disabled={operations.includes(
+                                                                `pref-${game.appId}`,
+                                                            )}
+                                                            items={Object.entries(
+                                                                STATUS_LABELS,
+                                                            ).map(
+                                                                ([
+                                                                    value,
+                                                                    label,
+                                                                ]) => ({
+                                                                    value,
+                                                                    label: t(
+                                                                        label,
+                                                                    ),
+                                                                }),
+                                                            )}
+                                                        >
+                                                            <SelectTrigger
+                                                                aria-label={`${t('Estado: ')}${game.name}`}
+                                                                className="h-8 w-full text-xs bg-black/40 border-border/60"
+                                                            >
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {Object.entries(
+                                                                    STATUS_LABELS,
+                                                                ).map(
+                                                                    ([
+                                                                        value,
+                                                                        label,
+                                                                    ]) => (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                value
+                                                                            }
+                                                                            value={
+                                                                                value
+                                                                            }
+                                                                        >
+                                                                            {t(
+                                                                                label,
+                                                                            )}
+                                                                        </SelectItem>
+                                                                    ),
+                                                                )}
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                     {game.appId > 0 && (
                                                         <AchievementProgress
