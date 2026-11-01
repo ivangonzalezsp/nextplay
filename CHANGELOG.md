@@ -4,6 +4,15 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+### Features
+
+- Ajustes → Datos permite descargar e importar copias ZIP locales, con validación de estructura, tamaño, SHA-256, integridad de SQLite y datos, vista previa y copia de recuperación antes de restaurar. Si la biblioteca cambia después de validar, se rechaza el reemplazo hasta revisar de nuevo el ZIP.
+- Ajustes → Datos permite conectar Google Drive con un cliente OAuth de escritorio, exportar copias de SQLite e importar una copia conservando una copia local de recuperación. Las credenciales y la sesión de Codex no se exportan.
+
+### Correcciones de errores
+
+- Ninguno.
+
 ## [1.2.0] - 2026-10-28
 
 ### Features
