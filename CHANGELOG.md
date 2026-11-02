@@ -4,6 +4,8 @@ Cambios visibles de Next Play. Las novedades y correcciones nuevas se añaden ba
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-02
+
 ### Features
 
 - Ajustes → Datos permite descargar e importar copias ZIP locales, con validación de estructura, tamaño, SHA-256, integridad de SQLite y datos, vista previa y copia de recuperación antes de restaurar. Si la biblioteca cambia después de validar, se rechaza el reemplazo hasta revisar de nuevo el ZIP.
