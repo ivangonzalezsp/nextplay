@@ -1,5 +1,73 @@
 // English UI and service messages; Spanish source text remains the fallback.
 export const ENGLISH: Record<string, string> = {
+    'Copias locales (ZIP)': 'Local backups (ZIP)',
+    'Guarda un ZIP en tu equipo o importa una copia de Next Play. Incluye biblioteca, preferencias e historiales; no incluye credenciales ni la sesión de Codex.':
+        'Save a ZIP to your computer or import a Next Play backup. Includes the library, preferences and history; excludes credentials and the Codex session.',
+    'Exportar ZIP': 'Export ZIP',
+    'Importar ZIP': 'Import ZIP',
+    'Primero se valida el archivo. Nada se reemplaza hasta confirmar; antes de restaurar se guarda una copia local de recuperación.':
+        'The file is validated first. Nothing is replaced until you confirm; a local recovery copy is saved before restoring.',
+    'Procesando copia local…': 'Processing local backup…',
+    'Copia ZIP validada': 'ZIP backup validated',
+    'Juegos:': 'Games:',
+    'Preferencias:': 'Preferences:',
+    'Recomendaciones:': 'Recommendations:',
+    'Eventos de juego:': 'Play events:',
+    'Gestiona las copias desde el PC donde se ejecuta Next Play.':
+        'Manage backups from the PC running Next Play.',
+    'La copia validada ha caducado. Selecciona de nuevo el ZIP.':
+        'The validated backup has expired. Select the ZIP again.',
+    'La biblioteca ha cambiado desde la validación. Selecciona de nuevo el ZIP para revisarlo.':
+        'The library has changed since validation. Select the ZIP again to review it.',
+    'Selecciona un ZIP de Next Play.': 'Select a Next Play ZIP.',
+    'Guarda y restaura tu biblioteca, preferencias e historiales. No incluye credenciales ni la sesión de Codex. Cada exportación crea una copia nueva.':
+        'Save and restore your library, preferences and history. Credentials and the Codex session are excluded. Each export creates a new backup.',
+    'Gestiona Google Drive desde el PC donde se ejecuta Next Play.':
+        'Manage Google Drive from the PC running Next Play.',
+    'Google Drive conectado': 'Google Drive connected',
+    'Google Drive sin conectar': 'Google Drive disconnected',
+    'Configurar cliente OAuth de Google': 'Configure Google OAuth client',
+    'Activa Google Drive API en Google Cloud y crea un cliente OAuth de tipo Aplicación de escritorio. Selecciona su JSON descargado. Usa el mismo cliente en tus otros equipos para acceder a las copias.':
+        'Enable Google Drive API in Google Cloud and create a Desktop app OAuth client. Select its downloaded JSON. Use the same client on your other computers to access backups.',
+    'Guía de configuración de Google': 'Google setup guide',
+    'JSON del cliente OAuth (se guarda solo en este PC)':
+        'OAuth client JSON (saved only on this PC)',
+    'Selecciona el JSON OAuth de una aplicación de escritorio de Google.':
+        'Select the OAuth JSON for a Google Desktop app.',
+    'Cliente OAuth guardado. Conecta tu cuenta de Google.':
+        'OAuth client saved. Connect your Google account.',
+    'Conectar Google Drive': 'Connect Google Drive',
+    'Continuar en Google (navegador externo)':
+        'Continue in Google (external browser)',
+    'Copia guardada en Google Drive:': 'Backup saved to Google Drive:',
+    'Exportar a Google Drive': 'Export to Google Drive',
+    'Buscar copias para importar': 'Find backups to import',
+    'Desconectar Google Drive': 'Disconnect Google Drive',
+    'No hay copias de Next Play en esta cuenta para este cliente OAuth.':
+        'There are no Next Play backups in this account for this OAuth client.',
+    'Importar copia': 'Import backup',
+    'Procesando copia de Google Drive…': 'Processing Google Drive backup…',
+    '¿Restaurar esta copia?': 'Restore this backup?',
+    'Se reemplazará la biblioteca actual, incluidas preferencias e historiales. Antes se conservará una copia local en data/backups. Las conexiones no cambian.':
+        'The current library, including preferences and history, will be replaced. A local recovery copy will be saved in data/backups first. Connections will be preserved.',
+    'Restaurar copia': 'Restore backup',
+    'No se pudo autorizar Google Drive. Vuelve a conectar tu cuenta.':
+        'Google Drive authorization failed. Reconnect your account.',
+    'Google devolvió una respuesta no válida.':
+        'Google returned an invalid response.',
+    'Configura primero el cliente OAuth de Google.':
+        'Configure the Google OAuth client first.',
+    'La conexión con Google ha caducado. Inténtalo de nuevo.':
+        'The Google connection has expired. Try again.',
+    'Conecta primero tu cuenta de Google.':
+        'Connect your Google account first.',
+    'No se pudo completar la operación en Google Drive. Comprueba la conexión y los permisos.':
+        'The Google Drive operation failed. Check your connection and permissions.',
+    'La copia supera el límite de 256 MB.':
+        'The backup exceeds the 256 MB limit.',
+    'Selecciona una copia de Next Play.': 'Select a Next Play backup.',
+    'La copia está dañada o no es compatible. La biblioteca actual se conserva.':
+        'The backup is damaged or incompatible. The current library has been preserved.',
     'Cambios de estado': 'Status changes',
     'No hay cambios de estado en este periodo.':
         'No status changes in this period.',

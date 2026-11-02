@@ -9,6 +9,8 @@ import {
 } from './store.ts';
 import { isMaintenance } from './store.ts';
 import { appStatus, manageApp } from './desktop.ts';
+import { manageDrive } from './google-drive.ts';
+import { manageLocalBackup } from './local-backup.ts';
 import { appVersion } from './updates.ts';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
@@ -251,7 +253,12 @@ export function verifyRequest(request: Request) {
     if (
         request.method !== 'GET' &&
         request.headers.get('content-type')?.split(';')[0] !==
-            'application/json'
+            'application/json' &&
+        !(
+            request.method === 'POST' &&
+            url.pathname === '/api/backups/validate' &&
+            request.headers.get('content-type') === 'application/zip'
+        )
     )
         throw new AppError(
             translateMessage('Se requiere una solicitud JSON.'),
@@ -452,6 +459,25 @@ async function handleRequest(
         if (path === '/api/app' && request.method === 'GET')
             return complete(
                 Response.json(await appStatus(request), { headers }),
+            );
+        if (path.startsWith('/api/backups/')) {
+            const response = await manageLocalBackup(
+                request,
+                path === '/api/backups/validate' ? {} : await body(request),
+            );
+            for (const [key, value] of Object.entries(headers))
+                response.headers.set(key, value);
+            return complete(response);
+        }
+        if (path.startsWith('/api/drive/'))
+            return complete(
+                Response.json(
+                    await manageDrive(
+                        request,
+                        request.method === 'GET' ? {} : await body(request),
+                    ),
+                    { headers },
+                ),
             );
         if (path === '/api/connections' || path.startsWith('/api/app/'))
             return complete(

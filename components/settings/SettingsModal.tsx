@@ -5,6 +5,8 @@ import { useLanguage } from '@/components/header/LanguageSelector';
 
 import { useState } from 'react';
 import { AppSetup } from './AppSetup';
+import { GoogleDriveBackup } from './GoogleDriveBackup';
+import { LocalBackup } from './LocalBackup';
 import { CodexControls } from '@/components/ai/CodexControls';
 import { TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -209,6 +211,8 @@ export function SettingsModal({
             </TabsContent>
 
             <TabsContent value="data" className="space-y-5 pt-5">
+                {open && <LocalBackup disabled={busy.length > 0} />}
+                {open && <GoogleDriveBackup disabled={busy.length > 0} />}
                 {state?.setup.hltb && pendingHltbCount > 0 && (
                     <div className="hud-card-subpanel">
                         <div className="flex items-center justify-between mb-2">
